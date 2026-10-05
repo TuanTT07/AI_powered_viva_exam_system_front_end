@@ -141,3 +141,123 @@ Admin Dashboard
 ```
 
 Exact allowed role transitions are backend policy: TBD.
+
+---
+
+## M0 Stitch Coverage Audit
+
+### Lecturer — End-to-End Lifecycle
+
+```text
+Login
+→ Lecturer Dashboard
+→ Subject
+→ Learning Materials
+→ Upload / Wait for Processing
+→ AI Question Generation
+→ Review Draft Questions and Sources
+→ Question Bank
+→ Create/Edit Questions and Rubrics
+→ Create Exam
+→ Assign Students
+→ Configure Schedule / Questions / Follow-up Limits
+→ Review and Publish
+→ Monitor
+→ Attempt Queue
+→ Review Recording and Transcript
+→ Review AI Suggested Score
+→ Enter and Confirm Lecturer Final Score
+→ Publish According to Policy
+→ Reports / Export
+```
+
+Confirmed Stitch coverage:
+
+- learning materials,
+- generated-question review and citation evidence,
+- question bank and batch import,
+- question/rubric editor,
+- exam list and combined exam configuration/assignment,
+- attempt queue,
+- per-question and final grading states,
+- report/grade ledger.
+
+Missing or incomplete:
+
+- login is only a live-only unconfirmed node,
+- lecturer dashboard, subject list/detail and rubric list/editor lack dedicated frames,
+- create-exam, exam overview and publish validation lack dedicated frames,
+- live monitoring has no frame,
+- error/empty/permission/conflict states are not designed,
+- finalization versus publication semantics require backend confirmation.
+
+### Student — End-to-End Lifecycle
+
+```text
+Login
+→ Student Dashboard
+→ Upcoming / Eligible Exams
+→ Exam Detail and Instructions
+→ Device Check
+→ Ready
+→ Start Viva
+→ AI Speaks Official Question
+→ Wait for Answer
+→ Record Answer
+→ Resolve Final Transcript
+→ AI Processing
+→ Backend-Confirmed Follow-up OR Next Main Question
+→ Complete
+→ Backend-Confirmed Submission Receipt
+→ Result Pending / Unreleased
+→ Released Result
+```
+
+Confirmed Stitch coverage:
+
+- combined device check/instructions/ready reference,
+- one active Viva variant showing recording, partial transcript and follow-up,
+- combined student results hub/detail with released and pending examples.
+
+Missing or incomplete:
+
+- dashboard, exam list and exam detail,
+- AI speaking, waiting, AI processing, next-question and completing phases,
+- all reconnect and error paths,
+- submission receipt is only a live-only unconfirmed node,
+- released-result policy and feedback visibility remain TBD.
+
+### Admin — End-to-End Lifecycle
+
+```text
+Login
+→ Admin Dashboard
+→ User Management
+→ Search / Filter
+→ Open Account Editor
+→ Assign Allowed Role / Subject Scope / Status
+→ Save and Confirm
+→ Subject Management
+→ System Configuration Exposed by Backend
+```
+
+Confirmed Stitch coverage:
+
+- populated user table and account editor overlay.
+
+Missing or incomplete:
+
+- admin dashboard,
+- subject/lecturer assignment,
+- loading/empty/error/forbidden states,
+- role transition and lock policies,
+- system configuration frame; the live AI voice configuration node is unconfirmed and cannot define provider architecture.
+
+## Cross-Flow Rules
+
+1. Stitch navigation labels do not create routes by themselves; the normalized route map is in `docs/ROUTES.md`.
+2. AI-generated questions remain drafts until lecturer approval.
+3. AI scores remain suggestions; only a lecturer-confirmed score is official.
+4. Student result visibility is controlled by backend release policy.
+5. Reconnect restores a backend-authoritative Viva snapshot before actions resume.
+6. Any screen that contains sensitive evidence must handle forbidden and unavailable states without leaking data.
