@@ -1,0 +1,56 @@
+# AIVES Frontend File Index
+
+- `.agent/PLANS.md`
+- `.agent/checklists/feature.md`
+- `.agent/checklists/release.md`
+- `.agent/checklists/ui.md`
+- `.agent/plans/active/2026-10-05-stitch-audit-and-foundation.md`
+- `.agent/plans/active/README.md`
+- `.agent/plans/completed/README.md`
+- `.agent/prompts/implement-feature.md`
+- `.agent/prompts/implement-screen.md`
+- `.agent/prompts/integrate-api.md`
+- `.agent/prompts/refactor.md`
+- `.agent/prompts/review.md`
+- `.agent/roles/api-agent.md`
+- `.agent/roles/explorer.md`
+- `.agent/roles/feature-agent.md`
+- `.agent/roles/reviewer.md`
+- `.agent/roles/ui-agent.md`
+- `.agent/state/CURRENT.md`
+- `.agent/state/DECISIONS.md`
+- `.agent/state/KNOWN_ISSUES.md`
+- `.agent/tasks/TASK_TEMPLATE.md`
+- `AGENTS.md`
+- `FILE_INDEX.md`
+- `README.md`
+- `docs/ROUTES.md`
+- `docs/api/AI_CONTRACT.md`
+- `docs/api/API_CONTRACT.md`
+- `docs/api/ERROR_HANDLING.md`
+- `docs/api/WEBSOCKET_EVENTS.md`
+- `docs/architecture/ARCHITECTURE.md`
+- `docs/architecture/DATA_FLOW.md`
+- `docs/architecture/REALTIME.md`
+- `docs/architecture/STATE_MANAGEMENT.md`
+- `docs/architecture/VIVA_STATE_MACHINE.md`
+- `docs/design/COMPONENTS.md`
+- `docs/design/DESIGN_SYSTEM.md`
+- `docs/design/SCREEN_REGISTRY.md`
+- `docs/design/STATES.md`
+- `docs/design/UI_RULES.md`
+- `docs/product/BUSINESS_RULES.md`
+- `docs/product/FEATURES.md`
+- `docs/product/PERMISSION_MATRIX.md`
+- `docs/product/PRODUCT.md`
+- `docs/product/ROLES.md`
+- `docs/product/USER_FLOWS.md`
+- `docs/quality/ACCESSIBILITY.md`
+- `docs/quality/DEPLOYMENT.md`
+- `docs/quality/ENVIRONMENTS.md`
+- `docs/quality/PERFORMANCE.md`
+- `docs/quality/SECURITY.md`
+- `docs/quality/TESTING.md`
+- `raw/stitch/README.md`
+
+Total Markdown files: 52
