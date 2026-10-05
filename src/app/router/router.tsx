@@ -2,6 +2,10 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth, RequireRole } from '../guards/guards'
 import { AdminLayout, AuthLayout, ExamLayout, LecturerLayout, StudentLayout } from '../layouts/layouts'
 import { LoginPage, NotFound, Placeholder, RouteError } from '../../pages/pages'
+import { UserManagementPage } from '../../features/administration/pages/UserManagementPage'
+import { SubjectManagementPage } from '../../features/administration/pages/SubjectManagementPage'
+import { SettingsPage } from '../../features/administration/pages/SettingsPage'
+import { AdminDashboardPage } from '../../features/administration/pages/AdminDashboardPage'
 import type { AppRole } from '../../types/auth'
 
 type RouteInfo = [string, string, string, string]
@@ -12,12 +16,28 @@ const student: RouteInfo[] = [['', 'Tổng quan sinh viên', 'Dashboard', 'Thôn
 const admin: RouteInfo[] = [['', 'Tổng quan quản trị', 'Administration', 'Trạng thái vận hành được cho phép truy cập.'], ['users', 'Quản lý người dùng', 'Administration', 'Tài khoản, vai trò và trạng thái theo chính sách backend.'], ['subjects', 'Môn học và phân công', 'Administration', 'Quản lý subject và phạm vi giảng viên.'], ['settings', 'Cấu hình hệ thống', 'Administration', 'Chỉ hiển thị cấu hình backend công bố.']]
 const pages = (role: AppRole, routes: RouteInfo[]) => routes.map(([path, title, feature, description]) => ({ path, element: <Placeholder role={role} title={title} feature={feature} description={description} /> }))
 
+const adminRoutes = admin.map(([path, title, feature, description]) => {
+  if (path === '') {
+    return { index: true, element: <AdminDashboardPage /> }
+  }
+  if (path === 'users') {
+    return { path, element: <UserManagementPage /> }
+  }
+  if (path === 'subjects') {
+    return { path, element: <SubjectManagementPage /> }
+  }
+  if (path === 'settings') {
+    return { path, element: <SettingsPage /> }
+  }
+  return { path, element: <Placeholder role="admin" title={title} feature={feature} description={description} /> }
+})
+
 export const router = createBrowserRouter([{ path: '/', errorElement: <RouteError />, children: [
   { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
   { element: <RequireAuth />, children: [
     { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: pages('lecturer', lecturer) }] },
     { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: pages('student', student) }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <Placeholder role="student" title="Phiên vấn đáp đang hoạt động" feature="Viva Session" description="Viva runtime sẽ được triển khai bằng state machine và snapshot backend-authoritative ở milestone riêng." /> }] }] },
-    { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: pages('admin', admin) }] },
+    { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: adminRoutes }] },
   ] },
   { index: true, element: <Navigate replace to="/login" /> }, { path: '*', element: <NotFound /> },
 ] }])
