@@ -1,5 +1,6 @@
 import { createContext } from 'react'
-import type { SessionState } from '../../types/auth'
+import type { AuthenticatedUser, LoginCredentials, SessionState } from '../../types/auth'
 
-export const defaultSession: SessionState = { status: 'unauthenticated', user: null }
-export const SessionContext = createContext(defaultSession)
+export type SessionContextValue = { session: SessionState; signIn(credentials: LoginCredentials): Promise<AuthenticatedUser> }
+export const defaultSession: SessionState = { status: 'loading', user: null }
+export const SessionContext = createContext<SessionContextValue>({ session: defaultSession, async signIn() { throw new Error('Session provider is unavailable.') } })
