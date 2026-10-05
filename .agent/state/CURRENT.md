@@ -4,48 +4,36 @@
 
 ## Current Milestone
 
-M0 — Stitch Audit & Frontend Foundation Planning.
+M1 — Frontend Foundation.
 
 ## Current Goal
 
-Convert the approved Stitch visual reference and AIVES requirements into an auditable route, screen, component, state and implementation plan before production coding begins.
+Establish the reusable frontend foundation required before feature-page implementation.
 
-## Audit Progress
+## Foundation Progress
 
-- Confirmed the milestone baseline of 16 Stitch exports.
-- Audited all 16 baseline frames in the authenticated Stitch canvas.
-- Recorded three additional live-only nodes as unconfirmed/TBD rather than silently expanding scope.
-- Normalized the production route proposal to 33 resource-oriented routes.
-- Classified Stitch frames as routes, modal/state views and overlays.
-- Mapped repeated patterns into shared primitives, shared application components and feature components.
-- Extracted the core palette, typography, spacing and radius values from Stitch.
-- Compared Viva coverage with the state machine and realtime rules.
-- Audited Lecturer, Student and Admin flows.
-- Created the M1 frontend-foundation ExecPlan.
+- React Router, TanStack Query and Zustand installed and recorded in ADR-009.
+- Vitest/Testing Library baseline and explicit `typecheck`/`test` scripts added.
+- Centralized design tokens, focus styles and reduced-motion behavior added.
+- Initial primitives, common states, provider composition and typed API boundary added.
+- Provider-agnostic session state, role guards, five layouts and 33 route shells added.
+- No feature data, backend endpoint, realtime protocol or AI provider is implemented.
 
-## Complete for M0
+## Complete
 
-- Stitch source/provenance record.
-- Screen registry and per-screen audit.
-- Route normalization and duplicate-concept decisions.
-- Component inventory and duplicate-pattern consolidation.
-- Design-system extraction with unresolved tokens marked TBD.
-- Global and Viva state coverage audit.
-- User-flow coverage and gap audit.
-- Architecture review: the intended feature-based structure remains valid; no source reorganization is required in M0.
-- M1 implementation plan.
+- M0 audit and foundation plan.
+- M1.1–M1.9 frontend foundation implementation and validation baseline.
 
-## Remaining Before M1 Execution
+## Remaining Before Feature Implementation
 
 1. Product owner confirms whether the three live-only Stitch nodes are approved.
-2. Backend/auth owners confirm identity, REST, realtime and media contracts needed by foundation interfaces.
-3. Team approves the 33-route map and the route-merging decisions.
-4. Team approves the normalized token mapping, especially the style-guide/generated secondary and tertiary differences.
-5. M1 is explicitly authorized; dependencies are not installed in M0.
+2. Backend/auth owners confirm identity, REST, realtime and media contracts.
+3. Implement the first authorized vertical feature slice using the foundation.
+4. Add route/guard integration tests once an auth adapter is chosen.
 
 ## Next Step
 
-Review and approve `.agent/plans/active/M1-frontend-foundation.md`, then implement the foundation in milestone order without feature screens or backend integration beyond typed boundaries/mocks isolated to tests.
+Choose and plan the first feature slice. Recommended start: authentication/role adapter after contract confirmation, or Lecturer learning-material shell when a backend contract is available.
 
 ## Blockers / TBD
 
@@ -53,4 +41,4 @@ See `.agent/state/KNOWN_ISSUES.md` for the complete list. Major blockers remain 
 
 ## Last Validation
 
-Documentation audit validated on 2026-10-05. Repository scripts available today: `npm run lint` and `npm run build`; there are no `typecheck` or `test` scripts yet.
+M1 validated on 2026-10-05: `npm run typecheck`, `npm run lint`, `npm run test` and `npm run build` pass.

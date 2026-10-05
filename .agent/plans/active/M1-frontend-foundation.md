@@ -248,3 +248,8 @@ Required behavior checks:
 ## Progress Log
 
 - 2026-10-05: Plan created from completed M0 Stitch audit. No dependencies installed and no production source changed.
+- 2026-10-05: M1.1 complete — added `typecheck` and `test` scripts; configured Vitest, Testing Library and jsdom with initial primitive tests.
+- 2026-10-05: M1.2–M1.4 complete — centralized the approved visual foundation in CSS tokens; implemented initial accessible primitives/common states, Query provider, narrow Zustand UI state and typed API client boundary.
+- 2026-10-05: M1.5–M1.8 complete — added provider-agnostic session boundary, role guards, five layouts and all 33 normalized route shells. No endpoint, DTO, realtime event or AI provider was invented.
+- 2026-10-05: Validation passed: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`.
+- 2026-10-05: M1.9 complete — verified unauthenticated and wrong-role guards plus accessible primitive states; inspected the login foundation route in the browser. M1 is complete.

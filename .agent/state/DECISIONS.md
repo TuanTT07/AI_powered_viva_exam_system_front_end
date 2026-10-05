@@ -76,3 +76,13 @@ Role-specific behavior is handled through permissions, routes and layouts.
 **Decision:** Agents read only task-relevant documentation by default.
 
 **Reason:** Reduce context pollution and token waste.
+
+---
+
+## ADR-009 — M1 Foundation Stack
+
+**Decision:** Use React Router for route/layout composition, TanStack Query for server-state infrastructure and Zustand only for narrow cross-screen UI state.
+
+**Reason:** This implements the approved ownership model without storing backend entities in a client store. API/realtime contracts remain behind service boundaries until confirmed.
+
+**Testing baseline:** Vitest, Testing Library and jsdom.
