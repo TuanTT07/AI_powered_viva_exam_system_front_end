@@ -1,3 +1,5 @@
 export const appRoles = ['admin', 'lecturer', 'student'] as const
 export type AppRole = (typeof appRoles)[number]
-export type SessionState = { status: 'loading' | 'authenticated' | 'unauthenticated'; user: { id: string; displayName: string; roles: AppRole[] } | null }
+export type AuthenticatedUser = { id: string; displayName: string; roles: AppRole[] }
+export type LoginCredentials = { email: string; password: string }
+export type SessionState = { status: 'loading' | 'authenticated' | 'unauthenticated'; user: AuthenticatedUser | null }

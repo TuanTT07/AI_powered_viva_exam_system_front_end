@@ -5,7 +5,7 @@ import { SessionProvider } from '../providers/app-providers'
 
 describe('route guards', () => {
   it('redirects unauthenticated visitors to login', () => {
-    render(<SessionProvider><MemoryRouter initialEntries={['/lecturer']}><Routes><Route element={<RequireAuth />}><Route path="/lecturer" element={<p>Protected</p>} /></Route><Route path="/login" element={<p>Login</p>} /></Routes></MemoryRouter></SessionProvider>)
+    render(<SessionProvider initialSession={{ status: 'unauthenticated', user: null }}><MemoryRouter initialEntries={['/lecturer']}><Routes><Route element={<RequireAuth />}><Route path="/lecturer" element={<p>Protected</p>} /></Route><Route path="/login" element={<p>Login</p>} /></Routes></MemoryRouter></SessionProvider>)
     expect(screen.getByText('Login')).toBeInTheDocument()
   })
 

@@ -18,7 +18,7 @@ Use this file for unresolved issues that affect implementation. Unknown behavior
 - Lecturer live monitoring.
 - Student dashboard, upcoming exams and exam detail.
 - Admin dashboard, subject assignment and general system configuration.
-- Confirmed-baseline login and completion receipt.
+- Confirmed-baseline completion receipt. Login was implemented from live-only TD-01; it still lacks a local screenshot/export and product approval as a baseline design.
 - No dedicated narrow/mobile/tablet frames exist.
 
 ## Missing Global UI States
@@ -72,6 +72,7 @@ Use this file for unresolved issues that affect implementation. Unknown behavior
 
 ## Backend Contracts
 
+- Login identity provider, production credential exchange, session persistence, logout and recovery routes are TBD. The development-only adapter must not be treated as production authentication.
 - REST endpoint paths and DTOs.
 - Pagination and filtering format.
 - Realtime transport and event/command names.
