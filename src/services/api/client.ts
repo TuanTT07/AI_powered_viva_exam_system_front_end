@@ -1,4 +1,6 @@
 import { runtimeConfig } from './runtime-config'
+import { tokenManager } from './token-manager'
+
 
 export type QueryValue = string | number | boolean | null | undefined
 export type ApiRequestOptions = {
@@ -47,6 +49,10 @@ export const apiClient: ApiClient = {
     const timer = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
     const headers = new Headers(options.headers)
     headers.set('Accept', headers.get('Accept') ?? 'application/json')
+    const token = tokenManager.getToken()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
     let body: BodyInit | undefined
     if (isJsonBody(options.body)) { body = JSON.stringify(options.body); headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json') }
     else if (options.body !== undefined) body = options.body as BodyInit
