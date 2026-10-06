@@ -69,7 +69,7 @@ STITCH-15 represents generated drafts, a citation warning and an open evidence d
 - import success,
 - import error/cancel.
 
-STITCH-03 represents a partially valid preflight result. File schema and partial-import policy remain TBD.
+STITCH-03 represents a partially valid preflight result. The approved MVP accepts UTF-8 CSV files up to 5 MB and 500 data rows with headers `question_text`, `topic`, `bloom_level`, `suggested_answer`, and `rubric_name`. The first three columns are required; unknown columns are ignored and duplicate headers are rejected. File selection/parsing, file errors, all-valid, partially-valid, all-invalid, confirmation, pending, success and mutation-failure states remain within the Question Bank dialog. Valid rows may be imported while invalid rows are skipped; zero-valid batches cannot be confirmed. Successfully imported questions use the canonical draft status.
 
 ### Exams
 

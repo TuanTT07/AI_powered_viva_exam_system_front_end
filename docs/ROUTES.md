@@ -82,7 +82,7 @@ Additional recovery/callback routes depend on the identity-provider contract and
 
 ## Deliberately Not Routes
 
-- question import dialog,
+- question import dialog (CSV-only MVP, owned by `/lecturer/subjects/:subjectId/questions`; no separate route),
 - AI citation/source drawer,
 - user account editor overlay,
 - publish/finalize confirmation,
