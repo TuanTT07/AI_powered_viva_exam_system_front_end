@@ -86,5 +86,21 @@ export const apiUserRepository = {
     })
     if (!response.success) throw new Error(response.message || 'Lỗi tạo người dùng')
     return mapUserDto(response.data)
+  },
+
+  async update(id: string, payload: { fullName: string; email: string; roleName: string }): Promise<User> {
+    const response = await apiClient.request<ApiResponse<UserResponseDto>>(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: payload,
+    })
+    if (!response.success) throw new Error(response.message || 'Lỗi cập nhật người dùng')
+    return mapUserDto(response.data)
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await apiClient.request<ApiResponse<any>>(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    if (!response.success) throw new Error(response.message || 'Lỗi xóa người dùng')
   }
 }

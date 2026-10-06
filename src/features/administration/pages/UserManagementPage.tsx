@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { Button, Input, Badge, Dialog } from '../../../components/ui/primitives';
-import { useUsers, useCreateUser } from '../user-hooks';
-import type { UserRole } from '../api-user-repository';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../user-hooks';
+import type { UserRole, User } from '../api-user-repository';
 
 function AccountEditorDialog({
+  user,
   open,
   onClose,
   onSave,
 }: {
+  user: User | null;
   open: boolean;
   onClose: () => void;
   onSave: (user: any) => void;
 }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('lecturer');
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [role, setRole] = useState<UserRole>(user?.role || 'lecturer');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      id: Math.random().toString(),
+      id: user ? user.id : Math.random().toString(),
       name,
-      identifier: 'NEW-USER',
+      identifier: user ? user.identifier : 'NEW-USER',
       email,
       role,
       status: 'active',
@@ -45,13 +47,15 @@ function AccountEditorDialog({
           </div>
         </div>
 
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MẬT KHẨU KHỞI TẠO BAN ĐẦU *</label>
-            <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Bắt buộc đổi khi đăng nhập lần đầu</span>
+        {!user && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MẬT KHẨU KHỞI TẠO BAN ĐẦU *</label>
+              <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Bắt buộc đổi khi đăng nhập lần đầu</span>
+            </div>
+            <Input value="AkademiaViva@2025!" readOnly />
           </div>
-          <Input value="AkademiaViva@2025!" readOnly />
-        </div>
+        )}
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>CHỌN VAI TRÒ HỆ THỐNG *</label>
@@ -82,28 +86,39 @@ function AccountEditorDialog({
 export function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeRoleFilter, setActiveRoleFilter] = useState<'all' | UserRole>('all');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
 
   const usersQuery = useUsers({ keyword: searchTerm, role: activeRoleFilter });
   const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
 
-  const handleSaveUser = (newUser: any) => {
-    createUser.mutate({
-      fullName: newUser.name,
-      email: newUser.email,
-      roleName: newUser.role,
-      userCode: newUser.identifier,
-    }, {
-      onSuccess: () => setIsAddingUser(false)
-    });
+  const handleSaveUser = (savedUser: any) => {
+    if (isAddingUser) {
+      createUser.mutate({
+        fullName: savedUser.name,
+        email: savedUser.email,
+        roleName: savedUser.role,
+        userCode: savedUser.identifier,
+      }, { onSuccess: () => setIsAddingUser(false) });
+    } else if (editingUser) {
+      updateUser.mutate({
+        id: savedUser.id,
+        fullName: savedUser.name,
+        email: savedUser.email,
+        roleName: savedUser.role,
+      }, { onSuccess: () => setEditingUser(null) });
+    }
   };
 
   const users = usersQuery.data?.content || [];
   const filteredUsers = users;
 
-  const toggleStatus = (id: string) => {
-    // toggle logic not supported by API yet
-    console.log('Toggle status for', id);
+  const handleDelete = (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa tài khoản này không?')) {
+      deleteUser.mutate(id);
+    }
   };
 
   return (
@@ -227,9 +242,9 @@ export function UserManagementPage() {
                 </td>
                 <td style={{ padding: '16px', textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: '8px' }}>
-                    <button style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Sửa</button>
-                    <button onClick={() => toggleStatus(user.id)} style={{ background: 'transparent', border: 'none', color: 'var(--secondary)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>
-                      {user.status === 'active' ? 'Khóa' : 'Mở khóa'}
+                    <button onClick={() => setEditingUser(user)} style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Sửa</button>
+                    <button onClick={() => handleDelete(user.id)} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>
+                      Xóa
                     </button>
                   </div>
                 </td>
@@ -243,8 +258,13 @@ export function UserManagementPage() {
         </table>
       </section>
 
-      {isAddingUser && (
-        <AccountEditorDialog open={isAddingUser} onClose={() => setIsAddingUser(false)} onSave={handleSaveUser} />
+      {(isAddingUser || editingUser) && (
+        <AccountEditorDialog 
+          user={isAddingUser ? null : editingUser}
+          open={isAddingUser || !!editingUser} 
+          onClose={() => { setIsAddingUser(false); setEditingUser(null); }} 
+          onSave={handleSaveUser} 
+        />
       )}
     </div>
   );
