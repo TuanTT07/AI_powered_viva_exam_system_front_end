@@ -1,0 +1,3 @@
+import type { RosterStudent } from './roster-types'
+import type { AssignmentStrategy, ScheduleSlot } from './schedule-types'
+export function generateScheduleSlots(examId: string, startAt: string, durationMinutes: number, breakMinutes: number, roster: RosterStudent[], strategy: AssignmentStrategy): ScheduleSlot[] { let cursor = new Date(startAt).getTime(); return roster.map((student, index) => { const start = new Date(cursor); const end = new Date(cursor + durationMinutes * 60_000); cursor = end.getTime() + breakMinutes * 60_000; return { id: `SLOT-${examId}-${String(index + 1).padStart(3, '0')}`, examId, startAt: start.toISOString(), endAt: end.toISOString(), ...(strategy === 'ROSTER_ORDER' ? { rosterStudentId: student.id } : {}) } }) }

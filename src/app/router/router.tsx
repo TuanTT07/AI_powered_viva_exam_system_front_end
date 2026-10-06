@@ -16,6 +16,10 @@ import { VivaInterviewRoom } from '../../features/viva-session/pages/VivaIntervi
 import { ExamSuccessPage } from '../../features/viva-session/pages/ExamSuccessPage'
 import { AIQuestionGenerationPage } from '../../features/ai-question-generation/ai-question-generation-page'
 import { ExamListPage } from '../../features/exams/exam-list-page'
+import { ExamEditorPage } from '../../features/exams/exam-editor'
+import { ExamStudentRosterPage } from '../../features/exams/exam-student-roster-page'
+import { ExamSchedulingPage } from '../../features/exams/exam-scheduling-page'
+import { ExamQuestionConfigPage } from '../../features/exams/exam-question-config-page'
 import { StudentExamListPage } from '../../features/exams/student-exam-list-page'
 import { GradingWorkspacePage } from '../../features/grading/grading-workspace-page'
 
@@ -56,6 +60,7 @@ export const router = createBrowserRouter([{
         {
       element: <RequireAuth />, children: [
         { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions/generate', element: <AIQuestionGenerationPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, { path: 'exams', element: <ExamListPage /> }, { path: 'exams/:examId/attempts/:attemptId', element: <GradingWorkspacePage /> }, ...pages('lecturer', lecturer.filter(([path]) => path !== 'exams' && path !== 'exams/:examId/attempts/:attemptId'))] }] },
+        { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions/generate', element: <AIQuestionGenerationPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, { path: 'exams', element: <ExamListPage /> }, { path: 'exams/new', element: <ExamEditorPage /> }, { path: 'exams/:examId/schedule', element: <ExamSchedulingPage /> }, { path: 'exams/:examId/questions', element: <ExamQuestionConfigPage /> }, { path: 'exams/:examId/students', element: <ExamStudentRosterPage /> }, { path: 'exams/:examId/edit', element: <ExamEditorPage /> }, ...pages('lecturer', lecturer.filter(([path]) => !['exams', 'exams/new', 'exams/:examId/edit', 'exams/:examId/students'].includes(path)))] }] },
         { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: studentRoutes }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <VivaInterviewRoom /> }] }] },
         { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: adminRoutes }] },
       ]
