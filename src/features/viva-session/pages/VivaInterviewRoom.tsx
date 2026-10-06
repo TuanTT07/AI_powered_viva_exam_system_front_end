@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Badge } from '../../../components/ui/primitives';
 import { AudioVisualizer } from '../components/AudioVisualizer';
@@ -15,11 +15,20 @@ export function VivaInterviewRoom() {
   const [phase, setPhase] = useState<SessionPhase>('AI_SPEAKING');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   
+  type TranscriptItem = {
+    id: string;
+    role: 'ai' | 'student';
+    text: string;
+    timestamp: string;
+    isPartial?: boolean;
+    isFollowUp?: boolean;
+  };
+  
   // Mock data for transcript
-  const [transcript, setTranscript] = useState([
+  const [transcript, setTranscript] = useState<TranscriptItem[]>([
     {
       id: '1',
-      role: 'ai' as const,
+      role: 'ai',
       text: 'Chào bạn. Câu hỏi đầu tiên dành cho bạn: Bạn hãy trình bày về mô hình MVC (Model-View-Controller) trong phát triển phần mềm và cho ví dụ thực tế.',
       timestamp: '09:00',
       isPartial: false,
