@@ -1,5 +1,6 @@
 export const examRoutes = {
   list: '/lecturer/exams',
+  new: '/lecturer/exams/new',
   detail: (examId: string) => `/lecturer/exams/${examId}`,
   edit: (examId: string) => `/lecturer/exams/${examId}/edit`,
   students: (examId: string) => `/lecturer/exams/${examId}/students`,
