@@ -85,6 +85,10 @@ Conceptual product states:
 
 Exact backend enums, editability and transition rules remain TBD. UI actions must be derived from backend capabilities/status rather than display labels alone.
 
+### Exam Detail and Group 2 readiness
+
+The lecturer Exam Detail route (`/lecturer/exams/:examId`) derives a four-section readiness summary from shared exam, roster, schedule and question repositories. It handles initial loading, exam-not-found/error/retry, partial section loading/error, empty roster, missing or invalid schedule, missing or invalid question configuration, editable `DRAFT`/`SCHEDULED` exams and read-only `IN_PROGRESS`/`COMPLETED`/`CANCELLED` exams. `READY` means only that frontend configuration is complete; it does not publish, start or activate an exam.
+
 ### Exam Scheduling
 
 - no saved schedule,
