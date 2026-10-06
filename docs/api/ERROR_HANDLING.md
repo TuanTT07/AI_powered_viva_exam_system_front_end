@@ -7,6 +7,10 @@
 - clear recovery,
 - no fabricated exam state.
 
+## API foundation normalization
+
+`ApiError` preserves a safe backend message, HTTP status, optional code and string field errors without exposing stack traces or HTML proxy pages. It distinguishes network failure, timeout and caller cancellation. Timeouts use `VITE_API_TIMEOUT_MS` (default 15000 ms), caller abort signals are respected, and timers are cleaned up. Feature repositories must pass these errors to existing error states and must not silently switch from API mode to mock mode.
+
 ## Generic Categories
 
 ### 400 Validation
