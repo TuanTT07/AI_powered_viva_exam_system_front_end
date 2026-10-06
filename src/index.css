@@ -19,3 +19,10 @@ h1{font-size:clamp(2.25rem,4vw,3.8rem);line-height:1.04}
 .workspace>div>header{padding:14px clamp(24px,5vw,64px)}
 .workspace main{width:min(1400px,100%);padding:clamp(32px,5vw,72px) clamp(24px,5vw,64px)}
 @media(max-width:760px){.workspace aside{padding:18px 20px}.workspace .brand{margin-bottom:22px;font-size:1.7rem}.workspace aside nav ul{padding:0 4px 7px}}
+
+/* Keep sibling actions visually aligned across the editorial screens. */
+.lecturer-actions,.subject-actions,.subject-links,.qb-actions,.dialog-actions{align-items:stretch}
+.lecturer-actions>.button,.subject-actions>.button,.subject-links>.button,.qb-actions>.button{min-width:142px}
+.workspace-header .button{min-width:108px}
+.dialog-actions>.button{min-width:112px}
+@media(max-width:760px){.lecturer-actions>.button,.subject-actions>.button,.subject-links>.button,.qb-actions>.button{min-width:0;flex:1}.dialog-actions>.button{min-width:0}}
