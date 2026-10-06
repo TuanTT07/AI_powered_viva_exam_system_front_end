@@ -11,29 +11,41 @@ interface TranscriptMessageProps {
 export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({ role, text, timestamp, isPartial, isFollowUp }) => {
   const isAI = role === 'ai';
 
-  let bgClass = isAI ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100';
+  let bg = isAI ? 'var(--surface)' : '#eff6ff';
+  let borderColor = isAI ? 'var(--border)' : '#bfdbfe';
+  
   if (isAI && isFollowUp) {
-    bgClass = 'bg-amber-50 border-amber-200';
+    bg = '#fffbeb';
+    borderColor = '#fde68a';
   }
 
   return (
-    <div className={`flex w-full mb-4 ${isAI ? 'justify-start' : 'justify-end'}`}>
-      <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm border ${bgClass} ${isAI ? 'rounded-tl-none' : 'rounded-tr-none'}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`text-xs font-semibold uppercase tracking-wider ${isAI ? (isFollowUp ? 'text-amber-600' : 'text-blue-600') : 'text-slate-600'}`}>
+    <div style={{ display: 'flex', width: '100%', marginBottom: '16px', justifyItems: isAI ? 'flex-start' : 'flex-end', justifyContent: isAI ? 'flex-start' : 'flex-end' }}>
+      <div style={{ 
+        maxWidth: '80%', 
+        padding: '16px', 
+        background: bg, 
+        border: `1px solid ${borderColor}`,
+        borderRadius: '16px',
+        borderTopLeftRadius: isAI ? '0' : '16px',
+        borderTopRightRadius: !isAI ? '0' : '16px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: isAI ? (isFollowUp ? '#d97706' : 'var(--navy)') : 'var(--secondary)' }}>
             {isAI ? '🤖 Giám khảo AI' : '👤 Sinh viên'}
           </span>
-          {isFollowUp && <span className="text-xs px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full font-medium">Câu hỏi phụ (Làm rõ ý)</span>}
-          <span className="text-xs text-gray-400 ml-auto">{timestamp}</span>
+          {isFollowUp && <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#fef3c7', color: '#92400e', borderRadius: '12px', fontWeight: 600 }}>Câu hỏi phụ (Làm rõ ý)</span>}
+          <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', marginLeft: 'auto' }}>{timestamp}</span>
         </div>
         
-        <p className={`text-gray-800 leading-relaxed ${isPartial ? 'opacity-50 italic' : ''}`}>
+        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6, fontStyle: isPartial ? 'italic' : 'normal', opacity: isPartial ? 0.6 : 1 }}>
           {text}
         </p>
         
         {isPartial && (
-          <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
-            <span className="animate-pulse">●</span> Đang nghe...
+          <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ animation: 'pulse 1s infinite' }}>●</span> Đang nghe...
           </div>
         )}
       </div>
