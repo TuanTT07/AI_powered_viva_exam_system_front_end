@@ -23,6 +23,8 @@ import { ExamQuestionConfigPage } from '../../features/exams/exam-question-confi
 import { ExamDetailPage } from '../../features/exams/exam-detail-page'
 import { StudentExamListPage } from '../../features/exams/student-exam-list-page'
 import { GradingWorkspacePage } from '../../features/grading/grading-workspace-page'
+import { StudentExamResultPage } from '../../features/exams/student-exam-result-page'
+import { StudentResultListPage } from '../../features/exams/student-result-list-page'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -52,6 +54,8 @@ const studentRoutes = student.map(([path, title, feature, description]) => {
   if (path === '') return { index: true, element: <StudentDashboard /> }
   if (path === 'exams') return { path, element: <StudentExamListPage /> }
   if (path === 'exams/:examId/completed') return { path, element: <ExamSuccessPage /> }
+  if (path === 'results') return { path, element: <StudentResultListPage /> }
+  if (path === 'exams/:examId/result') return { path, element: <StudentExamResultPage /> }
   return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
 })
 
