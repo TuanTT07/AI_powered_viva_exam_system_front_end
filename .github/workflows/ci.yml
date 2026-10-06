@@ -1,0 +1,31 @@
+name: Frontend CI Check
+
+on:
+  push:
+    branches: [ "main", "feature/*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-and-build:
+    name: Lint & Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Tải code về máy ảo
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Cài đặt Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Cài đặt thư viện (Dependencies)
+        run: npm install
+
+      - name: 🔍 Kiểm tra lỗi code (ESLint)
+        run: npm run lint
+
+      - name: 🏗️ Kiểm tra lỗi TypeScript & Build thử (Vite)
+        run: npm run build
