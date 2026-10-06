@@ -85,6 +85,23 @@ Conceptual product states:
 
 Exact backend enums, editability and transition rules remain TBD. UI actions must be derived from backend capabilities/status rather than display labels alone.
 
+### Exam Scheduling
+
+- no saved schedule,
+- generated unsaved schedule,
+- saved schedule,
+- empty-roster prerequisite,
+- invalid exam configuration,
+- unassigned students,
+- fully assigned schedule,
+- conflict state,
+- save failure,
+- read-only schedule,
+- regenerate confirmation,
+- unsaved-changes warning.
+
+Scheduling is an explicitly approved inferred screen at `/lecturer/exams/:examId/schedule` (INF-12). No dedicated Stitch Scheduling frame exists; STITCH-08 is the nearest visual reference. The frontend uses mock persistence only; calendar integration, notifications, student delivery, backend concurrency, question allocation, and runtime sessions are out of scope.
+
 ### Grading
 
 - attempt loading,
