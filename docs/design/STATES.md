@@ -203,3 +203,13 @@ Only one primary Viva phase is active at a time. Connection/media conditions may
 - **Represented:** populated data, selected filters, several status badges, material processing/failure, import partial validation, AI draft review/citation warning, active recording/partial transcript/follow-up, grading with AI suggestion and lecturer edit, result released/pending.
 - **Inferable but not complete:** ready/preflight, AI draft approval, exam publish, grading finalization/publication and completed receipt (live-only).
 - **Completely missing from confirmed baseline:** global loading/empty/permission families; Viva preparing, speaking, waiting, AI processing, next question, completing and every recovery/error state.
+
+## Exam scheduling API states
+
+- **Loading:** schedule request is in flight; scheduling actions are disabled.
+- **Empty:** backend returns no candidate schedule; show the assignment and auto-schedule actions.
+- **Unsupported roster:** API mode has no lecturer student lookup, manual roster add, CSV import or candidate delete endpoint; explain that real student UUIDs are required.
+- **Assignment error:** preserve the entered UUIDs and show the normalized backend error; never replace the view with mock data.
+- **Generated schedule:** show every returned slot, student identity, timestamps and backend status.
+- **Reschedule error:** keep the dialog values and report the validation/conflict response.
+- **Read-only statuses:** backend terminal/active statuses are displayed as returned; only the explicit reschedule action is offered where the backend allows it.

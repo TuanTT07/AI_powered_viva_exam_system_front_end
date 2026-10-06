@@ -10,8 +10,19 @@ import { normalizeRosterDraft, validateRosterDraft } from './roster-validation'
 import type { RosterDraft, RosterImportPreview, RosterStudent } from './roster-types'
 import './exam-student-roster.css'
 import { examRoutes } from './exam-routes'
+import { runtimeConfig } from '../../services/api/runtime-config'
 
 export function ExamStudentRosterPage() {
+  if (runtimeConfig.dataSource === 'api') return <ApiRosterUnsupportedPage />
+  return <MockExamStudentRosterPage />
+}
+
+function ApiRosterUnsupportedPage() {
+  const { examId = '' } = useParams()
+  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{examId}</span></div><h1>Danh sách sinh viên</h1><p>Roster API chưa được backend cung cấp cho lecturer.</p></div><div className="roster-head-actions"><Link className="button outline" to={examRoutes.schedule(examId)}>Mở Scheduling API</Link><Link className="button outline" to={examRoutes.list}>Về danh sách kỳ thi</Link></div></header><Alert tone="info"><strong>Chưa hỗ trợ trong API mode.</strong> Backend hiện chỉ có endpoint gán candidate theo <code>studentId</code> UUID. Chưa có endpoint lấy danh sách sinh viên, thêm thủ công, import CSV hoặc xoá candidate cho lecturer.</Alert><EmptyState title="Cần student UUID từ backend" description="Dùng trang Scheduling để gửi các UUID thật vào endpoint POST /api/v1/exams/{examId}/candidates. Dữ liệu mock roster chỉ hoạt động khi VITE_DATA_SOURCE=mock." /></section>
+}
+
+function MockExamStudentRosterPage() {
   const { examId = '' } = useParams(); const { session } = useSession(); const [params, setParams] = useSearchParams(); const [addOpen, setAddOpen] = useState(false); const [importOpen, setImportOpen] = useState(false); const [remove, setRemove] = useState<RosterStudent | null>(null)
   const exam = useExam(examId); const roster = useExamRoster(examId); const editable = exam.data ? exam.data.status === 'DRAFT' || exam.data.status === 'SCHEDULED' : false; const query = (params.get('q') ?? '').trim().toLocaleLowerCase(); const rows = useMemo(() => (roster.data ?? []).filter((student) => `${student.studentCode} ${student.fullName} ${student.email}`.toLocaleLowerCase().includes(query)), [roster.data, query])
   if (session.user && !session.user.roles.includes('lecturer')) return <PermissionDenied />
