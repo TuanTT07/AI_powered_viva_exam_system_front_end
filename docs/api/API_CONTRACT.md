@@ -106,6 +106,21 @@ Contract: TBD.
 
 If backend uses cursor pagination, do not convert to page-number assumptions in shared abstractions.
 
+## Exam candidate assignment and scheduling (confirmed backend contract)
+
+The frontend scheduling integration uses only these confirmed endpoints:
+
+| Method | Path | Request | Response |
+|---|---|---|---|
+| `POST` | `/api/v1/exams/{examId}/candidates` | `{ studentIds: UUID[] }` | `CandidateScheduleResponse[]` |
+| `GET` | `/api/v1/exams/{examId}/schedule` | — | `CandidateScheduleResponse[]` |
+| `POST` | `/api/v1/exams/{examId}/schedule/auto` | `{ studentIds: UUID[], slotDurationMinutes: integer >= 5, breakDurationMinutes?: integer >= 0 }` | `CandidateScheduleResponse[]` |
+| `PUT` | `/api/v1/exams/{examId}/schedule/reschedule` | `{ studentId: UUID, newScheduledStartTime: ISO date-time, newScheduledEndTime: ISO date-time }` | `CandidateScheduleResponse` |
+
+`CandidateScheduleResponse` contains `attemptId`, `examId`, `studentId`, student identity fields, `slotNumber`, scheduled/actual timestamps, `status` (`SCHEDULED`, `READY`, `IN_PROGRESS`, `COMPLETED`, `ABSENT`, `CANCELLED`) and `accessCode`.
+
+The current backend does not expose a lecturer student-search/roster-read endpoint, candidate delete endpoint, or CSV import endpoint. In API mode the roster screen therefore explains the limitation and Scheduling accepts only real backend UUIDs. API failures never fall back to mock data. Authentication is provided by the centralized API client/token boundary.
+
 ## Date/Time
 
 Backend should provide timezone-safe timestamps.

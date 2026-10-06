@@ -82,3 +82,17 @@ Client loses realtime connection
 ```
 
 Never assume locally buffered answer data is officially recorded unless confirmed.
+
+## Exam scheduling API flow
+
+```text
+Exam Scheduling page
+→ TanStack Query scheduling hooks
+→ exam scheduling repository
+→ centralized API client (base URL, bearer token, timeout, errors)
+→ /api/v1/exams/{examId}/candidates|schedule|schedule/auto|schedule/reschedule
+→ CandidateScheduleResponse DTOs
+→ scheduling view model/table
+```
+
+The repository validates UUIDs and request constraints before transport. Query invalidation is scoped to the exam schedule and related exam caches. API mode is explicit: a request failure remains an error and does not select the mock repository. Because the backend currently lacks lecturer roster lookup, delete and CSV endpoints, those actions remain available only in the mock repository and are surfaced as unsupported in API mode.
