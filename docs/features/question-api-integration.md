@@ -7,3 +7,5 @@ Supported operations are raw Spring Page search (`GET /api/questions`), detail, 
 API mode requires a Course UUID in `/lecturer/subjects/:subjectId/questions`; mock slugs are rejected before any request. Search, status, Bloom and one-based URL pagination are sent server-side. Create and edit require an authenticated Lecturer UUID and use real Rubric UUIDs. Manual questions are always sent with `aiGenerated=false` and are created as backend drafts. API failures never fall back to mock data.
 
 The backend does not support topic, suggested answer, explanation, keywords or course-scoped Rubrics, so those fields are labelled unavailable in API mode and are not sent. Mock mode keeps the existing richer editor. CSV import and AI generation remain mock-backed until their backend contracts exist.
+
+Rubric deletion is integrated separately through the Rubric repository and its confirmation flow. It is API-backed only for real Rubric UUIDs; mock mode keeps local deletion. Successful deletion waits for HTTP 204, invalidates global Rubric and affected Question queries, and never deletes Questions.

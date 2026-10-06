@@ -24,6 +24,8 @@ Backend DTO
 Feature repositories remain the boundary between pages and data sources. They select either the existing mock repository or a future API repository using the shared runtime `dataSource` and `selectRepository` helper. Components never read `import.meta.env` or call the API client directly. API failures propagate to feature error states; they never fall back to mock data. TanStack Query owns request caching and targeted invalidation, while logout clears the entire query cache.
 
 Question Bank is the first real feature integration: API mode owns raw Spring Page search, UUID validation, DTO mapping, detail, create, update, approve and delete. Create/update mutations obtain `createdById` from the authenticated backend session, map Bloom/status enums, and invalidate only the affected course list plus detail cache. Import, AI generation, exam question configuration and exam readiness remain explicitly mock-backed until their backend contracts exist. API query keys include datasource, course and server filters so mock and API caches cannot mix.
+
+Rubric deletion follows the same repository boundary. A confirmed `DELETE /api/rubrics/{id}` receives HTTP 204 before Rubric list/detail caches and relevant Question caches are invalidated. The operation is global because the backend Rubric API has no course scope; the UI keeps Questions and renders a null Rubric reference as “Chưa gắn Rubric”.
 ```
 
 ## AI Question Generation

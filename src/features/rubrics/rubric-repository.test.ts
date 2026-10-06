@@ -18,4 +18,11 @@ describe('rubricRepository', () => {
     const saved = await mockRubricRepository.save({ subjectId: 'testing', name: 'Rubric kiểm thử', criteria: [{ id: 'criterion-test', name: 'Bao phủ', maximumScore: '5', description: '' }] })
     await expect(mockRubricRepository.get('testing', saved.id)).resolves.toMatchObject({ id: saved.id, criteria: [{ id: 'criterion-test' }] })
   })
+
+  it('deletes a mock rubric without changing another subject', async () => {
+    const saved = await mockRubricRepository.save({ subjectId: 'delete-test', name: 'Xoá thử', criteria: [] })
+    await mockRubricRepository.delete(saved.id)
+    await expect(mockRubricRepository.get('delete-test', saved.id)).resolves.toBeNull()
+    await expect(mockRubricRepository.list('java')).resolves.toEqual(expect.any(Array))
+  })
 })
