@@ -30,3 +30,22 @@ export function useSaveCourse() {
     }
   })
 }
+
+export function useDeleteCourse() {
+  const queryClient = useQueryClient()
+  return useMutation({ mutationFn: courseRepository.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses'] }) })
+}
+
+export function useCourseLecturers(id: string | null) {
+  return useQuery({ queryKey: ['courses', id, 'lecturers'], queryFn: () => id ? courseRepository.getLecturers(id) : [], enabled: !!id })
+}
+
+export function useAssignLecturer() {
+  const queryClient = useQueryClient()
+  return useMutation({ mutationFn: (payload: { courseId: string; lecturerId: string }) => courseRepository.assignLecturer(payload.courseId, payload.lecturerId), onSuccess: (_data, variables) => { queryClient.invalidateQueries({ queryKey: ['courses', variables.courseId] }); queryClient.invalidateQueries({ queryKey: ['courses', variables.courseId, 'lecturers'] }); queryClient.invalidateQueries({ queryKey: ['courses'] }) } })
+}
+
+export function useRemoveLecturer() {
+  const queryClient = useQueryClient()
+  return useMutation({ mutationFn: (payload: { courseId: string; lecturerId: string }) => courseRepository.removeLecturer(payload.courseId, payload.lecturerId), onSuccess: (_data, variables) => { queryClient.invalidateQueries({ queryKey: ['courses', variables.courseId] }); queryClient.invalidateQueries({ queryKey: ['courses', variables.courseId, 'lecturers'] }) } })
+}

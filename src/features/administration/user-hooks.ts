@@ -38,3 +38,16 @@ export function useDeleteUser() {
     }
   })
 }
+
+export function useUser(id: string | null) {
+  return useQuery({ queryKey: ['users', 'detail', id], queryFn: () => id ? userRepository.getById(id) : null, enabled: !!id })
+}
+
+export function useUserCourses(id: string | null) {
+  return useQuery({ queryKey: ['users', id, 'courses'], queryFn: () => id ? userRepository.getCourses(id) : [], enabled: !!id })
+}
+
+export function useResetUserPassword() {
+  const queryClient = useQueryClient()
+  return useMutation({ mutationFn: (payload: { id: string; newPassword: string }) => userRepository.resetPassword(payload.id, payload.newPassword), onSuccess: (_data, variables) => queryClient.invalidateQueries({ queryKey: ['users', 'detail', variables.id] }) })
+}

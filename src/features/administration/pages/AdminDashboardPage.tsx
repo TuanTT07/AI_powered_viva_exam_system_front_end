@@ -1,4 +1,5 @@
 import { Badge, Button } from '../../../components/ui/primitives';
+import { Link } from 'react-router-dom';
 
 export function AdminDashboardPage() {
   return (
@@ -14,6 +15,7 @@ export function AdminDashboardPage() {
           <p style={{ margin: '8px 0 0 0', color: 'var(--secondary)' }}>Giám sát thời gian thực tài nguyên AI và tiến độ các kỳ thi.</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: 8 }}><Link className="button outline" to="/admin/users">Quản lý người dùng</Link><Link className="button outline" to="/admin/courses">Quản lý môn học</Link></div>
           <Button variant="outline">Kiểm tra kết nối (Ping all)</Button>
           <Button variant="primary">Xuất báo cáo vận hành (.PDF)</Button>
         </div>

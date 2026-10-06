@@ -63,6 +63,8 @@ Viva error UX should follow `VIVA_STATE_MACHINE.md`.
 
 ## Mutations
 
+Admin detail, password, delete and lecturer assignment mutations show pending state, invalidate targeted TanStack Query keys after success and preserve backend errors. A failed assignment or destructive action is not retried against mock data.
+
 For destructive/high-impact mutations:
 - use pending state,
 - prevent duplicate submission,

@@ -49,7 +49,11 @@ export const mockCourseRepository = {
     const updated = { ...MOCK_SUBJECTS[index], ...payload }
     MOCK_SUBJECTS[index] = updated
     return updated
-  }
+  },
+  async delete(id: string) { const index = MOCK_SUBJECTS.findIndex(s => s.id === id); if (index < 0) throw new Error('Không tìm thấy môn học'); MOCK_SUBJECTS.splice(index, 1) },
+  async getLecturers(id: string) { const subject = MOCK_SUBJECTS.find(s => s.id === id); if (!subject) throw new Error('Không tìm thấy môn học'); return subject.lecturers },
+  async assignLecturer(courseId: string, lecturerId: string) { const subject = MOCK_SUBJECTS.find(s => s.id === courseId); if (!subject) throw new Error('Không tìm thấy môn học'); if (!subject.lecturers.some(l => l.id === lecturerId)) subject.lecturers.push({ id: lecturerId, name: `Giảng viên ${lecturerId}`, initials: 'GV' }); return subject },
+  async removeLecturer(courseId: string, lecturerId: string) { const subject = MOCK_SUBJECTS.find(s => s.id === courseId); if (!subject) throw new Error('Không tìm thấy môn học'); subject.lecturers = subject.lecturers.filter(l => l.id !== lecturerId) },
 }
 
 export const courseRepository = selectRepository(runtimeConfig.dataSource, { mock: mockCourseRepository, api: apiCourseRepository })
