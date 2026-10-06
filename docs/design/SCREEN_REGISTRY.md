@@ -116,6 +116,25 @@ These are not routes. The 10 registry families cover all global states and the 1
 
 ## D. TBD / Unconfirmed Live Stitch Frames (3)
 
+## E. Lecturer visual alignment audit (2026-10-07)
+
+The approved Stitch project was opened directly at `stitch.withgoogle.com/projects/16463711942931628972`. The following matrix records the visual source used during this refinement. Screens without a dedicated node remain inferred and reuse the nearest interaction pattern; this is not a claim of exact parity.
+
+| Frontend route | Stitch screen | Node ID | Match | Remaining difference |
+|---|---|---|---|---|
+| `/lecturer` | Lecturer Dashboard | — | Inferred | Dashboard content is assembled from current product data; no dedicated frame. |
+| `/lecturer/subjects` | Assigned Subjects | — | Inferred | No dedicated frame; uses shared shell and card/table language. |
+| `/lecturer/subjects/:subjectId/questions` | Question Bank | `147e3e32d53e4e82aa56c450fe86e42b` | Partial | Existing API states and pagination remain feature-owned. |
+| `/lecturer/subjects/:subjectId/questions/new` | Question and Rubric Editor | `585c0cb02d4b4fbd9ca29cf0e25e3d92` | Partial | Backend-authoritative fields remain unchanged. |
+| `/lecturer/subjects/:subjectId/questions/generate` | AI Question Review | `c751422c2b524ab79b1ce88993b8c2ac` | Partial | Generation remains a draft-review workflow. |
+| `/lecturer/subjects/:subjectId/materials` | Learning Materials | `d016ceb171b34764945e37c7f6bc58fa` | Partial | Upload and processing states remain feature-owned. |
+| `/lecturer/exams` | Exam List | `49a51fbd8174487d98b6c2335dc8a458` | Partial | API status/editability rules remain unchanged. |
+| `/lecturer/exams/:examId/edit` | Exam Configuration | `6421e124837441fca29c2cffd5e09a46` | Partial | Scheduling and roster are separate routes by approved architecture. |
+| `/lecturer/exams/:examId/students` | Exam Configuration and Assignment | `6421e124837441fca29c2cffd5e09a46` | Partial | Roster capability limitations remain internal/documented. |
+| `/lecturer/exams/:examId/schedule` | Exam Configuration and Assignment | `6421e124837441fca29c2cffd5e09a46` | Inferred | No dedicated scheduling frame exists. |
+| `/lecturer/exams/:examId/questions` | Exam Configuration and Assignment | `6421e124837441fca29c2cffd5e09a46` | Inferred | No dedicated question-config frame exists. |
+| `/lecturer/exams/:examId/monitor` | Live Exam Monitoring | — | Inferred | No dedicated monitoring frame exists. |
+
 These nodes were visible in the live canvas after the 16-node baseline. They are audited as provenance but are not counted as approved exports.
 
 | ID | Screen | Source | Role | Feature | Type | Route | Stitch Reference | Status |

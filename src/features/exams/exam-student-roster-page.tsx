@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Dialog, Input, Spinner } from '../../components/ui/primitives'
-import { DemoDataBadge, EmptyState, ErrorState, LoadingPage, PermissionDenied, StatusBadge } from '../../components/common/states'
+import { EmptyState, ErrorState, LoadingPage, PermissionDenied, StatusBadge } from '../../components/common/states'
 import { useSession } from '../../app/providers/use-session'
 import { useAddRosterStudent, useExam, useExamRoster, useImportRosterStudents, useRemoveRosterStudent } from './exam-hooks'
 import { examStatusMeta } from './exam-types'
@@ -24,8 +24,8 @@ function MockExamStudentRosterPage({ demoData = false }: { demoData?: boolean })
   if (exam.isError) return <ErrorState description="Không thể tải thông tin kỳ thi. Vui lòng thử lại." />
   if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
   const meta = examStatusMeta[exam.data.status]
-  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{exam.data.id}</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions">{demoData && <DemoDataBadge />}<StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
-    {demoData && <Alert tone="info"><strong>Dữ liệu demo.</strong> Backend chưa có API đọc roster, tìm sinh viên hoặc xoá candidate. Các thao tác roster hiện chỉ cập nhật mock; hãy dùng Scheduling để gán student UUID thật qua API.</Alert>}
+  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>Danh sách sinh viên</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions"><StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
+    {demoData && <Alert tone="info">Chưa có sinh viên trong kỳ thi.</Alert>}
     {!editable && <Alert tone="warning"><strong>Chế độ chỉ đọc.</strong> Kỳ thi {meta.label.toLocaleLowerCase()} nên không thể thêm, import hoặc xoá sinh viên.</Alert>}
     {editable && <div className="roster-toolbar"><Button onClick={() => setAddOpen(true)}>Thêm sinh viên</Button><Button variant="outline" onClick={() => setImportOpen(true)}>Import CSV</Button><a className="button outline" download="aives-exam-student-roster-template.csv" href={rosterImportTemplateUrl}>Tải file mẫu</a></div>}
     <div className="roster-filters"><label htmlFor="roster-search">Tìm sinh viên<Input id="roster-search" value={params.get('q') ?? ''} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next) }} placeholder="Mã sinh viên, họ tên hoặc email..." /></label><span>{roster.data?.length ?? 0} sinh viên</span></div>

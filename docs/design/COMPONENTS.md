@@ -73,6 +73,8 @@ Location: `src/app/layouts/`
 
 The first 16 Stitch frames show at least three inconsistent navigation variants. Production must normalize them into the role layouts above instead of copying each frame shell.
 
+The current portal implements this normalization through `WorkspaceLayout`, shared `Button`/`Input`/`Dialog`/`Alert`/`Badge`/`Skeleton` primitives and feature-owned responsive styles. Lecturer and Admin therefore share the same shell, focus treatment, spacing tokens and mobile breakpoint while retaining feature-specific data behavior.
+
 ## C. Feature-Specific Components
 
 Feature components live under their owning `src/features/<feature>/` folder.
