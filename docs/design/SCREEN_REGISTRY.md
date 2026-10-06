@@ -38,6 +38,15 @@ No production AIVES component currently exists in `src/`; the current app is the
 | STITCH-15 | AI Question Review with Citation Drawer | Stitch | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions/generate` | Node `c751422c2b524ab79b1ce88993b8c2ac` | reference |
 | STITCH-16 | Learning Materials and AI Knowledge Sources | Stitch | Lecturer | Learning Materials | Route | `/lecturer/subjects/:subjectId/materials` | Node `d016ceb171b34764945e37c7f6bc58fa` | implemented |
 
+## B. API-Integrated Inferred Screens
+
+| ID | Screen | Source | Role | Feature | Route | Reference | Status |
+|---|---|---|---|---|---|---|---|
+| INF-14 | Exam Monitoring Dashboard | Inferred | Lecturer | Monitoring | `/lecturer/exams/:examId/monitor` | Existing design system; no dedicated Stitch frame | API integrated |
+| INF-15 | Student My Slot | Inferred | Student | Exams | `/student/exams/:examId` | Existing student layout; no dedicated Stitch frame | API integrated |
+
+Monitoring and Student My Slot use the existing design tokens and layouts. These are not claims of exact Stitch parity.
+
 ### Per-Screen Audit
 
 | ID | Reuse targets | New feature candidates | Missing states | Accessibility / responsive issues | Architecture concern |
