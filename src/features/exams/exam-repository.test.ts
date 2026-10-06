@@ -18,4 +18,16 @@ describe('exam repository', () => {
   it('supports an explicit deterministic error fixture', async () => {
     await expect(repository.list({ q: '__ERROR__', subject: '', status: '', page: 1, pageSize: 5 })).rejects.toThrow('Exam repository unavailable')
   })
+  it('creates a draft and updates only the selected record', async () => {
+    const created = await repository.create({ title: 'Kỳ thi mới', subjectId: 'oop-java', scheduledAt: '2027-01-01T02:00:00.000Z', durationMinutes: 15, mainQuestionCount: 3, maxFollowUpCount: 2 })
+    expect(created.status).toBe('DRAFT')
+    const beforeOther = await repository.get('EXAM-2024-CORE-K21')
+    const updated = await repository.update(created.id, { ...created, title: 'Kỳ thi đã sửa' })
+    expect(updated.title).toBe('Kỳ thi đã sửa')
+    expect((await repository.get('EXAM-2024-CORE-K21'))).toEqual(beforeOther)
+  })
+  it('rejects edits for non-editable statuses', async () => {
+    const completed = await repository.get('EXAM-2024-CORE-K21')
+    await expect(repository.update('EXAM-2024-CORE-K21', { ...completed!, title: 'Không được sửa' })).rejects.toThrow('not editable')
+  })
 })

@@ -1,4 +1,4 @@
-import type { ExamListRequest, ExamListResponse, ExamSession, ExamStatus } from './exam-types'
+import type { ExamDraft, ExamListRequest, ExamListResponse, ExamSession, ExamStatus } from './exam-types'
 
 const seed: ExamSession[] = [
   { id: 'EXAM-2024-OOP-01', title: 'Vấn đáp OOP Java - Đợt 1', subjectId: 'oop-java', subjectCode: 'INT2204', subjectName: 'Lập trình Java', scheduledAt: '2024-10-15T08:00:00+07:00', durationMinutes: 15, studentCount: 45, mainQuestionCount: 5, maxFollowUpCount: 2, status: 'IN_PROGRESS' },
@@ -14,7 +14,7 @@ const seed: ExamSession[] = [
   { id: 'EXAM-2025-UX-01', title: 'Vấn đáp Thiết kế tương tác', subjectId: 'ux', subjectCode: 'INT2260', subjectName: 'Thiết kế tương tác', scheduledAt: '2025-08-12T08:00:00+07:00', durationMinutes: 12, studentCount: 30, mainQuestionCount: 4, maxFollowUpCount: 2, status: 'CANCELLED' },
 ]
 
-export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>> }
+export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>> }
 
 export function createExamRepository(records: ExamSession[] = seed): ExamRepository {
   return {
@@ -25,6 +25,30 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
       const totalPages = Math.max(1, Math.ceil(filtered.length / request.pageSize))
       const page = Math.min(Math.max(1, request.page), totalPages)
       return { items: filtered.slice((page - 1) * request.pageSize, page * request.pageSize), total: filtered.length, page, pageSize: request.pageSize, totalPages }
+    },
+    async get(examId) { if (examId === '__ERROR__') throw new Error('Exam repository unavailable'); return records.find((exam) => exam.id === examId) },
+    async create(draft) {
+      if (draft.title === '__ERROR__') throw new Error('Exam create failed')
+      const subject = records.find((exam) => exam.subjectId === draft.subjectId)
+      if (!subject) throw new Error('Subject is not available to this lecturer')
+      let sequence = records.length + 1
+      let id = `EXAM-MOCK-${String(sequence).padStart(3, '0')}`
+      while (records.some((exam) => exam.id === id)) { sequence += 1; id = `EXAM-MOCK-${String(sequence).padStart(3, '0')}` }
+      const exam: ExamSession = { id, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, studentCount: 0, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount, status: 'DRAFT' }
+      records.push(exam)
+      return exam
+    },
+    async update(examId, draft) {
+      if (draft.title === '__ERROR__') throw new Error('Exam update failed')
+      const index = records.findIndex((exam) => exam.id === examId)
+      if (index < 0) throw new Error('Exam not found')
+      const current = records[index]
+      if (current.status !== 'DRAFT' && current.status !== 'SCHEDULED') throw new Error('Exam is not editable')
+      const subject = records.find((exam) => exam.subjectId === draft.subjectId)
+      if (!subject) throw new Error('Subject is not available to this lecturer')
+      const updated: ExamSession = { ...current, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount }
+      records[index] = updated
+      return updated
     },
     async subjects() { return [...new Map(records.map((exam) => [exam.subjectId, { id: exam.subjectId, code: exam.subjectCode, name: exam.subjectName }])).values()] },
     async summary() { return records.reduce((counts, exam) => ({ ...counts, [exam.status]: counts[exam.status] + 1 }), { DRAFT: 0, SCHEDULED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 }) },
