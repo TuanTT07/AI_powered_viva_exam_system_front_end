@@ -18,6 +18,10 @@ Backend DTO
 → Server State Cache
 → Feature View Model
 → UI
+
+## API/mock composition
+
+Feature repositories remain the boundary between pages and data sources. They select either the existing mock repository or a future API repository using the shared runtime `dataSource` and `selectRepository` helper. Components never read `import.meta.env` or call the API client directly. API failures propagate to feature error states; they never fall back to mock data. TanStack Query owns request caching and targeted invalidation, while logout clears the entire query cache.
 ```
 
 ## AI Question Generation
