@@ -10,6 +10,7 @@ export class AuthenticationError extends Error {
 export interface AuthAdapter {
   getSession(): Promise<AuthenticatedUser | null>
   signIn(credentials: LoginCredentials): Promise<AuthenticatedUser>
+  signOut(): Promise<void>
 }
 
 const demoPassword = 'AivesDemo!2026'
@@ -26,11 +27,13 @@ export const developmentAuthAdapter: AuthAdapter = {
     if (!user || password !== demoPassword) throw new AuthenticationError('Email hoặc mật khẩu không chính xác.')
     return user
   },
+  async signOut() {},
 }
 
 export const unavailableAuthAdapter: AuthAdapter = {
   async getSession() { return null },
   async signIn() { throw new AuthenticationError('Đăng nhập chưa được cấu hình cho môi trường này.') },
+  async signOut() {},
 }
 
 export const defaultAuthAdapter = (): AuthAdapter => import.meta.env.DEV ? developmentAuthAdapter : unavailableAuthAdapter

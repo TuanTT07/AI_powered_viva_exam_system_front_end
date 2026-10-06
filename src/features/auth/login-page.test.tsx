@@ -8,7 +8,7 @@ import { authorizedReturnPath } from './auth-navigation'
 import { LoginPage } from './login-page'
 
 const lecturer: AuthenticatedUser = { id: 'lecturer-1', displayName: 'Lecturer', roles: ['lecturer'] }
-const signedOutAdapter = (signIn: AuthAdapter['signIn']): AuthAdapter => ({ getSession: async () => null, signIn })
+const signedOutAdapter = (signIn: AuthAdapter['signIn']): AuthAdapter => ({ getSession: async () => null, signIn, signOut: async () => {} })
 
 function renderLogin(adapter: AuthAdapter, from?: unknown) {
   return render(<SessionProvider adapter={adapter}><MemoryRouter initialEntries={[{ pathname: '/login', state: from ? { from } : undefined }]}><Routes><Route path="/login" element={<LoginPage />} /><Route path="/lecturer/*" element={<p>Lecturer destination</p>} /><Route path="/student/*" element={<p>Student destination</p>} /><Route path="/admin/*" element={<p>Admin destination</p>} /></Routes></MemoryRouter></SessionProvider>)
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
 
   it('shows an initialization state before the session is resolved', async () => {
     let complete: ((user: AuthenticatedUser | null) => void) | undefined
-    const adapter: AuthAdapter = { getSession: () => new Promise((resolve: (user: AuthenticatedUser | null) => void) => { complete = resolve }), signIn: vi.fn() }
+    const adapter: AuthAdapter = { getSession: () => new Promise((resolve: (user: AuthenticatedUser | null) => void) => { complete = resolve }), signIn: vi.fn(), signOut: vi.fn() }
     renderLogin(adapter)
     expect(screen.getAllByLabelText('Đang kiểm tra phiên đăng nhập')).toHaveLength(2)
     complete?.(null)

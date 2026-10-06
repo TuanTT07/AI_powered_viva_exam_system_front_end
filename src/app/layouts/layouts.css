@@ -1,0 +1,2 @@
+.workspace-header>div{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}.workspace-user{color:var(--secondary);font-size:.78rem}.workspace-logout{min-height:34px;padding-inline:12px;font-size:.8rem}
+@media(max-width:760px){.workspace-header{align-items:stretch}.workspace-header>div{justify-content:space-between}.workspace-logout{width:100%}}
