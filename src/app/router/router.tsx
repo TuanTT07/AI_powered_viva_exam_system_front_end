@@ -6,6 +6,7 @@ import { UserManagementPage } from '../../features/administration/pages/UserMana
 import { SubjectManagementPage } from '../../features/administration/pages/SubjectManagementPage'
 import { SettingsPage } from '../../features/administration/pages/SettingsPage'
 import { AdminDashboardPage } from '../../features/administration/pages/AdminDashboardPage'
+import { StudentDashboard } from '../../features/dashboard/pages/StudentDashboard'
 import type { AppRole } from '../../types/auth'
 import { QuestionBankPage } from '../../features/question-bank/question-bank-page'
 import { QuestionEditorPage } from '../../features/question-bank/question-editor-page'
@@ -15,6 +16,8 @@ import { VivaInterviewRoom } from '../../features/viva-session/pages/VivaIntervi
 import { ExamSuccessPage } from '../../features/viva-session/pages/ExamSuccessPage'
 import { AIQuestionGenerationPage } from '../../features/ai-question-generation/ai-question-generation-page'
 import { ExamListPage } from '../../features/exams/exam-list-page'
+import { StudentExamListPage } from '../../features/exams/student-exam-list-page'
+import { GradingWorkspacePage } from '../../features/grading/grading-workspace-page'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -41,6 +44,8 @@ const adminRoutes = admin.map(([path, title, feature, description]) => {
 })
 
 const studentRoutes = student.map(([path, title, feature, description]) => {
+  if (path === '') return { index: true, element: <StudentDashboard /> }
+  if (path === 'exams') return { path, element: <StudentExamListPage /> }
   if (path === 'exams/:examId/completed') return { path, element: <ExamSuccessPage /> }
   return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
 })
@@ -50,7 +55,7 @@ export const router = createBrowserRouter([{
     { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
         {
       element: <RequireAuth />, children: [
-        { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions/generate', element: <AIQuestionGenerationPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, { path: 'exams', element: <ExamListPage /> }, ...pages('lecturer', lecturer.filter(([path]) => path !== 'exams'))] }] },
+        { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions/generate', element: <AIQuestionGenerationPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, { path: 'exams', element: <ExamListPage /> }, { path: 'exams/:examId/attempts/:attemptId', element: <GradingWorkspacePage /> }, ...pages('lecturer', lecturer.filter(([path]) => path !== 'exams' && path !== 'exams/:examId/attempts/:attemptId'))] }] },
         { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: studentRoutes }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <VivaInterviewRoom /> }] }] },
         { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: adminRoutes }] },
       ]

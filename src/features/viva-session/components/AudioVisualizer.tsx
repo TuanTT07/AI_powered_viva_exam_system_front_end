@@ -6,11 +6,11 @@ interface AudioVisualizerProps {
 }
 
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ isActive, status }) => {
-  const [bars, setBars] = useState<number[]>(Array(30).fill(20));
+  const [bars, setBars] = useState<number[]>(Array(40).fill(10));
 
   useEffect(() => {
     if (!isActive) {
-      setBars(Array(30).fill(20));
+      setBars(Array(40).fill(10));
       return;
     }
 
@@ -21,19 +21,25 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ isActive, stat
     return () => clearInterval(interval);
   }, [isActive]);
 
-  const getColorClass = () => {
-    if (status === 'ai_speaking') return 'bg-blue-400';
-    if (status === 'student_speaking') return 'bg-green-400';
-    return 'bg-gray-500';
+  const getColor = () => {
+    if (status === 'ai_speaking') return '#60a5fa'; // blue
+    if (status === 'student_speaking') return '#4ade80'; // green
+    return '#64748b'; // gray
   };
 
   return (
-    <div className="flex items-center justify-center gap-1 h-32 w-full bg-slate-900 rounded-xl p-4 overflow-hidden border border-slate-700">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '120px', width: '100%', background: 'var(--navy-dark)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
       {bars.map((height, i) => (
         <div
           key={i}
-          className={`w-2 rounded-full transition-all duration-75 ${getColorClass()}`}
-          style={{ height: `${isActive ? height : 20}%` }}
+          style={{
+            width: '6px',
+            borderRadius: '4px',
+            background: getColor(),
+            transition: 'height 75ms ease',
+            height: `${isActive ? height : 10}%`,
+            boxShadow: isActive ? `0 0 10px ${getColor()}` : 'none'
+          }}
         />
       ))}
     </div>

@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Badge } from '../../../components/ui/primitives';
+import { useSession } from '../../../app/providers/use-session';
 import { AudioVisualizer } from '../components/AudioVisualizer';
 import { TranscriptMessage } from '../components/TranscriptMessage';
-import { useSession } from '../../../app/providers/use-session';
 
 type SessionPhase = 'AI_SPEAKING' | 'WAITING_FOR_ANSWER' | 'STUDENT_SPEAKING';
 
@@ -123,15 +122,14 @@ export function VivaInterviewRoom() {
   };
 
   const handleEndExam = () => {
-    // Navigate to completion receipt page
     navigate(`/student/exams/${examId}/completed`);
   };
 
   const getPhaseIndicator = () => {
     switch (phase) {
-      case 'AI_SPEAKING': return <Badge tone="ai">AI Đang nói</Badge>;
-      case 'WAITING_FOR_ANSWER': return <Badge tone="warning">Tới lượt bạn</Badge>;
-      case 'STUDENT_SPEAKING': return <Badge tone="success">Đang ghi âm</Badge>;
+      case 'AI_SPEAKING': return <span className="badge warning" style={{ background: '#bfdbfe', color: '#1e3a8a', border: 'none' }}>🤖 AI Đang nói</span>;
+      case 'WAITING_FOR_ANSWER': return <span className="badge warning">⏳ Tới lượt bạn</span>;
+      case 'STUDENT_SPEAKING': return <span className="badge success" style={{ animation: 'pulse 2s infinite', background: '#dcfce7', color: '#166534', border: 'none' }}>🎙️ Đang ghi âm</span>;
     }
   };
 
@@ -143,98 +141,106 @@ export function VivaInterviewRoom() {
   }, [transcript, currentAnswer]);
 
   return (
-    <div className="flex flex-col h-full min-h-[calc(100vh-64px)] bg-gray-50">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(100vh - 64px)', background: 'var(--bg)' }}>
       {/* 1. Exam Header Info */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Phòng thi Vấn đáp Trực tiếp</h1>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-4">
-            <span>Thí sinh: <span className="font-semibold text-slate-700">{session.user?.displayName || 'Sinh viên'}</span></span>
-            <span className="text-gray-300">•</span> 
-            <span>Mã đề: <span className="font-mono">EXAM-{examId || 'TEST'}</span></span>
-            <span className="text-gray-300">•</span> 
-            <span className="font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+          <h1 style={{ fontSize: '1.4rem', fontFamily: 'var(--display)', margin: '0 0 4px', color: 'var(--navy-dark)' }}>Phòng thi Vấn đáp Trực tiếp</h1>
+          <p style={{ fontSize: '0.85rem', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <span>Thí sinh: <span style={{ fontWeight: 700, color: 'var(--text)' }}>{session.user?.displayName || 'Sinh viên'}</span></span>
+            <span style={{ color: 'var(--border)' }}>•</span> 
+            <span>Mã đề: <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, background: 'var(--muted)', padding: '2px 6px', borderRadius: '4px' }}>EXAM-{examId || 'TEST'}</span></span>
+            <span style={{ color: 'var(--border)' }}>•</span> 
+            <span style={{ fontWeight: 600, color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '12px' }}>
               Hỏi thêm: {followUpCount}/{maxFollowUps} lần
             </span>
           </p>
         </div>
         
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Thời gian còn lại</span>
-            <span className={`text-2xl font-mono font-bold ${timeLeft < 60 ? 'text-red-600 animate-pulse' : 'text-slate-700'}`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', textTransform: 'uppercase', fontWeight: 700 }}>Thời gian còn lại</span>
+            <span style={{ fontSize: '1.8rem', fontFamily: 'var(--mono)', fontWeight: 700, color: timeLeft < 60 ? 'var(--danger)' : 'var(--navy-dark)', animation: timeLeft < 60 ? 'pulse 1s infinite' : 'none' }}>
               {formatTime(timeLeft)}
             </span>
           </div>
-          <Button variant="outline" onClick={handleEndExam} className="border-red-200 text-red-600 hover:bg-red-50">
+          <button className="button outline" onClick={handleEndExam} style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
             Nộp bài sớm
-          </Button>
+          </button>
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-6 gap-6">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '24px', gap: '24px' }}>
         
         {/* 2. Audio Visualizer & Interaction Block */}
-        <section className="bg-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-          <div className="p-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-              <span className="text-white font-medium">Bản ghi âm trực tiếp</span>
+        <section className="panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderColor: 'var(--navy-dark)', boxShadow: '0 8px 24px rgba(8, 18, 52, 0.08)' }}>
+          <div style={{ padding: '16px 20px', background: 'var(--navy-dark)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--danger)', animation: 'pulse 1.5s infinite' }}></div>
+              <span style={{ color: '#fff', fontWeight: 600 }}>Bản ghi âm trực tiếp</span>
             </div>
             {getPhaseIndicator()}
           </div>
           
-          <div className="p-8 flex flex-col items-center gap-8">
+          <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px', background: 'var(--navy)' }}>
             <AudioVisualizer 
               isActive={phase === 'AI_SPEAKING' || phase === 'STUDENT_SPEAKING'} 
               status={phase === 'AI_SPEAKING' ? 'ai_speaking' : phase === 'STUDENT_SPEAKING' ? 'student_speaking' : 'idle'}
             />
             
-            <div className="flex gap-4">
-              <Button 
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button 
+                className="button"
                 onClick={handleStartSpeaking}
                 disabled={phase === 'STUDENT_SPEAKING'}
-                className={`px-8 py-4 text-lg font-medium rounded-xl transition-all ${
-                  phase === 'STUDENT_SPEAKING' 
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-                }`}
+                style={{ 
+                  padding: '16px 32px', fontSize: '1.1rem', minHeight: '56px', borderRadius: '28px',
+                  background: phase === 'STUDENT_SPEAKING' ? 'var(--navy-dark)' : '#2563eb',
+                  color: phase === 'STUDENT_SPEAKING' ? 'var(--secondary)' : '#fff',
+                  border: 'none',
+                  cursor: phase === 'STUDENT_SPEAKING' ? 'not-allowed' : 'pointer',
+                  boxShadow: phase === 'STUDENT_SPEAKING' ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.3)'
+                }}
               >
                 🎤 Bắt đầu trả lời
-              </Button>
-              <Button 
+              </button>
+              <button 
+                className="button"
                 onClick={handleStopSpeaking}
                 disabled={phase !== 'STUDENT_SPEAKING'}
-                className={`px-8 py-4 text-lg font-medium rounded-xl transition-all ${
-                  phase !== 'STUDENT_SPEAKING' 
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
-                    : 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20'
-                }`}
+                style={{ 
+                  padding: '16px 32px', fontSize: '1.1rem', minHeight: '56px', borderRadius: '28px',
+                  background: phase !== 'STUDENT_SPEAKING' ? 'var(--navy-dark)' : '#16a34a',
+                  color: phase !== 'STUDENT_SPEAKING' ? 'var(--secondary)' : '#fff',
+                  border: 'none',
+                  cursor: phase !== 'STUDENT_SPEAKING' ? 'not-allowed' : 'pointer',
+                  boxShadow: phase !== 'STUDENT_SPEAKING' ? 'none' : '0 4px 12px rgba(22, 163, 74, 0.3)'
+                }}
               >
                 ✅ Hoàn tất câu trả lời
-              </Button>
+              </button>
             </div>
           </div>
         </section>
 
         {/* 3. Real-time Transcript Chat */}
-        <section className="flex-1 bg-white rounded-2xl border shadow-sm p-6 flex flex-col relative">
-          <h2 className="text-lg font-semibold border-b pb-4 mb-4 flex items-center justify-between text-slate-800">
+        <section className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, borderBottom: '1px solid var(--border)', paddingBottom: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--navy-dark)', fontFamily: 'var(--display)' }}>
             <span>Biên bản hội thoại (Transcript)</span>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                className="button outline"
                 onClick={handleSimulateFollowUp}
                 disabled={followUpCount >= maxFollowUps || phase === 'STUDENT_SPEAKING'}
-                className="text-xs py-1 px-3 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                style={{ fontSize: '0.75rem', padding: '0 12px', minHeight: '28px', borderColor: '#fcd34d', color: '#b45309', background: '#fffbeb' }}
               >
                 + Mô phỏng Hỏi Xoáy (Dev)
-              </Button>
-              <Badge tone="info">Live STT</Badge>
+              </button>
+              <span className="badge info" style={{ background: '#e0f2fe', color: '#0369a1', border: 'none' }}>Live STT</span>
             </div>
           </h2>
           
-          <div className="flex-1 overflow-y-auto pb-4 space-y-2">
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '16px' }}>
             {transcript.map((msg) => (
               <TranscriptMessage 
                 key={msg.id} 
@@ -257,7 +263,7 @@ export function VivaInterviewRoom() {
             )}
             
             {/* Scroll anchor */}
-            <div className="h-4" ref={scrollRef}></div>
+            <div style={{ height: '16px' }} ref={scrollRef}></div>
           </div>
         </section>
         
