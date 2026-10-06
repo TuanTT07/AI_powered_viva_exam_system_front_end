@@ -1,6 +1,8 @@
 import type { ExamDraft, ExamListRequest, ExamListResponse, ExamSession, ExamStatus } from './exam-types'
 import type { RosterDraft, RosterStudent } from './roster-types'
 import { rosterEditableStatuses } from './roster-types'
+import type { ExamSchedule, ScheduleDraft } from './schedule-types'
+import { validateSchedule } from './schedule-validation'
 
 const seed: ExamSession[] = [
   { id: 'EXAM-2024-OOP-01', title: 'Vấn đáp OOP Java - Đợt 1', subjectId: 'oop-java', subjectCode: 'INT2204', subjectName: 'Lập trình Java', scheduledAt: '2024-10-15T08:00:00+07:00', durationMinutes: 15, studentCount: 45, mainQuestionCount: 5, maxFollowUpCount: 2, status: 'IN_PROGRESS' },
@@ -16,10 +18,11 @@ const seed: ExamSession[] = [
   { id: 'EXAM-2025-UX-01', title: 'Vấn đáp Thiết kế tương tác', subjectId: 'ux', subjectCode: 'INT2260', subjectName: 'Thiết kế tương tác', scheduledAt: '2025-08-12T08:00:00+07:00', durationMinutes: 12, studentCount: 30, mainQuestionCount: 4, maxFollowUpCount: 2, status: 'CANCELLED' },
 ]
 
-export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void> }
+export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule> }
 
 export function createExamRepository(records: ExamSession[] = seed): ExamRepository {
   const rosters = new Map<string, RosterStudent[]>(records.map((exam) => [exam.id, []]))
+  const schedules = new Map<string, ExamSchedule>()
   rosters.set('EXAM-2025-DB-01', [
     { id: 'ROSTER-EXAM-2025-DB-01-001', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025001', fullName: 'Trần Minh Anh', email: 'sv2025001@example.edu.vn' },
     { id: 'ROSTER-EXAM-2025-DB-01-002', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025002', fullName: 'Lê Hoàng Nam', email: 'sv2025002@example.edu.vn' },
@@ -68,6 +71,8 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
     async addRosterStudent(examId, draft) { const exam = ensureEditable(examId); if (draft.studentCode === '__ERROR__') throw new Error('Không thể thêm sinh viên'); ensureUnique(examId, draft); const current = rosters.get(examId) ?? []; const student: RosterStudent = { ...draft, id: `ROSTER-${exam.id}-${String(current.length + 1).padStart(3, '0')}`, examId, addedAt: '2026-10-06T00:00:00+07:00' }; current.push(student); rosters.set(examId, current); adjustCount(examId, 1); return student },
     async importRosterStudents(examId, drafts) { ensureEditable(examId); const imported: RosterStudent[] = []; for (const draft of drafts) { const student = await this.addRosterStudent(examId, draft); imported.push(student) } return imported },
     async removeRosterStudent(examId, rosterId) { ensureEditable(examId); const current = rosters.get(examId) ?? []; const index = current.findIndex((student) => student.id === rosterId); if (index < 0) throw new Error('Sinh viên không tồn tại trong kỳ thi'); current.splice(index, 1); adjustCount(examId, -1) },
+    async getSchedule(examId) { if (examId === '__ERROR__') throw new Error('Schedule repository unavailable'); if (!records.some((exam) => exam.id === examId)) throw new Error('Exam not found'); const schedule = schedules.get(examId); return schedule ? { ...schedule, slots: schedule.slots.map((slot) => ({ ...slot })) } : undefined },
+    async saveSchedule(examId, draft) { const exam = ensureEditable(examId); if (draft.breakMinutes === 13) throw new Error('Schedule save failed'); const roster = rosters.get(examId) ?? []; const issues = validateSchedule(exam, roster, draft); if (issues.length) throw new Error(issues[0].message); const schedule: ExamSchedule = { examId, breakMinutes: draft.breakMinutes, strategy: draft.strategy, slots: draft.slots.map((slot) => ({ ...slot })), updatedAt: '2026-10-06T00:00:00+07:00' }; schedules.set(examId, schedule); return { ...schedule, slots: schedule.slots.map((slot) => ({ ...slot })) } },
   }
 }
 

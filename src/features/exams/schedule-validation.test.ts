@@ -1,0 +1,5 @@
+import { describe, expect, it } from 'vitest'
+import { validateSchedule } from './schedule-validation'
+import type { ExamSession } from './exam-types'
+const exam: ExamSession = { id: 'e1', title: 'Exam', subjectId: 's', subjectCode: 'S', subjectName: 'Subject', scheduledAt: '2027-01-01T01:00:00.000Z', durationMinutes: 15, studentCount: 1, mainQuestionCount: 1, maxFollowUpCount: 0, status: 'DRAFT' }
+describe('schedule validation', () => { it('rejects invalid break and duplicate assignments', () => { const slot = { id: 'slot', examId: 'e1', startAt: '2027-01-01T01:00:00.000Z', endAt: '2027-01-01T01:15:00.000Z', rosterStudentId: 'r1' }; const issues = validateSchedule(exam, [{ id: 'r1', examId: 'e1', studentCode: 'SV1', fullName: 'A', email: 'a@example.com' }], { breakMinutes: 31, strategy: 'ROSTER_ORDER', slots: [slot, { ...slot, id: 'slot2', startAt: '2027-01-01T01:10:00.000Z' }] }); expect(issues.map((issue) => issue.code)).toEqual(expect.arrayContaining(['break', 'overlap', 'assignment'])) }) })

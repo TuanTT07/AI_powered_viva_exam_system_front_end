@@ -9,6 +9,7 @@ import { parseRosterFile, rosterImportTemplateUrl } from './roster-import-parser
 import { normalizeRosterDraft, validateRosterDraft } from './roster-validation'
 import type { RosterDraft, RosterImportPreview, RosterStudent } from './roster-types'
 import './exam-student-roster.css'
+import { examRoutes } from './exam-routes'
 
 export function ExamStudentRosterPage() {
   const { examId = '' } = useParams(); const { session } = useSession(); const [params, setParams] = useSearchParams(); const [addOpen, setAddOpen] = useState(false); const [importOpen, setImportOpen] = useState(false); const [remove, setRemove] = useState<RosterStudent | null>(null)
@@ -18,7 +19,7 @@ export function ExamStudentRosterPage() {
   if (exam.isError) return <ErrorState description="Không thể tải thông tin kỳ thi. Vui lòng thử lại." />
   if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
   const meta = examStatusMeta[exam.data.status]
-  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to="/lecturer/exams">Kỳ thi</Link><span>/</span><span>{exam.data.id}</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions"><StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={`/lecturer/exams/${examId}`}>Quay lại kỳ thi</Link></div></header>
+  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{exam.data.id}</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions"><StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
     {!editable && <Alert tone="warning"><strong>Chế độ chỉ đọc.</strong> Kỳ thi {meta.label.toLocaleLowerCase()} nên không thể thêm, import hoặc xoá sinh viên.</Alert>}
     {editable && <div className="roster-toolbar"><Button onClick={() => setAddOpen(true)}>Thêm sinh viên</Button><Button variant="outline" onClick={() => setImportOpen(true)}>Import CSV</Button><a className="button outline" download="aives-exam-student-roster-template.csv" href={rosterImportTemplateUrl}>Tải file mẫu</a></div>}
     <div className="roster-filters"><label htmlFor="roster-search">Tìm sinh viên<Input id="roster-search" value={params.get('q') ?? ''} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next) }} placeholder="Mã sinh viên, họ tên hoặc email..." /></label><span>{roster.data?.length ?? 0} sinh viên</span></div>
