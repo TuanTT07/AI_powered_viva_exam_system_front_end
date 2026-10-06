@@ -121,6 +121,20 @@ The frontend scheduling integration uses only these confirmed endpoints:
 
 The current backend does not expose a lecturer student-search/roster-read endpoint, candidate delete endpoint, or CSV import endpoint. In API mode the roster screen therefore explains the limitation and Scheduling accepts only real backend UUIDs. API failures never fall back to mock data. Authentication is provided by the centralized API client/token boundary.
 
+### Functional Group 2 capability matrix
+
+| Capability | Source in API mode | Endpoint |
+|---|---|---|
+| Candidate assignment | API | `POST /api/v1/exams/{examId}/candidates` |
+| Candidate listing | Mock, labelled `Dữ liệu demo` | No verified lecturer roster endpoint |
+| Candidate removal | Mock, labelled `Dữ liệu demo` | No verified delete endpoint |
+| CSV roster import | Mock, labelled `Dữ liệu demo` | No verified import endpoint |
+| Schedule loading | API | `GET /api/v1/exams/{examId}/schedule` |
+| Automatic scheduling | API | `POST /api/v1/exams/{examId}/schedule/auto` |
+| Manual rescheduling | API | `PUT /api/v1/exams/{examId}/schedule/reschedule` |
+
+Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
+
 ## Date/Time
 
 Backend should provide timezone-safe timestamps.

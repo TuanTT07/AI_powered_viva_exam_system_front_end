@@ -5,8 +5,8 @@ import { DEFAULT_API_TIMEOUT_MS, normalizeApiBaseUrl, parseRuntimeConfig } from 
 import { selectRepository } from './repository-selection'
 
 describe('runtime configuration', () => {
-  it('defaults to mock mode and the documented timeout', () => { expect(parseRuntimeConfig({})).toEqual({ apiBaseUrl: '', apiTimeoutMs: DEFAULT_API_TIMEOUT_MS, dataSource: 'mock' }) })
-  it('parses api mode and valid timeout', () => { expect(parseRuntimeConfig({ VITE_DATA_SOURCE: 'api', VITE_API_BASE_URL: 'https://api.example.test///', VITE_API_TIMEOUT_MS: '3000' })).toEqual({ apiBaseUrl: 'https://api.example.test', apiTimeoutMs: 3000, dataSource: 'api' }) })
+  it('defaults to mock mode and the documented timeout', () => { expect(parseRuntimeConfig({})).toEqual({ apiBaseUrl: '', apiTimeoutMs: DEFAULT_API_TIMEOUT_MS, dataSource: 'mock', demoCourseId: '', demoExamId: '', demoCandidateIds: [] }) })
+  it('parses api mode, valid timeout and demo IDs', () => { expect(parseRuntimeConfig({ VITE_DATA_SOURCE: 'api', VITE_API_BASE_URL: 'https://api.example.test///', VITE_API_TIMEOUT_MS: '3000', VITE_DEMO_COURSE_ID: ' course-1 ', VITE_DEMO_EXAM_ID: 'exam-1', VITE_DEMO_CANDIDATE_IDS: 'student-1, student-2' })).toEqual({ apiBaseUrl: 'https://api.example.test', apiTimeoutMs: 3000, dataSource: 'api', demoCourseId: 'course-1', demoExamId: 'exam-1', demoCandidateIds: ['student-1', 'student-2'] }) })
   it('falls back safely for invalid mode and timeout', () => { expect(parseRuntimeConfig({ VITE_DATA_SOURCE: 'remote', VITE_API_TIMEOUT_MS: '-1' })).toMatchObject({ dataSource: 'mock', apiTimeoutMs: DEFAULT_API_TIMEOUT_MS }) })
   it('normalizes empty and trailing-slash base URLs', () => { expect(normalizeApiBaseUrl(undefined)).toBe(''); expect(normalizeApiBaseUrl(' https://api.test/// ')).toBe('https://api.test') })
 })
