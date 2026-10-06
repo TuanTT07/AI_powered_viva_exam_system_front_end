@@ -1,1 +1,20 @@
 .lecturer-page{display:grid;gap:24px}.lecturer-page h1,.lecturer-page h2,.lecturer-page p{margin-top:0}.lecturer-page h1{font-size:clamp(2.2rem,4vw,3.7rem);line-height:1.05}.lecturer-eyebrow{color:var(--navy);font:500 .72rem var(--mono);letter-spacing:.1em}.lecturer-header{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}.lecturer-header p{max-width:680px;color:var(--secondary)}.lecturer-actions,.subject-actions,.subject-links{display:flex;flex-wrap:wrap;gap:10px}.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric-card,.subject-card,.dashboard-section{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:20px}.metric-card span,.subject-card small,.subject-meta dt{display:block;color:var(--secondary);font-size:.78rem}.metric-card strong{display:block;margin-top:8px;font-size:2rem;color:var(--navy)}.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:18px}.subject-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.subject-card h2{margin:8px 0;font-size:1.2rem}.subject-card h2 a{color:var(--navy)}.subject-card small{margin-bottom:8px}.subject-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.subject-meta dd{margin:4px 0 0;font-weight:700}.subject-search{display:flex;gap:12px;align-items:end;max-width:680px}.subject-search label{flex:1}.subject-search input{width:100%}.link-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.link-list a{color:var(--navy);font-weight:700}.muted{color:var(--secondary)}.demo-note{font-size:.85rem;color:var(--secondary)}.overview-layout{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:18px}.overview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.overview-card{border:1px solid var(--border);padding:14px;border-radius:6px}.overview-card strong{display:block;font-size:1.5rem;color:var(--navy);margin-top:5px}@media(max-width:800px){.metric-grid,.subject-grid,.dashboard-grid,.overview-layout{grid-template-columns:1fr}.overview-cards{grid-template-columns:repeat(2,1fr)}.lecturer-header{display:block}.subject-search{display:block}.subject-search button{margin-top:10px}}@media(max-width:480px){.metric-grid,.overview-cards{grid-template-columns:1fr}.subject-meta{grid-template-columns:repeat(2,1fr)}}
+/* Match the Stitch lecturer frames: editorial headings, hairline dividers and flat cards. */
+.lecturer-page{gap:32px}
+.lecturer-page h1{font-size:clamp(2.6rem,5vw,4.5rem);line-height:.98}
+.lecturer-header{gap:36px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.lecturer-header p{font-size:1.05rem}
+.metric-grid{gap:0;border-block:1px solid var(--border)}
+.metric-card{padding:20px 24px;border-right:1px solid var(--border);border-radius:0}
+.metric-card:last-child{border-right:0}
+.metric-card span,.subject-card small,.subject-meta dt{font-family:var(--mono);font-size:.74rem;letter-spacing:.03em;text-transform:uppercase}
+.metric-card strong{margin-top:12px;font:2.5rem var(--display);color:var(--navy)}
+.dashboard-grid{gap:24px}
+.metric-card,.subject-card,.dashboard-section{border-radius:3px;padding:24px}
+.dashboard-section{background:transparent}
+.subject-card{background:var(--surface)}
+.subject-card h2{font-size:1.45rem}
+.link-list li{padding:12px 0;border-bottom:1px solid var(--border)}
+.overview-card{border-radius:3px;background:var(--surface);padding:18px}
+.overview-card strong{font:1.8rem var(--display);color:var(--navy)}
+@media(max-width:800px){.metric-card{border-right:0;border-bottom:1px solid var(--border)}.metric-card:last-child{border-bottom:0}}
