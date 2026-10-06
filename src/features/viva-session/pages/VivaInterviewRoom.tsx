@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Badge } from '../../../components/ui/primitives';
 import { AudioVisualizer } from '../components/AudioVisualizer';
@@ -16,17 +16,21 @@ export function VivaInterviewRoom() {
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   
   // Mock data for transcript
-  const [transcript] = useState([
+  const [transcript, setTranscript] = useState([
     {
       id: '1',
       role: 'ai' as const,
       text: 'Chào bạn. Câu hỏi đầu tiên dành cho bạn: Bạn hãy trình bày về mô hình MVC (Model-View-Controller) trong phát triển phần mềm và cho ví dụ thực tế.',
       timestamp: '09:00',
-      isPartial: false
+      isPartial: false,
+      isFollowUp: false
     }
   ]);
   
   const [currentAnswer, setCurrentAnswer] = useState('');
+  const [followUpCount, setFollowUpCount] = useState(0);
+  const maxFollowUps = 2;
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   // Timer effect
   useEffect(() => {
@@ -76,7 +80,37 @@ export function VivaInterviewRoom() {
 
   const handleStopSpeaking = () => {
     setPhase('WAITING_FOR_ANSWER');
-    // In reality, this would transition to AI_PROCESSING then AI_SPEAKING (Follow up)
+    // Save student answer
+    if (currentAnswer) {
+      setTranscript(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'student',
+        text: currentAnswer,
+        timestamp: '09:01',
+        isPartial: false
+      }]);
+      setCurrentAnswer('');
+    }
+  };
+
+  const handleSimulateFollowUp = () => {
+    if (followUpCount >= maxFollowUps) return;
+    setFollowUpCount(prev => prev + 1);
+    setPhase('AI_SPEAKING');
+    
+    setTranscript(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'ai',
+      text: 'Bạn vừa nhắc đến Model trong MVC, vậy Model tương tác thế nào với Database?',
+      timestamp: '09:02',
+      isPartial: false,
+      isFollowUp: true
+    }]);
+    
+    // Auto switch back to waiting after a delay
+    setTimeout(() => {
+      setPhase('WAITING_FOR_ANSWER');
+    }, 4000);
   };
 
   const handleEndExam = () => {
@@ -92,16 +126,27 @@ export function VivaInterviewRoom() {
     }
   };
 
+  // Auto scroll effect
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcript, currentAnswer]);
+
   return (
     <div className="flex flex-col h-full min-h-[calc(100vh-64px)] bg-gray-50">
       {/* 1. Exam Header Info */}
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Phòng thi Vấn đáp Trực tiếp</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Thí sinh: <span className="font-semibold text-slate-700">{session.user?.displayName || 'Sinh viên'}</span> 
-            <span className="mx-2">•</span> 
-            Mã đề: <span className="font-mono">EXAM-{examId || 'TEST'}</span>
+          <p className="text-sm text-slate-500 mt-1 flex items-center gap-4">
+            <span>Thí sinh: <span className="font-semibold text-slate-700">{session.user?.displayName || 'Sinh viên'}</span></span>
+            <span className="text-gray-300">•</span> 
+            <span>Mã đề: <span className="font-mono">EXAM-{examId || 'TEST'}</span></span>
+            <span className="text-gray-300">•</span> 
+            <span className="font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              Hỏi thêm: {followUpCount}/{maxFollowUps} lần
+            </span>
           </p>
         </div>
         
@@ -164,10 +209,20 @@ export function VivaInterviewRoom() {
         </section>
 
         {/* 3. Real-time Transcript Chat */}
-        <section className="flex-1 bg-white rounded-2xl border shadow-sm p-6 flex flex-col">
+        <section className="flex-1 bg-white rounded-2xl border shadow-sm p-6 flex flex-col relative">
           <h2 className="text-lg font-semibold border-b pb-4 mb-4 flex items-center justify-between text-slate-800">
             <span>Biên bản hội thoại (Transcript)</span>
-            <Badge tone="info">Live STT</Badge>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleSimulateFollowUp}
+                disabled={followUpCount >= maxFollowUps || phase === 'STUDENT_SPEAKING'}
+                className="text-xs py-1 px-3 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
+              >
+                + Mô phỏng Hỏi Xoáy (Dev)
+              </Button>
+              <Badge tone="info">Live STT</Badge>
+            </div>
           </h2>
           
           <div className="flex-1 overflow-y-auto pb-4 space-y-2">
@@ -178,21 +233,22 @@ export function VivaInterviewRoom() {
                 text={msg.text} 
                 timestamp={msg.timestamp} 
                 isPartial={msg.isPartial}
+                isFollowUp={msg.isFollowUp}
               />
             ))}
             
             {/* Real-time typing bubble for student */}
-            {(phase === 'STUDENT_SPEAKING' || currentAnswer) && (
+            {(phase === 'STUDENT_SPEAKING' || (currentAnswer && phase === 'WAITING_FOR_ANSWER')) && currentAnswer && (
               <TranscriptMessage 
                 role="student" 
-                text={currentAnswer || '...'} 
+                text={currentAnswer} 
                 timestamp="09:01" 
                 isPartial={phase === 'STUDENT_SPEAKING'}
               />
             )}
             
             {/* Scroll anchor */}
-            <div className="h-4"></div>
+            <div className="h-4" ref={scrollRef}></div>
           </div>
         </section>
         
