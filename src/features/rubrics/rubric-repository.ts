@@ -22,8 +22,8 @@ const rubricStore: Rubric[] = [{
 const clone = <T,>(value: T): T => structuredClone(value)
 
 export const mockRubricRepository: RubricRepository = {
-  async list(subjectId) { return clone(rubricStore.filter((rubric) => rubric.subjectId === subjectId)) },
-  async get(subjectId, rubricId) { return clone(rubricStore.find((rubric) => rubric.subjectId === subjectId && rubric.id === rubricId) ?? null) },
+  async list(subjectId) { return clone(subjectId ? rubricStore.filter((rubric) => rubric.subjectId === subjectId) : rubricStore) },
+  async get(subjectId, rubricId) { return clone(rubricStore.find((rubric) => rubric.id === rubricId && (!subjectId || rubric.subjectId === subjectId)) ?? null) },
   async save(draft) {
     const id = draft.id ?? `rubric-${crypto.randomUUID()}`
     const rubric = { ...clone(draft), id }
