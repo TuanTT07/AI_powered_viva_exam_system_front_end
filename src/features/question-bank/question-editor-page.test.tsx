@@ -8,7 +8,7 @@ describe('API question editor states', () => {
   it('blocks mock course IDs before any API-backed form is rendered', () => {
     const client = new QueryClient()
     render(<QueryClientProvider client={client}><MemoryRouter><ApiQuestionEditorPage subjectId="oop-java" /></MemoryRouter></QueryClientProvider>)
-    expect(screen.getByRole('heading', { name: 'Cần mã học phần backend' })).toBeInTheDocument()
-    expect(screen.getByText(/không được gửi lên backend/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Không tìm thấy dữ liệu yêu cầu' })).toBeInTheDocument()
+    expect(screen.getByText(/chọn một học phần hợp lệ/i)).toBeInTheDocument()
   })
 })
