@@ -44,6 +44,7 @@ function mapRubricDto(dto: RubricResponseDto, subjectId: string): Rubric {
     id: dto.id,
     subjectId,
     name: dto.rubricName,
+    description: dto.description || '',
     criteria: (dto.criteria || []).map(mapCriterionDto),
   }
 }
@@ -51,7 +52,7 @@ function mapRubricDto(dto: RubricResponseDto, subjectId: string): Rubric {
 function mapToRequest(draft: RubricDraft): RubricRequestDto {
   return {
     rubricName: draft.name,
-    description: '',
+    description: draft.description ?? '',
     criteria: draft.criteria.map((c) => ({
       criterionName: c.name,
       description: c.description,

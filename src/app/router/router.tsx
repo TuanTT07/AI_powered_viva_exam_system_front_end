@@ -10,7 +10,7 @@ import { StudentDashboard } from '../../features/dashboard/pages/StudentDashboar
 import type { AppRole } from '../../types/auth'
 import { QuestionBankPage } from '../../features/question-bank/question-bank-page'
 import { QuestionEditorPage } from '../../features/question-bank/question-editor-page'
-import { RubricEditorPage, RubricListPage } from '../../features/rubrics/rubric-pages'
+import { GlobalRubricEditorPage, GlobalRubricListPage, RubricEditorPage, RubricListPage } from '../../features/rubrics/rubric-pages'
 import { CourseMaterialsPage } from '../../features/learning-materials/course-materials-page'
 import { VivaInterviewRoom } from '../../features/viva-session/pages/VivaInterviewRoom'
 import { ExamSuccessPage } from '../../features/viva-session/pages/ExamSuccessPage'
@@ -35,7 +35,11 @@ const lecturer: RouteInfo[] = [
 ]
 const student: RouteInfo[] = [['', 'Tổng quan sinh viên', 'Dashboard', 'Thông tin kỳ thi và kết quả được phép xem.'], ['exams', 'Kỳ thi của tôi', 'Exams', 'Các kỳ thi backend xác nhận đủ điều kiện.'], ['exams/:examId', 'Chi tiết kỳ thi', 'Exams', 'Hướng dẫn và điều kiện vào thi.'], ['exams/:examId/check', 'Kiểm tra thiết bị', 'Viva Session', 'Preflight cho micro, loa và mạng.'], ['exams/:examId/completed', 'Biên nhận nộp bài', 'Viva Session', 'Chỉ hiển thị sau xác nhận backend.'], ['results', 'Kết quả và biên bản', 'Results', 'Kết quả đã được công bố.'], ['exams/:examId/result', 'Kết quả kỳ thi', 'Results', 'Điểm chính thức theo chính sách công bố.']]
 const admin: RouteInfo[] = [['', 'Tổng quan quản trị', 'Administration', 'Trạng thái vận hành được cho phép truy cập.'], ['users', 'Quản lý người dùng', 'Administration', 'Tài khoản, vai trò và trạng thái theo chính sách backend.'], ['subjects', 'Môn học và phân công', 'Administration', 'Quản lý subject và phạm vi giảng viên.'], ['settings', 'Cấu hình hệ thống', 'Administration', 'Chỉ hiển thị cấu hình backend công bố.']]
-const pages = (role: AppRole, routes: RouteInfo[]) => [...routes.map(([path, title, feature, description]) => {
+const pages = (role: AppRole, routes: RouteInfo[]) => [...(role === 'lecturer' ? [
+  { path: 'rubrics', element: <GlobalRubricListPage /> },
+  { path: 'rubrics/new', element: <GlobalRubricEditorPage /> },
+  { path: 'rubrics/:rubricId/edit', element: <GlobalRubricEditorPage /> },
+] : []), ...routes.map(([path, title, feature, description]) => {
   if (role === 'lecturer' && path === '') return { index: true, element: <LecturerDashboardPage /> }
   if (role === 'lecturer' && path === 'subjects') return { path, element: <LecturerSubjectListPage /> }
   if (role === 'lecturer' && path === 'subjects/:subjectId') return { path, element: <LecturerSubjectOverviewPage /> }

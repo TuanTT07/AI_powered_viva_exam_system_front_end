@@ -19,6 +19,7 @@ describe('Rubric API repository', () => {
       id: response.id,
       subjectId: '40000000-0000-4000-8000-000000000001',
       name: 'OOP Viva Rubric',
+      description: 'OOP assessment',
       criteria: [{ id: 'criterion-1', name: 'Correctness', description: 'Correct concepts', maximumScore: '10' }],
     }])
     expect(request).toHaveBeenCalledWith('/api/rubrics')

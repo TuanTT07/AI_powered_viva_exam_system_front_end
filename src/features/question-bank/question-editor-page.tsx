@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, LoadingPage, PermissionDenied } from '../../components/common/states'
 import { Alert, Button, Dialog, Input } from '../../components/ui/primitives'
 import { useQuestion, useQuestionTopics, useSaveQuestion, useApiQuestion, useCreateApiQuestion, useUpdateApiQuestion, useApproveApiQuestion, useDeleteApiQuestion } from './question-hooks'
@@ -37,13 +37,13 @@ function MockQuestionEditorForm({ subjectId, initial }: { subjectId: string; ini
 }
 
 export function ApiQuestionEditorPage({ subjectId, questionId }: { subjectId: string; questionId?: string }) {
-  const query = useApiQuestion(subjectId, questionId); const rubrics = useRubrics(subjectId)
+  const query = useApiQuestion(subjectId, questionId); const rubrics = useRubrics(subjectId); const location = useLocation()
   if (!subjectId || !isUuid(subjectId)) return <section className="state"><h2>Cần mã học phần backend</h2><p>API mode yêu cầu subjectId là UUID thật của Course; các mã mock không được gửi lên backend.</p><Link className="button outline" to="/lecturer/subjects">Chọn học phần</Link></section>
   if (questionId && !isUuid(questionId)) return <section className="state"><h2>Mã câu hỏi không hợp lệ</h2><p>API mode yêu cầu questionId là UUID.</p><Link className="button outline" to={listPath(subjectId)}>Về ngân hàng câu hỏi</Link></section>
   if (questionId && query.isLoading) return <LoadingPage label="Đang tải câu hỏi" />
   if (questionId && query.isError) return <section className="state"><Alert tone="danger">{query.error instanceof Error ? query.error.message : 'Không thể tải câu hỏi.'}</Alert><Button onClick={() => query.refetch()}>Thử lại</Button></section>
   if (questionId && !query.data) return <section className="state"><h1>Không tìm thấy câu hỏi</h1><Link className="button outline" to={listPath(subjectId)}>Về ngân hàng câu hỏi</Link></section>
-  return <ApiQuestionForm key={questionId ?? 'new'} subjectId={subjectId} initial={query.data ?? null} rubrics={rubrics.data ?? []} rubricLoading={rubrics.isLoading} rubricError={rubrics.isError} onRetryRubrics={() => rubrics.refetch()} />
+  return <><div className="question-editor-rubric-link"><Link className="button outline" to="/lecturer/rubrics/new" state={{ returnTo: location.pathname }}>Tạo Rubric mới</Link></div><ApiQuestionForm key={questionId ?? 'new'} subjectId={subjectId} initial={query.data ?? null} rubrics={rubrics.data ?? []} rubricLoading={rubrics.isLoading} rubricError={rubrics.isError} onRetryRubrics={() => rubrics.refetch()} /></>
 }
 
 function ApiQuestionForm({ subjectId, initial, rubrics, rubricLoading, rubricError, onRetryRubrics }: { subjectId: string; initial: Question | null; rubrics: { id: string; name: string }[]; rubricLoading: boolean; rubricError: boolean; onRetryRubrics: () => void }) {

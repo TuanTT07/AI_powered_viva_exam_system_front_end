@@ -9,6 +9,7 @@ export type Rubric = {
   id: string
   subjectId: string
   name: string
+  description?: string
   criteria: RubricCriterion[]
 }
 
