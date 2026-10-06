@@ -10,6 +10,7 @@ export type ApiRequestOptions = {
   headers?: HeadersInit
   signal?: AbortSignal
   timeoutMs?: number
+  authenticated?: boolean
 }
 export type ApiErrorOptions = { status?: number; code?: string; fieldErrors?: Record<string, string>; cause?: unknown }
 
@@ -49,8 +50,8 @@ export const apiClient: ApiClient = {
     const timer = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
     const headers = new Headers(options.headers)
     headers.set('Accept', headers.get('Accept') ?? 'application/json')
-    const token = tokenManager.getToken()
-    if (token) {
+    const token = options.authenticated === false ? null : tokenManager.getToken()
+    if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`)
     }
     let body: BodyInit | undefined
