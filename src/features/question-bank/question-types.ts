@@ -1,4 +1,4 @@
-export const bloomLevels = ['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH'] as const
+export const bloomLevels = ['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH', 'ĐÁNH GIÁ', 'SÁNG TẠO'] as const
 export type BloomLevel = typeof bloomLevels[number]
 export type QuestionStatus = 'ĐÃ DUYỆT' | 'CHỜ DUYỆT' | 'BẢN NHÁP'
 export type QuestionSource = 'AI đề xuất' | 'Thủ công' | 'Import'

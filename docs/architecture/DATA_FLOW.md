@@ -22,6 +22,8 @@ Backend DTO
 ## API/mock composition
 
 Feature repositories remain the boundary between pages and data sources. They select either the existing mock repository or a future API repository using the shared runtime `dataSource` and `selectRepository` helper. Components never read `import.meta.env` or call the API client directly. API failures propagate to feature error states; they never fall back to mock data. TanStack Query owns request caching and targeted invalidation, while logout clears the entire query cache.
+
+Question Bank is the first real feature integration: API mode owns raw Spring Page search, UUID validation, DTO mapping, detail, approve and delete. Import, AI generation, exam question configuration and exam readiness remain explicitly mock-backed until their backend contracts exist. API query keys include datasource, course and server filters so mock and API caches cannot mix.
 ```
 
 ## AI Question Generation
