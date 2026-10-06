@@ -1,5 +1,7 @@
 import type { AuthenticatedUser, LoginCredentials } from '../../types/auth'
-
+import { runtimeConfig } from '../../services/api/runtime-config'
+import { selectRepository } from '../../services/api/repository-selection'
+import { apiAuthAdapter } from './api-auth-adapter'
 export class AuthenticationError extends Error {
   constructor(message = 'Không thể xác thực thông tin đăng nhập.') {
     super(message)
@@ -36,4 +38,4 @@ export const unavailableAuthAdapter: AuthAdapter = {
   async signOut() {},
 }
 
-export const defaultAuthAdapter = (): AuthAdapter => import.meta.env.DEV ? developmentAuthAdapter : unavailableAuthAdapter
+export const defaultAuthAdapter = (): AuthAdapter => selectRepository(runtimeConfig.dataSource, { mock: import.meta.env.DEV ? developmentAuthAdapter : unavailableAuthAdapter, api: apiAuthAdapter })
