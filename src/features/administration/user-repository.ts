@@ -43,6 +43,26 @@ export const mockUserRepository = {
     }
     MOCK_USERS.unshift(newUser)
     return newUser
+  },
+
+  async update(id: string, payload: { fullName: string; email: string; roleName: string }): Promise<User> {
+    const index = MOCK_USERS.findIndex(u => u.id === id)
+    if (index === -1) throw new Error('Không tìm thấy người dùng')
+    const roleStr = payload.roleName.toLowerCase()
+    const updatedUser = { 
+      ...MOCK_USERS[index], 
+      name: payload.fullName, 
+      email: payload.email,
+      role: roleStr === 'admin' ? 'admin' as const : roleStr === 'student' ? 'student' as const : 'lecturer' as const
+    }
+    MOCK_USERS[index] = updatedUser
+    return updatedUser
+  },
+
+  async delete(id: string): Promise<void> {
+    const index = MOCK_USERS.findIndex(u => u.id === id)
+    if (index === -1) throw new Error('Không tìm thấy người dùng')
+    MOCK_USERS.splice(index, 1)
   }
 }
 
