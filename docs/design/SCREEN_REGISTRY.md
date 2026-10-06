@@ -24,7 +24,7 @@ No production AIVES component currently exists in `src/`; the current app is the
 | STITCH-01 | Exam Results & Statistics Ledger | Stitch | Lecturer | Reports | Route | `/lecturer/exams/:examId/report` | Node `0fcb82680d7940e4bcf6e578eb921aa1` | reference |
 | STITCH-02 | Question Bank | Stitch | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions` | Node `147e3e32d53e4e82aa56c450fe86e42b` | reference |
 | STITCH-03 | Question Import Batch Validation | Stitch | Lecturer | Question Bank | Modal | — (owned by Question Bank) | Node `167fad4c3ce54fefb6dc8c70879cd3bb` | reference |
-| STITCH-04 | Exam List | Stitch | Lecturer | Exams | Route | `/lecturer/exams` | Node `49a51fbd8174487d98b6c2335dc8a458` | reference |
+| STITCH-04 | Exam List | Stitch | Lecturer | Exams | Route | `/lecturer/exams` | Node `49a51fbd8174487d98b6c2335dc8a458` | implemented |
 | STITCH-05 | Active Viva — Recording a Follow-up | Stitch | Student | Viva Session | State | `/student/exams/:examId/session` | Node `506312ac1c0e45b18418bb051b24177c` | reference |
 | STITCH-06 | Attempt Grading Review | Stitch | Lecturer | Grading | Route | `/lecturer/exams/:examId/attempts/:attemptId` | Node `55fdd2dd2a784af593a190e4eafe9cba` | reference |
 | STITCH-07 | Question and Rubric Editor | Stitch | Lecturer | Question Bank / Rubrics | Route | `/lecturer/subjects/:subjectId/questions/:questionId` | Node `585c0cb02d4b4fbd9ca29cf0e25e3d92` | reference |
