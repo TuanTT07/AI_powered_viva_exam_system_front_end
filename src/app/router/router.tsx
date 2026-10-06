@@ -3,6 +3,7 @@ import { RequireAuth, RequireRole } from '../guards/guards'
 import { AdminLayout, AuthLayout, ExamLayout, LecturerLayout, StudentLayout } from '../layouts/layouts'
 import { LoginPage, NotFound, Placeholder, RouteError } from '../../pages/pages'
 import type { AppRole } from '../../types/auth'
+import { QuestionBankPage } from '../../features/question-bank/question-bank-page'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -15,7 +16,7 @@ const pages = (role: AppRole, routes: RouteInfo[]) => routes.map(([path, title, 
 export const router = createBrowserRouter([{ path: '/', errorElement: <RouteError />, children: [
   { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
   { element: <RequireAuth />, children: [
-    { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: pages('lecturer', lecturer) }] },
+    { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{path:'subjects/:subjectId/questions',element:<QuestionBankPage/>}, ...pages('lecturer', lecturer)] }] },
     { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: pages('student', student) }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <Placeholder role="student" title="Phiên vấn đáp đang hoạt động" feature="Viva Session" description="Viva runtime sẽ được triển khai bằng state machine và snapshot backend-authoritative ở milestone riêng." /> }] }] },
     { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: pages('admin', admin) }] },
   ] },
