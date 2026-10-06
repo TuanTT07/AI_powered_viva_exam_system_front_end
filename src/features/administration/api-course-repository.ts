@@ -123,5 +123,36 @@ export const apiCourseRepository = {
     })
     if (!response.success) throw new Error(response.message || 'Lỗi cập nhật môn học')
     return mapCourseDetailDto(response.data)
+  },
+
+  async delete(id: string): Promise<void> {
+    const response = await apiClient.request<ApiResponse<void>>(`/api/admin/courses/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    if (!response.success) throw new Error(response.message || 'Lỗi xoá môn học')
+  },
+
+  async getLecturers(courseId: string): Promise<{ id: string; name: string; initials: string }[]> {
+    const response = await apiClient.request<ApiResponse<LecturerResponseDto[]>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers`)
+    if (!response.success) throw new Error(response.message || 'Lỗi lấy danh sách giảng viên')
+    return (response.data || []).map((l) => ({
+      id: l.id,
+      name: l.fullName,
+      initials: getInitials(l.fullName),
+    }))
+  },
+
+  async assignLecturer(courseId: string, lecturerId: string): Promise<void> {
+    const response = await apiClient.request<ApiResponse<void>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers/${encodeURIComponent(lecturerId)}`, {
+      method: 'PUT',
+    })
+    if (!response.success) throw new Error(response.message || 'Lỗi phân công giảng viên')
+  },
+
+  async removeLecturer(courseId: string, lecturerId: string): Promise<void> {
+    const response = await apiClient.request<ApiResponse<void>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers/${encodeURIComponent(lecturerId)}`, {
+      method: 'DELETE',
+    })
+    if (!response.success) throw new Error(response.message || 'Lỗi gỡ giảng viên')
   }
 }
