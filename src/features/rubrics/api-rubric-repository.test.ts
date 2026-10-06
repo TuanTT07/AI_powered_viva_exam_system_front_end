@@ -37,4 +37,18 @@ describe('Rubric API repository', () => {
     expect(request).toHaveBeenNthCalledWith(1, '/api/rubrics', expect.objectContaining({ method: 'POST', body: expect.objectContaining({ rubricName: 'OOP Viva Rubric' }) }))
     expect(request).toHaveBeenNthCalledWith(2, `/api/rubrics/${response.id}`, expect.objectContaining({ method: 'PUT', body: expect.objectContaining({ rubricName: 'Updated rubric' }) }))
   })
+
+  it('deletes a valid UUID and handles the empty 204 response', async () => {
+    const request = vi.fn().mockResolvedValue(undefined)
+    const repository = createApiRubricRepository({ request })
+    await expect(repository.delete(response.id)).resolves.toBeUndefined()
+    expect(request).toHaveBeenCalledWith(`/api/rubrics/${response.id}`, { method: 'DELETE' })
+  })
+
+  it('rejects mock IDs before making a delete request', async () => {
+    const request = vi.fn()
+    const repository = createApiRubricRepository({ request })
+    await expect(repository.delete('rubric-java-core')).rejects.toMatchObject({ code: 'INVALID_UUID' })
+    expect(request).not.toHaveBeenCalled()
+  })
 })

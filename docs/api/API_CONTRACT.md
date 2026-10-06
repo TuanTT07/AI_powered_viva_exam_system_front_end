@@ -77,6 +77,9 @@ Dev1 should compose Question and Rubric repositories with `selectRepository(runt
 - list
 - create/update
 - detail
+- delete (`DELETE /api/rubrics/{id}`, HTTP 204 No Content)
+
+Rubric deletion requires a real Rubric UUID and uses the shared API client. The frontend waits for the 204 response before removing cached Rubrics. Questions referencing the deleted Rubric remain intact; the backend may set `rubricId`/`rubricName` to null. Rubrics are global in the current API rather than course-scoped, so deletion invalidates Rubric caches and affected Question caches across subject contexts. API failures never fall back to mock data.
 
 ### Exams
 - list
@@ -131,6 +134,7 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 | Candidate listing | Mock, labelled `Dữ liệu demo` | No verified lecturer roster endpoint |
 | Candidate removal | Mock, labelled `Dữ liệu demo` | No verified delete endpoint |
 | CSV roster import | Mock, labelled `Dữ liệu demo` | No verified import endpoint |
+| Rubric deletion | API | `DELETE /api/rubrics/{id}` (204 No Content) |
 | Schedule loading | API | `GET /api/v1/exams/{examId}/schedule` |
 | Automatic scheduling | API | `POST /api/v1/exams/{examId}/schedule/auto` |
 | Manual rescheduling | API | `PUT /api/v1/exams/{examId}/schedule/reschedule` |

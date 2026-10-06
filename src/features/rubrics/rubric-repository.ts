@@ -7,6 +7,7 @@ export type RubricRepository = {
   list(subjectId: string): Promise<Rubric[]>
   get(subjectId: string, rubricId: string): Promise<Rubric | null>
   save(rubric: RubricDraft & { id?: string }): Promise<Rubric>
+  delete(rubricId: string): Promise<void>
 }
 
 const rubricStore: Rubric[] = [{
@@ -30,6 +31,10 @@ export const mockRubricRepository: RubricRepository = {
     if (index >= 0) rubricStore[index] = rubric
     else rubricStore.push(rubric)
     return clone(rubric)
+  },
+  async delete(rubricId) {
+    const index = rubricStore.findIndex((rubric) => rubric.id === rubricId)
+    if (index >= 0) rubricStore.splice(index, 1)
   },
 }
 

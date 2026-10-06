@@ -1,4 +1,4 @@
-import { apiClient } from '../../services/api/client'
+import { ApiError, apiClient } from '../../services/api/client'
 import type { Rubric, RubricCriterion, RubricDraft } from './rubric-types'
 import type { RubricRepository } from './rubric-repository'
 
@@ -61,6 +61,9 @@ function mapToRequest(draft: RubricDraft): RubricRequestDto {
 }
 
 type RubricApiClient = Pick<typeof apiClient, 'request'>
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+export const isRubricUuid = (value: string) => uuidPattern.test(value)
+function assertRubricUuid(value: string) { if (!isRubricUuid(value)) throw new ApiError('Mã rubric phải là UUID của backend.', { code: 'INVALID_UUID' }) }
 
 export function createApiRubricRepository(client: RubricApiClient = apiClient): RubricRepository {
   return {
@@ -79,7 +82,7 @@ export function createApiRubricRepository(client: RubricApiClient = apiClient): 
       throw error
     }
   },
-  async save(draft: RubricDraft & { id?: string }): Promise<Rubric> {
+    async save(draft: RubricDraft & { id?: string }): Promise<Rubric> {
     const payload = mapToRequest(draft)
     let response: RubricResponseDto
     if (draft.id) {
@@ -93,7 +96,11 @@ export function createApiRubricRepository(client: RubricApiClient = apiClient): 
         body: payload,
       })
     }
-    return mapRubricDto(response, draft.subjectId)
+      return mapRubricDto(response, draft.subjectId)
+    },
+    async delete(rubricId: string): Promise<void> {
+      assertRubricUuid(rubricId)
+      await client.request<void>(`/api/rubrics/${encodeURIComponent(rubricId)}`, { method: 'DELETE' })
     },
   }
 }
