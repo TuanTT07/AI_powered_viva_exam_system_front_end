@@ -1,27 +1,7 @@
 import { useState } from 'react';
 import { Button, Input, Badge, Dialog } from '../../../components/ui/primitives';
-
-type UserRole = 'admin' | 'lecturer' | 'student';
-type UserStatus = 'active' | 'inactive';
-
-interface User {
-  id: string;
-  name: string;
-  identifier: string; // e.g. CB-201402
-  email: string;
-  role: UserRole;
-  status: UserStatus;
-  subjects?: string[];
-  initials: string;
-}
-
-const MOCK_USERS: User[] = [
-  { id: '1', name: 'TS. Nguyễn Văn An', identifier: 'CB-201402', email: 'nguyenvanan@academia.edu.vn', role: 'lecturer', status: 'active', subjects: ['Lập trình Java Core', 'OOP'], initials: 'NA' },
-  { id: '2', name: 'TS. Lê Quang Dũng', identifier: 'CB-201618', email: 'dung.lq@academia.edu.vn', role: 'lecturer', status: 'active', subjects: ['Cấu trúc dữ liệu & Giải thuật'], initials: 'LD' },
-  { id: '3', name: 'Ban Quản trị Hệ thống', identifier: 'SYS-ROOT-01', email: 'admin.viva@academia.edu.vn', role: 'admin', status: 'active', initials: 'QT' },
-  { id: '4', name: 'Trần Mai Linh', identifier: 'SV-21020485', email: 'linh.tm21020485@sv.academia.edu.vn', role: 'student', status: 'active', subjects: ['K66-CAC'], initials: 'TL' },
-  { id: '5', name: 'Cán bộ Hoàng Văn Tuấn', identifier: 'CB-201209', email: 'tuan.hv@academia.edu.vn', role: 'lecturer', status: 'inactive', subjects: ['Kiến trúc máy tính'], initials: 'HT' },
-];
+import { useUsers, useCreateUser } from '../user-hooks';
+import type { UserRole } from '../api-user-repository';
 
 function AccountEditorDialog({
   open,
@@ -100,25 +80,30 @@ function AccountEditorDialog({
 }
 
 export function UserManagementPage() {
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeRoleFilter, setActiveRoleFilter] = useState<'all' | UserRole>('all');
   const [isAddingUser, setIsAddingUser] = useState(false);
 
-  const filteredUsers = users.filter((u) => {
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchSearch = u.name.toLowerCase().includes(lowerSearch) || u.email.toLowerCase().includes(lowerSearch) || u.identifier.toLowerCase().includes(lowerSearch);
-    const matchRole = activeRoleFilter === 'all' || u.role === activeRoleFilter;
-    return matchSearch && matchRole;
-  });
+  const usersQuery = useUsers({ keyword: searchTerm, role: activeRoleFilter });
+  const createUser = useCreateUser();
 
-  const handleSaveUser = (newUser: User) => {
-    setUsers([newUser, ...users]);
-    setIsAddingUser(false);
+  const handleSaveUser = (newUser: any) => {
+    createUser.mutate({
+      fullName: newUser.name,
+      email: newUser.email,
+      roleName: newUser.role,
+      userCode: newUser.identifier,
+    }, {
+      onSuccess: () => setIsAddingUser(false)
+    });
   };
 
+  const users = usersQuery.data?.content || [];
+  const filteredUsers = users;
+
   const toggleStatus = (id: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
+    // toggle logic not supported by API yet
+    console.log('Toggle status for', id);
   };
 
   return (
@@ -140,7 +125,7 @@ export function UserManagementPage() {
           <div style={{ display: 'flex', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 20px', gap: '24px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold' }}>TỔNG TÀI KHOẢN</span>
-              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{users.length}</span>
+              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{usersQuery.data?.totalElements ?? 0}</span>
             </div>
             <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--border)' }}></div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -185,7 +170,7 @@ export function UserManagementPage() {
                 transition: 'all 0.2s'
               }}
             >
-              {role === 'all' ? `Tất cả (${users.length})` : role === 'admin' ? `Admin (${users.filter(u => u.role === 'admin').length})` : role === 'lecturer' ? `Giảng viên (${users.filter(u => u.role === 'lecturer').length})` : `Sinh viên (${users.filter(u => u.role === 'student').length})`}
+              {role === 'all' ? `Tất cả` : role === 'admin' ? `Admin` : role === 'lecturer' ? `Giảng viên` : `Sinh viên`}
             </button>
           ))}
         </div>

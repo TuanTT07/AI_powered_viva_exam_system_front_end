@@ -1,4 +1,7 @@
 import type { Rubric, RubricDraft } from './rubric-types'
+import { runtimeConfig } from '../../services/api/runtime-config'
+import { selectRepository } from '../../services/api/repository-selection'
+import { apiRubricRepository } from './api-rubric-repository'
 
 export type RubricRepository = {
   list(subjectId: string): Promise<Rubric[]>
@@ -17,7 +20,7 @@ const rubricStore: Rubric[] = [{
 
 const clone = <T,>(value: T): T => structuredClone(value)
 
-export const rubricRepository: RubricRepository = {
+export const mockRubricRepository: RubricRepository = {
   async list(subjectId) { return clone(rubricStore.filter((rubric) => rubric.subjectId === subjectId)) },
   async get(subjectId, rubricId) { return clone(rubricStore.find((rubric) => rubric.subjectId === subjectId && rubric.id === rubricId) ?? null) },
   async save(draft) {
@@ -29,3 +32,5 @@ export const rubricRepository: RubricRepository = {
     return clone(rubric)
   },
 }
+
+export const rubricRepository: RubricRepository = selectRepository(runtimeConfig.dataSource, { mock: mockRubricRepository, api: apiRubricRepository })
