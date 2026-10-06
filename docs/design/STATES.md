@@ -83,7 +83,15 @@ Conceptual product states:
 - closed,
 - cancelled.
 
-Exact backend enums, editability and transition rules remain TBD. UI actions must be derived from backend capabilities/status rather than display labels alone.
+The verified API enums are `DRAFT`, `PUBLISHED`, `IN_PROGRESS`, `COMPLETED` and `CANCELLED`. API mode maps backend `startTime`/`endTime` and `examConfig` into the existing domain. Edit/delete/status actions remain backend-authoritative; failures stay visible and never become demo success.
+
+### Exam Monitoring
+
+- loading, empty candidate list, retry/error, status counters, reset confirmation/pending/error, mark-absent confirmation/pending/error, forbidden and invalid UUID.
+
+### Student My Slot
+
+- loading, scheduled/too-early, ready/joinable, in-progress, completed, absent, cancelled, not scheduled/not found, missing authenticated Student UUID and retry/error.
 
 ### Exam Detail and Group 2 readiness
 

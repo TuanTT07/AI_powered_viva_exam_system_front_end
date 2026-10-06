@@ -25,6 +25,7 @@ import { StudentExamListPage } from '../../features/exams/student-exam-list-page
 import { GradingWorkspacePage } from '../../features/grading/grading-workspace-page'
 import { StudentExamResultPage } from '../../features/exams/student-exam-result-page'
 import { StudentResultListPage } from '../../features/exams/student-result-list-page'
+import { StudentExamSlotPage } from '../../features/exams/student-exam-slot-page'
 import { ExamMonitoringPage } from '../../features/exams/exam-monitoring-page'
 import { LecturerDashboardPage, LecturerSubjectListPage, LecturerSubjectOverviewPage } from '../../features/subjects/lecturer-subject-pages'
 
@@ -62,6 +63,7 @@ const studentRoutes = student.map(([path, title, feature, description]) => {
   if (path === 'exams') return { path, element: <StudentExamListPage /> }
   if (path === 'exams/:examId/completed') return { path, element: <ExamSuccessPage /> }
   if (path === 'results') return { path, element: <StudentResultListPage /> }
+  if (path === 'exams/:examId') return { path, element: <StudentExamSlotPage /> }
   if (path === 'exams/:examId/result') return { path, element: <StudentExamResultPage /> }
   return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
 })

@@ -1,6 +1,6 @@
 # REST API Contract — Frontend Expectations
 
-> The current local backend is described by OpenAPI at `http://localhost:8080/v3/api-docs`. Feature repositories are still mock-first; the API foundation adds shared transport infrastructure without connecting pages to real endpoints.
+> The current backend is described by OpenAPI at `http://localhost:8080/v3/api-docs` and the deployed demo at `https://aives-backend-xxhi.onrender.com/v3/api-docs`. Group 1 Question/Rubric and the verified Group 2 Exam, Monitoring, Scheduling and Student My Slot repositories select API or mock explicitly through `VITE_DATA_SOURCE`.
 
 ## Contract Rule
 
@@ -82,8 +82,10 @@ Dev1 should compose Question and Rubric repositories with `selectRepository(runt
 Rubric deletion requires a real Rubric UUID and uses the shared API client. The frontend waits for the 204 response before removing cached Rubrics. Questions referencing the deleted Rubric remain intact; the backend may set `rubricId`/`rubricName` to null. Rubrics are global in the current API rather than course-scoped, so deletion invalidates Rubric caches and affected Question caches across subject contexts. API failures never fall back to mock data.
 
 ### Exams
-- list
-- create/update
+- list (`GET /api/v1/exams`, Spring `PageExamResponse`)
+- create (`POST /api/v1/exams`), update (`PUT /api/v1/exams/{id}`), delete (`DELETE /api/v1/exams/{id}`)
+- detail (`GET /api/v1/exams/{id}`) and status (`PATCH /api/v1/exams/{id}/status`)
+- Monitoring (`GET /api/v1/exams/{examId}/monitor`, reset/absent attempt commands)
 - assign students
 - configure
 - publish
@@ -135,11 +137,16 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 | Candidate removal | Mock, labelled `Dữ liệu demo` | No verified delete endpoint |
 | CSV roster import | Mock, labelled `Dữ liệu demo` | No verified import endpoint |
 | Rubric deletion | API | `DELETE /api/rubrics/{id}` (204 No Content) |
+| Exam management CRUD/status | API | `/api/v1/exams`, `/api/v1/exams/{id}`, `/api/v1/exams/{id}/status` |
+| Exam monitoring | API | `/api/v1/exams/{examId}/monitor` and attempt reset/absent |
+| Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot?studentId={studentUuid}` |
 | Schedule loading | API | `GET /api/v1/exams/{examId}/schedule` |
 | Automatic scheduling | API | `POST /api/v1/exams/{examId}/schedule/auto` |
 | Manual rescheduling | API | `PUT /api/v1/exams/{examId}/schedule/reschedule` |
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
+
+The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: Lecturer Courses discovery, lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Course Materials, bulk Question Import, AI Question Generation, Viva runtime/WebSocket, Grading and Reports.
 
 ## Lecturer course assignment (not yet available)
 

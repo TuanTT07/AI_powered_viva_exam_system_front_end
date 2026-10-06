@@ -5,6 +5,9 @@ import type { ExamSchedule, ScheduleDraft } from './schedule-types'
 import { validateSchedule } from './schedule-validation'
 import type { ExamQuestionConfig, QuestionConfigDraft } from './question-config-types'
 import { questionRepository } from '../question-bank/question-repository'
+import { apiExamRepository } from './api-exam-repository'
+import { runtimeConfig } from '../../services/api/runtime-config'
+import { selectRepository } from '../../services/api/repository-selection'
 
 const seed: ExamSession[] = [
   { id: 'EXAM-2024-OOP-01', title: 'Vấn đáp OOP Java - Đợt 1', subjectId: 'oop-java', subjectCode: 'INT2204', subjectName: 'Lập trình Java', scheduledAt: '2024-10-15T08:00:00+07:00', durationMinutes: 15, studentCount: 45, mainQuestionCount: 5, maxFollowUpCount: 2, status: 'IN_PROGRESS' },
@@ -20,7 +23,7 @@ const seed: ExamSession[] = [
   { id: 'EXAM-2025-UX-01', title: 'Vấn đáp Thiết kế tương tác', subjectId: 'ux', subjectCode: 'INT2260', subjectName: 'Thiết kế tương tác', scheduledAt: '2025-08-12T08:00:00+07:00', durationMinutes: 12, studentCount: 30, mainQuestionCount: 4, maxFollowUpCount: 2, status: 'CANCELLED' },
 ]
 
-export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule>; getQuestionConfig(examId: string): Promise<ExamQuestionConfig | undefined>; saveQuestionConfig(examId: string, draft: QuestionConfigDraft): Promise<ExamQuestionConfig> }
+export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; delete(examId: string): Promise<void>; updateStatus(examId: string, status: ExamStatus): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule>; getQuestionConfig(examId: string): Promise<ExamQuestionConfig | undefined>; saveQuestionConfig(examId: string, draft: QuestionConfigDraft): Promise<ExamQuestionConfig> }
 
 export function createExamRepository(records: ExamSession[] = seed): ExamRepository {
   const rosters = new Map<string, RosterStudent[]>(records.map((exam) => [exam.id, []]))
@@ -68,8 +71,10 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
       records[index] = updated
       return updated
     },
+    async delete(examId) { const index = records.findIndex((exam) => exam.id === examId); if (index < 0) throw new Error('Exam not found'); if (!['DRAFT', 'SCHEDULED'].includes(records[index].status)) throw new Error('Exam is not deletable'); records.splice(index, 1); rosters.delete(examId); schedules.delete(examId); questionConfigs.delete(examId) },
+    async updateStatus(examId, status) { const exam = records.find((item) => item.id === examId); if (!exam) throw new Error('Exam not found'); const allowed: Record<ExamStatus, ExamStatus[]> = { DRAFT: ['PUBLISHED', 'CANCELLED'], PUBLISHED: ['IN_PROGRESS', 'CANCELLED'], SCHEDULED: ['IN_PROGRESS', 'CANCELLED'], IN_PROGRESS: ['COMPLETED', 'CANCELLED'], COMPLETED: [], CANCELLED: [] }; if (!allowed[exam.status].includes(status)) throw new Error('Chuyển trạng thái kỳ thi không hợp lệ'); exam.status = status; return exam },
     async subjects() { return [...new Map(records.map((exam) => [exam.subjectId, { id: exam.subjectId, code: exam.subjectCode, name: exam.subjectName }])).values()] },
-    async summary() { return records.reduce((counts, exam) => ({ ...counts, [exam.status]: counts[exam.status] + 1 }), { DRAFT: 0, SCHEDULED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 }) },
+    async summary() { return records.reduce((counts, exam) => ({ ...counts, [exam.status]: counts[exam.status] + 1 }), { DRAFT: 0, PUBLISHED: 0, SCHEDULED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 }) },
     async listRoster(examId) { if (examId === '__ERROR__') throw new Error('Roster repository unavailable'); if (!records.some((exam) => exam.id === examId)) throw new Error('Exam not found'); return [...(rosters.get(examId) ?? [])] },
     async addRosterStudent(examId, draft) { const exam = ensureEditable(examId); if (draft.studentCode === '__ERROR__') throw new Error('Không thể thêm sinh viên'); ensureUnique(examId, draft); const current = rosters.get(examId) ?? []; const student: RosterStudent = { ...draft, id: `ROSTER-${exam.id}-${String(current.length + 1).padStart(3, '0')}`, examId, addedAt: '2026-10-06T00:00:00+07:00' }; current.push(student); rosters.set(examId, current); adjustCount(examId, 1); return student },
     async importRosterStudents(examId, drafts) { ensureEditable(examId); const imported: RosterStudent[] = []; for (const draft of drafts) { const student = await this.addRosterStudent(examId, draft); imported.push(student) } return imported },
@@ -81,5 +86,6 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
   }
 }
 
-export const examRepository = createExamRepository()
+export const mockExamRepository = createExamRepository()
+export const examRepository: ExamRepository = selectRepository(runtimeConfig.dataSource, { mock: mockExamRepository, api: apiExamRepository })
 export const examSeed = seed

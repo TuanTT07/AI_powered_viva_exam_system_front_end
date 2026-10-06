@@ -1,4 +1,4 @@
-export const examStatuses = ['DRAFT', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
+export const examStatuses = ['DRAFT', 'PUBLISHED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
 export type ExamStatus = (typeof examStatuses)[number]
 
 export type ExamSession = {
@@ -21,6 +21,7 @@ export type ExamDraft = Pick<ExamSession, 'title' | 'subjectId' | 'scheduledAt' 
 
 export const examStatusMeta: Record<ExamStatus, { label: string; tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger' }> = {
   DRAFT: { label: 'NHÁP', tone: 'neutral' },
+  PUBLISHED: { label: 'ĐÃ CÔNG BỐ', tone: 'info' },
   SCHEDULED: { label: 'ĐÃ LÊN LỊCH', tone: 'info' },
   IN_PROGRESS: { label: 'ĐANG DIỄN RA', tone: 'warning' },
   COMPLETED: { label: 'ĐÃ KẾT THÚC', tone: 'success' },

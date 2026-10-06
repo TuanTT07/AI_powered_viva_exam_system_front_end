@@ -112,3 +112,5 @@ Authenticated Lecturer session
 ```
 
 Course IDs are treated as opaque values. In API mode only the configured `VITE_DEMO_COURSE_ID` can safely open API-backed course features; mock-only IDs render navigation as disabled. No Lecturer page derives assignment from Admin APIs, questions, rubrics or exams.
+
+Exam Management uses the API repository for list/detail/create/update/delete/status when `VITE_DATA_SOURCE=api`. DTOs map `courseId`, `startTime`/`endTime` and `examConfig` into the existing Exam domain. Monitoring and Student My Slot have separate repositories and typed query keys; missing Lecturer roster and Student exam-list endpoints remain demo/unavailable. API failures never select mock data.
