@@ -1,21 +1,7 @@
 import { useState } from 'react';
 import { Badge, Button, Input, Dialog } from '../../../components/ui/primitives';
-
-interface Subject {
-  id: string;
-  code: string;
-  name: string;
-  department: string;
-  lecturers: { name: string; initials: string }[];
-  questionCount: number;
-}
-
-const MOCK_SUBJECTS: Subject[] = [
-  { id: '1', code: 'INT2204', name: 'Lập trình OOP', department: 'Khoa CNTT', lecturers: [{ name: 'TS. Nguyễn Văn A', initials: 'VA' }, { name: 'ThS. Trần B', initials: 'TB' }], questionCount: 450 },
-  { id: '2', code: 'INT2208', name: 'Kiến trúc máy tính', department: 'Khoa CNTT', lecturers: [{ name: 'PGS. Hoàng C', initials: 'HC' }], questionCount: 320 },
-  { id: '3', code: 'MAT1092', name: 'Đại số tuyến tính', department: 'Khoa Toán Cơ', lecturers: [], questionCount: 0 },
-  { id: '4', code: 'ECO101', name: 'Kinh tế vi mô', department: 'Khoa Kinh tế', lecturers: [{ name: 'TS. Lê D', initials: 'LD' }], questionCount: 120 },
-];
+import { useCourses, useSaveCourse, useCourse } from '../course-hooks';
+import type { Subject } from '../api-course-repository';
 
 function SubjectEditorDialog({
   subject,
@@ -37,7 +23,7 @@ function SubjectEditorDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      id: subject ? subject.id : Math.random().toString(),
+      id: subject ? subject.id : '',
       code,
       name,
       department,
@@ -107,30 +93,33 @@ function SubjectEditorDialog({
 }
 
 export function SubjectManagementPage() {
-  const [subjects, setSubjects] = useState<Subject[]>(MOCK_SUBJECTS);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
-  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
+  const coursesQuery = useCourses({ keyword: searchTerm });
+  const saveCourse = useSaveCourse();
+  const editingSubjectQuery = useCourse(editingSubjectId);
+
+  const subjects = coursesQuery.data?.content || [];
+
   const filteredSubjects = subjects.filter((s) => {
-    const matchSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.code.toLowerCase().includes(searchTerm.toLowerCase()) || s.department.toLowerCase().includes(searchTerm.toLowerCase());
     const matchFilter = activeFilter === 'all' 
       ? true 
       : activeFilter === 'assigned' 
         ? s.lecturers.length > 0 
         : s.lecturers.length === 0;
-    return matchSearch && matchFilter;
+    return matchFilter;
   });
 
   const handleSave = (savedSubject: Subject) => {
-    if (isAdding) {
-      setSubjects([savedSubject, ...subjects]);
-    } else {
-      setSubjects(subjects.map(s => s.id === savedSubject.id ? savedSubject : s));
-    }
-    setIsAdding(false);
-    setEditingSubject(null);
+    saveCourse.mutate(savedSubject, {
+      onSuccess: () => {
+        setIsAdding(false);
+        setEditingSubjectId(null);
+      }
+    });
   };
 
   return (
@@ -152,7 +141,7 @@ export function SubjectManagementPage() {
           <div style={{ display: 'flex', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 20px', gap: '24px', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold' }}>TỔNG MÔN HỌC</span>
-              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{subjects.length}</span>
+              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{coursesQuery.data?.totalElements ?? 0}</span>
             </div>
             <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--border)' }}></div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -254,7 +243,7 @@ export function SubjectManagementPage() {
                   )}
                 </td>
                 <td style={{ padding: '16px', textAlign: 'right' }}>
-                  <Button variant="outline" onClick={() => setEditingSubject(subject)}>Thiết lập</Button>
+                  <Button variant="outline" onClick={() => setEditingSubjectId(subject.id)}>Thiết lập</Button>
                 </td>
               </tr>
             )) : (
@@ -266,11 +255,11 @@ export function SubjectManagementPage() {
         </table>
       </section>
 
-      {(editingSubject || isAdding) && (
+      {(editingSubjectId || isAdding) && (
         <SubjectEditorDialog
-          subject={editingSubject}
-          open={!!editingSubject || isAdding}
-          onClose={() => { setEditingSubject(null); setIsAdding(false); }}
+          subject={isAdding ? null : editingSubjectQuery.data ?? null}
+          open={!!editingSubjectId || isAdding}
+          onClose={() => { setEditingSubjectId(null); setIsAdding(false); }}
           onSave={handleSave}
         />
       )}
