@@ -7,6 +7,7 @@ Purpose:
 - maintain authenticated session,
 - resolve user role and permissions,
 - route users to the correct workspace.
+- explicitly sign out from every authenticated workspace and remove local session/cache data.
 
 Primary roles:
 - All

@@ -31,6 +31,8 @@ Potential entities:
 - session/current user
 - login/logout depending on auth architecture
 
+The current backend Swagger does not expose authentication or logout endpoints. Until that contract exists, frontend logout is implemented through `AuthAdapter.signOut()` as local session termination and TanStack Query cache clearing. No JWT, refresh-token or revocation endpoint is assumed.
+
 ### Subjects
 - list assigned subjects
 - subject detail
