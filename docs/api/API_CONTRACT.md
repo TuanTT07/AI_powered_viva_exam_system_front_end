@@ -45,6 +45,10 @@ The current backend Swagger does not expose authentication or logout endpoints. 
 
 The Question Bank integration currently connects only search/list, detail, approve and delete. Question responses are raw Spring `Page` payloads and are mapped from transport DTOs in `src/features/question-bank/api-question-repository.ts`. The backend does not provide topic, suggested answer, response duration or a current lecturer UUID; API create/edit, import and AI generation therefore remain mock-only.
 
+## Authentication API
+
+The deployed backend exposes `POST /api/auth/login` with `{ email, password }` and `GET /api/auth/me`. Both return the shared `{ success, status, message, data }` envelope. Login `data` contains `accessToken`, `tokenType: Bearer`, `expiresIn` seconds and a `UserResponse`; supported roles are `ADMIN`, `LECTURER` and `STUDENT`. The frontend maps these to `admin`, `lecturer` and `student`. There is no logout or refresh endpoint; logout clears the client session and token.
+
 ## Integration order for the next developers
 
 Dev1 should compose Question and Rubric repositories with `selectRepository(runtimeConfig.dataSource, { mock, api })`, call `apiClient.request`, explicitly unwrap only Admin-style envelopes (not Question/Rubric raw responses), map DTOs and preserve existing query keys. Dev2 should follow the same pattern for Admin Users, Roles, Courses and Lecturer Assignment. Neither integration should switch to mock after a network/API error.

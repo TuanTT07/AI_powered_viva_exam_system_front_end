@@ -70,6 +70,8 @@ For destructive/high-impact mutations:
 
 Question Bank API mode validates Course and Question UUIDs before requests, keeps detail read-only, and never falls back to mock after network, timeout, 404 or 409 failures. Delete is confirmed and non-optimistic; approval invalidates detail and matching list queries.
 
+Authentication API mode treats 401/403 from `/api/auth/me` as logged out, while network, timeout and 5xx errors remain recoverable session-initialization errors. Invalid credentials use a generic message. JWTs are stored only in `sessionStorage` with an expiry timestamp; no password or token is logged or rendered.
+
 ## Grading
 
 If final grade save fails:
