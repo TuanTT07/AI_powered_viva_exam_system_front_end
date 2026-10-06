@@ -60,16 +60,19 @@ function mapToRequest(draft: RubricDraft): RubricRequestDto {
   }
 }
 
-export const apiRubricRepository: RubricRepository = {
-  async list(subjectId: string): Promise<Rubric[]> {
-    const response = await apiClient.request<RubricResponseDto[]>('/api/rubrics')
+type RubricApiClient = Pick<typeof apiClient, 'request'>
+
+export function createApiRubricRepository(client: RubricApiClient = apiClient): RubricRepository {
+  return {
+    async list(subjectId: string): Promise<Rubric[]> {
+    const response = await client.request<RubricResponseDto[]>('/api/rubrics')
     // Backend doesn't filter rubrics by course, so we return all of them
     // and attach the requested subjectId to satisfy the frontend interface
     return response.map((dto) => mapRubricDto(dto, subjectId))
   },
   async get(subjectId: string, rubricId: string): Promise<Rubric | null> {
     try {
-      const response = await apiClient.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(rubricId)}`)
+      const response = await client.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(rubricId)}`)
       return mapRubricDto(response, subjectId)
     } catch (error: any) {
       if (error?.status === 404) return null
@@ -80,16 +83,19 @@ export const apiRubricRepository: RubricRepository = {
     const payload = mapToRequest(draft)
     let response: RubricResponseDto
     if (draft.id) {
-      response = await apiClient.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(draft.id)}`, {
+      response = await client.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(draft.id)}`, {
         method: 'PUT',
         body: payload,
       })
     } else {
-      response = await apiClient.request<RubricResponseDto>('/api/rubrics', {
+      response = await client.request<RubricResponseDto>('/api/rubrics', {
         method: 'POST',
         body: payload,
       })
     }
     return mapRubricDto(response, draft.subjectId)
-  },
+    },
+  }
 }
+
+export const apiRubricRepository: RubricRepository = createApiRubricRepository()

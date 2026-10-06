@@ -33,4 +33,8 @@ export const mockRubricRepository: RubricRepository = {
   },
 }
 
-export const rubricRepository: RubricRepository = selectRepository(runtimeConfig.dataSource, { mock: mockRubricRepository, api: apiRubricRepository })
+export function createRubricRepository(config: Pick<typeof runtimeConfig, 'dataSource'> = runtimeConfig): RubricRepository {
+  return selectRepository(config.dataSource, { mock: mockRubricRepository, api: apiRubricRepository })
+}
+
+export const rubricRepository: RubricRepository = createRubricRepository()
