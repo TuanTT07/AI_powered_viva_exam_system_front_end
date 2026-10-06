@@ -102,6 +102,21 @@ Exact backend enums, editability and transition rules remain TBD. UI actions mus
 
 Scheduling is an explicitly approved inferred screen at `/lecturer/exams/:examId/schedule` (INF-12). No dedicated Stitch Scheduling frame exists; STITCH-08 is the nearest visual reference. The frontend uses mock persistence only; calendar integration, notifications, student delivery, backend concurrency, question allocation, and runtime sessions are out of scope.
 
+### Exam Question Configuration
+
+- no saved configuration,
+- saved MANUAL configuration,
+- saved RANDOM_POOL configuration,
+- insufficient eligible questions,
+- missing/ineligible saved reference,
+- filter no-results,
+- local unsaved selection,
+- save failure/success,
+- read-only configuration,
+- unsaved-changes warning.
+
+INF-13 is an inferred exam-scoped screen. Only approved questions from the exam subject are eligible; follow-up count is displayed but not configured here.
+
 ### Grading
 
 - attempt loading,
