@@ -96,3 +96,5 @@ Exam Scheduling page
 ```
 
 The repository validates UUIDs and request constraints before transport. Query invalidation is scoped to the exam schedule and related exam caches. API mode is explicit: a request failure remains an error and does not select the mock repository. Because the backend currently lacks lecturer roster lookup, delete and CSV endpoints, those actions remain available only in the mock repository and are surfaced as unsupported in API mode.
+
+For API mode, the roster capability intentionally composes the existing mock repository and returns a visible `Dữ liệu demo` indicator. This is a capability-level decision, not a runtime fallback: Scheduling assignment, schedule loading, auto scheduling and rescheduling always use the API repository and preserve API errors.

@@ -6,3 +6,4 @@ export function EmptyState({ title, description }: { title: string; description:
 export function ErrorState({ description }: { description: string }) { return <section className="state"><Alert tone="danger">{description}</Alert></section> }
 export function PermissionDenied() { return <section className="state"><h1>Không có quyền truy cập</h1><p>Quyền cuối cùng luôn do backend xác nhận.</p><Link className="button outline" to="/login">Quay lại đăng nhập</Link></section> }
 export function StatusBadge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'ai' }) { return <Badge tone={tone}>{label}</Badge> }
+export function DemoDataBadge() { return <StatusBadge label="Dữ liệu demo" tone="info" /> }

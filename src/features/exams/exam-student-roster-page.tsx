@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Dialog, Input, Spinner } from '../../components/ui/primitives'
-import { EmptyState, ErrorState, LoadingPage, PermissionDenied, StatusBadge } from '../../components/common/states'
+import { DemoDataBadge, EmptyState, ErrorState, LoadingPage, PermissionDenied, StatusBadge } from '../../components/common/states'
 import { useSession } from '../../app/providers/use-session'
 import { useAddRosterStudent, useExam, useExamRoster, useImportRosterStudents, useRemoveRosterStudent } from './exam-hooks'
 import { examStatusMeta } from './exam-types'
@@ -13,16 +13,10 @@ import { examRoutes } from './exam-routes'
 import { runtimeConfig } from '../../services/api/runtime-config'
 
 export function ExamStudentRosterPage() {
-  if (runtimeConfig.dataSource === 'api') return <ApiRosterUnsupportedPage />
-  return <MockExamStudentRosterPage />
+  return <MockExamStudentRosterPage demoData={runtimeConfig.dataSource === 'api'} />
 }
 
-function ApiRosterUnsupportedPage() {
-  const { examId = '' } = useParams()
-  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{examId}</span></div><h1>Danh sách sinh viên</h1><p>Roster API chưa được backend cung cấp cho lecturer.</p></div><div className="roster-head-actions"><Link className="button outline" to={examRoutes.schedule(examId)}>Mở Scheduling API</Link><Link className="button outline" to={examRoutes.list}>Về danh sách kỳ thi</Link></div></header><Alert tone="info"><strong>Chưa hỗ trợ trong API mode.</strong> Backend hiện chỉ có endpoint gán candidate theo <code>studentId</code> UUID. Chưa có endpoint lấy danh sách sinh viên, thêm thủ công, import CSV hoặc xoá candidate cho lecturer.</Alert><EmptyState title="Cần student UUID từ backend" description="Dùng trang Scheduling để gửi các UUID thật vào endpoint POST /api/v1/exams/{examId}/candidates. Dữ liệu mock roster chỉ hoạt động khi VITE_DATA_SOURCE=mock." /></section>
-}
-
-function MockExamStudentRosterPage() {
+function MockExamStudentRosterPage({ demoData = false }: { demoData?: boolean }) {
   const { examId = '' } = useParams(); const { session } = useSession(); const [params, setParams] = useSearchParams(); const [addOpen, setAddOpen] = useState(false); const [importOpen, setImportOpen] = useState(false); const [remove, setRemove] = useState<RosterStudent | null>(null)
   const exam = useExam(examId); const roster = useExamRoster(examId); const editable = exam.data ? exam.data.status === 'DRAFT' || exam.data.status === 'SCHEDULED' : false; const query = (params.get('q') ?? '').trim().toLocaleLowerCase(); const rows = useMemo(() => (roster.data ?? []).filter((student) => `${student.studentCode} ${student.fullName} ${student.email}`.toLocaleLowerCase().includes(query)), [roster.data, query])
   if (session.user && !session.user.roles.includes('lecturer')) return <PermissionDenied />
@@ -30,7 +24,8 @@ function MockExamStudentRosterPage() {
   if (exam.isError) return <ErrorState description="Không thể tải thông tin kỳ thi. Vui lòng thử lại." />
   if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
   const meta = examStatusMeta[exam.data.status]
-  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{exam.data.id}</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions"><StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
+  return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>{exam.data.id}</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions">{demoData && <DemoDataBadge />}<StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
+    {demoData && <Alert tone="info"><strong>Dữ liệu demo.</strong> Backend chưa có API đọc roster, tìm sinh viên hoặc xoá candidate. Các thao tác roster hiện chỉ cập nhật mock; hãy dùng Scheduling để gán student UUID thật qua API.</Alert>}
     {!editable && <Alert tone="warning"><strong>Chế độ chỉ đọc.</strong> Kỳ thi {meta.label.toLocaleLowerCase()} nên không thể thêm, import hoặc xoá sinh viên.</Alert>}
     {editable && <div className="roster-toolbar"><Button onClick={() => setAddOpen(true)}>Thêm sinh viên</Button><Button variant="outline" onClick={() => setImportOpen(true)}>Import CSV</Button><a className="button outline" download="aives-exam-student-roster-template.csv" href={rosterImportTemplateUrl}>Tải file mẫu</a></div>}
     <div className="roster-filters"><label htmlFor="roster-search">Tìm sinh viên<Input id="roster-search" value={params.get('q') ?? ''} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next) }} placeholder="Mã sinh viên, họ tên hoặc email..." /></label><span>{roster.data?.length ?? 0} sinh viên</span></div>

@@ -208,7 +208,7 @@ Only one primary Viva phase is active at a time. Connection/media conditions may
 
 - **Loading:** schedule request is in flight; scheduling actions are disabled.
 - **Empty:** backend returns no candidate schedule; show the assignment and auto-schedule actions.
-- **Unsupported roster:** API mode has no lecturer student lookup, manual roster add, CSV import or candidate delete endpoint; explain that real student UUIDs are required.
+- **Demo roster in API mode:** API mode has no lecturer student lookup, CSV import or candidate delete endpoint, so the existing roster is explicitly labelled `Dữ liệu demo`; explain that real student UUIDs are required for backend assignment.
 - **Assignment error:** preserve the entered UUIDs and show the normalized backend error; never replace the view with mock data.
 - **Generated schedule:** show every returned slot, student identity, timestamps and backend status.
 - **Reschedule error:** keep the dialog values and report the validation/conflict response.
