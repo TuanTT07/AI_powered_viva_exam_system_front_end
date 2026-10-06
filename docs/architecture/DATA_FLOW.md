@@ -98,3 +98,15 @@ Exam Scheduling page
 The repository validates UUIDs and request constraints before transport. Query invalidation is scoped to the exam schedule and related exam caches. API mode is explicit: a request failure remains an error and does not select the mock repository. Because the backend currently lacks lecturer roster lookup, delete and CSV endpoints, those actions remain available only in the mock repository and are surfaced as unsupported in API mode.
 
 For API mode, the roster capability intentionally composes the existing mock repository and returns a visible `Dữ liệu demo` indicator. This is a capability-level decision, not a runtime fallback: Scheduling assignment, schedule loading, auto scheduling and rescheduling always use the API repository and preserve API errors.
+
+## Lecturer dashboard and subjects flow
+
+```text
+Authenticated Lecturer session
+→ subject query/repository boundary
+→ mock assigned-course data (until Lecturer Courses API exists)
+→ Dashboard / Subject List / Subject Overview
+→ existing feature routes (Question, Rubric, Materials, AI, Exam)
+```
+
+Course IDs are treated as opaque values. In API mode only the configured `VITE_DEMO_COURSE_ID` can safely open API-backed course features; mock-only IDs render navigation as disabled. No Lecturer page derives assignment from Admin APIs, questions, rubrics or exams.

@@ -135,6 +135,10 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
 
+## Lecturer course assignment (not yet available)
+
+Swagger currently has no verified Lecturer-scoped course endpoint. The preferred future contract is `GET /api/lecturer/courses` (and optionally `GET /api/lecturer/courses/{courseId}`), deriving the Lecturer from the bearer token and enforcing assignment authorization server-side. Lecturer pages must not call the Admin `/api/admin/courses` endpoints.
+
 ## Date/Time
 
 Backend should provide timezone-safe timestamps.

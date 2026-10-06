@@ -66,9 +66,9 @@ These complete the 33-route map. “Missing design” means the production scree
 | ID | Screen | Source | Role | Feature | Type | Route | Stitch Reference | Status |
 |---|---|---|---|---|---|---|---|---|
 | INF-01 | Sign In | Inferred | Shared | Auth | Route | `/login` | Live-only node TD-01 is unconfirmed | missing-design |
-| INF-02 | Lecturer Dashboard | Inferred | Lecturer | Dashboard | Route | `/lecturer` | — | missing-design |
-| INF-03 | Assigned Subjects | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects` | — | missing-design |
-| INF-04 | Subject Overview | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects/:subjectId` | — | missing-design |
+| INF-02 | Lecturer Dashboard | Inferred | Lecturer | Dashboard | Route | `/lecturer` | Existing lecturer layout; no dedicated Stitch frame | implemented |
+| INF-03 | Assigned Subjects | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects` | Existing lecturer layout; no dedicated Stitch frame | implemented |
+| INF-04 | Subject Overview | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects/:subjectId` | Existing lecturer layout; no dedicated Stitch frame | implemented |
 | INF-05 | Create Question | Inferred | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions/new` | Reuse STITCH-07 structure | planned |
 | INF-06 | Rubric List | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics` | — | missing-design |
 | INF-07 | Create Rubric | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics/new` | Partial patterns in STITCH-07 | missing-design |

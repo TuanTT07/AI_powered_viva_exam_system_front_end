@@ -213,3 +213,12 @@ Only one primary Viva phase is active at a time. Connection/media conditions may
 - **Generated schedule:** show every returned slot, student identity, timestamps and backend status.
 - **Reschedule error:** keep the dialog values and report the validation/conflict response.
 - **Read-only statuses:** backend terminal/active statuses are displayed as returned; only the explicit reschedule action is offered where the backend allows it.
+
+## Lecturer Dashboard and Subject states
+
+- **Loading/error/retry:** dashboard and subject list wait on their query and expose a scoped retry action.
+- **Empty assigned courses:** explain that no Lecturer course assignment is available.
+- **No search results:** preserve the URL-backed search term and offer reset.
+- **Demo course:** display `Dữ liệu demo` when course assignment or exam summaries use mock data in API mode.
+- **Missing real UUID:** keep mock-only course navigation visible but disabled for API-backed actions; show the required demo configuration variable.
+- **Subject not found/permission denied:** use the existing safe error and role-guard states.
