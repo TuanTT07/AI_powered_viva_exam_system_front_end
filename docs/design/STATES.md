@@ -56,7 +56,7 @@ STITCH-16 represents ready, processing and failed rows in one populated table. T
 - reject/remove pending,
 - save/approval error.
 
-STITCH-15 represents generated drafts, a citation warning and an open evidence drawer. It does not represent configuration, generating, empty/no-output, service error or mutation failures.
+STITCH-15 represents generated drafts, configuration and review. The frontend implements subject-scoped READY-material selection, deterministic mock generation, validation, editing, selection, save confirmation and save-as-draft integration. No real AI/RAG retrieval or citations are generated; no-ready material, generation failure, save failure and unsaved-batch states are handled locally.
 
 ### Question Import
 
