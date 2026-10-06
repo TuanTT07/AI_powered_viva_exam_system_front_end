@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/ui/primitives';
 
@@ -48,7 +47,7 @@ export function ExamSuccessPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm text-gray-500 mb-1">Mã đề thi</span>
-              <span className="font-mono font-medium text-blue-600">{examId ? \`EXAM-\${examId}\` : 'VIVA-CS101'}</span>
+              <span className="font-mono font-medium text-blue-600">{examId ? 'EXAM-' + examId : 'VIVA-CS101'}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-sm text-gray-500 mb-1">Thời gian làm bài</span>

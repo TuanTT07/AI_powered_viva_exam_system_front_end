@@ -7,11 +7,11 @@ import { SubjectManagementPage } from '../../features/administration/pages/Subje
 import { SettingsPage } from '../../features/administration/pages/SettingsPage'
 import { AdminDashboardPage } from '../../features/administration/pages/AdminDashboardPage'
 import type { AppRole } from '../../types/auth'
+import { QuestionBankPage } from '../../features/question-bank/question-bank-page'
 import { QuestionEditorPage } from '../../features/question-bank/question-editor-page'
 import { RubricEditorPage, RubricListPage } from '../../features/rubrics/rubric-pages'
 import { VivaInterviewRoom } from '../../features/viva-session/pages/VivaInterviewRoom'
 import { ExamSuccessPage } from '../../features/viva-session/pages/ExamSuccessPage'
-import { DeviceCheckPage } from '../../features/viva-session/pages/DeviceCheckPage'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -38,7 +38,6 @@ const adminRoutes = admin.map(([path, title, feature, description]) => {
 })
 
 const studentRoutes = student.map(([path, title, feature, description]) => {
-  if (path === 'exams/:examId/check') return { path, element: <DeviceCheckPage /> }
   if (path === 'exams/:examId/completed') return { path, element: <ExamSuccessPage /> }
   return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
 })
