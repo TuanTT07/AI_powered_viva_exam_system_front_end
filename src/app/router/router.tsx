@@ -11,6 +11,8 @@ import { QuestionBankPage } from '../../features/question-bank/question-bank-pag
 import { QuestionEditorPage } from '../../features/question-bank/question-editor-page'
 import { RubricEditorPage, RubricListPage } from '../../features/rubrics/rubric-pages'
 import { CourseMaterialsPage } from '../../features/learning-materials/course-materials-page'
+import { VivaInterviewRoom } from '../../features/viva-session/pages/VivaInterviewRoom'
+import { ExamSuccessPage } from '../../features/viva-session/pages/ExamSuccessPage'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -36,12 +38,21 @@ const adminRoutes = admin.map(([path, title, feature, description]) => {
   return { path, element: <Placeholder role="admin" title={title} feature={feature} description={description} /> }
 })
 
-export const router = createBrowserRouter([{ path: '/', errorElement: <RouteError />, children: [
-  { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
-  { element: <RequireAuth />, children: [
-    { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{path:'subjects/:subjectId/materials',element:<CourseMaterialsPage/>},{path:'subjects/:subjectId/questions',element:<QuestionBankPage/>},{path:'subjects/:subjectId/questions/new',element:<QuestionEditorPage/>},{path:'subjects/:subjectId/questions/:questionId',element:<QuestionEditorPage/>},{path:'subjects/:subjectId/rubrics',element:<RubricListPage/>},{path:'subjects/:subjectId/rubrics/new',element:<RubricEditorPage/>},{path:'subjects/:subjectId/rubrics/:rubricId',element:<RubricEditorPage/>}, ...pages('lecturer', lecturer)] }] },
-    { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: pages('student', student) }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <Placeholder role="student" title="Phiên vấn đáp đang hoạt động" feature="Viva Session" description="Viva runtime sẽ được triển khai bằng state machine và snapshot backend-authoritative ở milestone riêng." /> }] }] },
-    { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: adminRoutes }] },
-  ] },
-  { index: true, element: <Navigate replace to="/login" /> }, { path: '*', element: <NotFound /> },
-] }])
+const studentRoutes = student.map(([path, title, feature, description]) => {
+  if (path === 'exams/:examId/completed') return { path, element: <ExamSuccessPage /> }
+  return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
+})
+
+export const router = createBrowserRouter([{
+  path: '/', errorElement: <RouteError />, children: [
+    { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
+        {
+      element: <RequireAuth />, children: [
+        { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, ...pages('lecturer', lecturer)] }] },
+        { element: <RequireRole roles={['student']} />, children: [{ path: 'student', element: <StudentLayout />, children: studentRoutes }, { path: 'student/exams/:examId/session', element: <ExamLayout />, children: [{ index: true, element: <VivaInterviewRoom /> }] }] },
+        { element: <RequireRole roles={['admin']} />, children: [{ path: 'admin', element: <AdminLayout />, children: adminRoutes }] },
+      ]
+    },
+    { index: true, element: <Navigate replace to="/login" /> }, { path: '*', element: <NotFound /> },
+  ]
+}])
