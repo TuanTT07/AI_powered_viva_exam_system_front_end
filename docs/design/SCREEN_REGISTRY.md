@@ -74,7 +74,7 @@ These complete the 33-route map. “Missing design” means the production scree
 | INF-07 | Create Rubric | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics/new` | Partial patterns in STITCH-07 | missing-design |
 | INF-08 | Rubric Editor | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics/:rubricId` | Partial patterns in STITCH-07 | missing-design |
 | INF-09 | Create Exam | Inferred | Lecturer | Exams | Route | `/lecturer/exams/new` | Reuse STITCH-08 structure | implemented |
-| INF-10 | Exam Overview | Inferred | Lecturer | Exams | Route | `/lecturer/exams/:examId` | — | missing-design |
+| INF-10 | Exam Overview and Group 2 Readiness | Inferred | Lecturer | Exams | Route | `/lecturer/exams/:examId` | No dedicated frame; inferred from STITCH-08 | implemented |
 | INF-11 | Student Assignments | Inferred | Lecturer | Exams | Route | `/lecturer/exams/:examId/students` | STITCH-08 partial only | implemented |
 | INF-12 | Exam Scheduling and Time Slots | Inferred | Lecturer | Exams | Route | `/lecturer/exams/:examId/schedule` | STITCH-08 nearest visual reference; no dedicated Scheduling frame | planned |
 | INF-21 | Live Exam Monitoring | Inferred | Lecturer | Monitoring | Route | `/lecturer/exams/:examId/monitor` | — | missing-design |
