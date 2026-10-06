@@ -25,4 +25,6 @@ h1{font-size:clamp(2.25rem,4vw,3.8rem);line-height:1.04}
 .lecturer-actions>.button,.subject-actions>.button,.subject-links>.button,.qb-actions>.button{min-width:142px}
 .workspace-header .button{min-width:108px}
 .dialog-actions>.button{min-width:112px}
+.dashboard-section>.subject-actions{align-items:center}
+.dashboard-section>.subject-actions>.button{align-self:center;min-height:42px}
 @media(max-width:760px){.lecturer-actions>.button,.subject-actions>.button,.subject-links>.button,.qb-actions>.button{min-width:0;flex:1}.dialog-actions>.button{min-width:0}}
