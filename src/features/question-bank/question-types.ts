@@ -14,6 +14,8 @@ export type Question = {
   rubric?: string
   source: QuestionSource
   status: QuestionStatus
+  createdById?: string
+  aiGenerated?: boolean
 }
 
 export type ImportedQuestionDraft = Pick<Question, 'content' | 'topic' | 'bloom' | 'suggestedAnswer' | 'rubricId' | 'rubric'>

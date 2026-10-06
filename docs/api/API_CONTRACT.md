@@ -43,7 +43,9 @@ The current backend Swagger does not expose authentication or logout endpoints. 
 
 ## Question API integration
 
-The Question Bank integration currently connects only search/list, detail, approve and delete. Question responses are raw Spring `Page` payloads and are mapped from transport DTOs in `src/features/question-bank/api-question-repository.ts`. The backend does not provide topic, suggested answer, response duration or a current lecturer UUID; API create/edit, import and AI generation therefore remain mock-only.
+The Question Bank integration connects search/list, detail, create, update, approve and delete. `POST /api/questions` and `PUT /api/questions/{id}` use the verified `QuestionRequest` fields (`courseId`, nullable `rubricId`, `createdById`, `content`, `bloomLevel`, `aiGenerated`) and raw `QuestionResponse` payloads. Responses are mapped in `src/features/question-bank/api-question-repository.ts`; localized Bloom labels are converted to backend enums and `DRAFT`/`APPROVED` statuses are preserved.
+
+Create/edit requires real UUIDs for course, question, rubric (when selected) and authenticated user. The UI never exposes `createdById` as an editable field. Manual create sends `aiGenerated=false`, and backend-created records are expected to be `DRAFT`. The backend currently does not support topic, suggested answer, explanation, keywords or course-scoped Rubrics; API mode labels those fields unavailable and does not send them. Import and AI generation remain mock-only.
 
 ## Authentication API
 

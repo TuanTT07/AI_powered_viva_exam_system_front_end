@@ -27,7 +27,7 @@ No production AIVES component currently exists in `src/`; the current app is the
 | STITCH-04 | Exam List | Stitch | Lecturer | Exams | Route | `/lecturer/exams` | Node `49a51fbd8174487d98b6c2335dc8a458` | implemented |
 | STITCH-05 | Active Viva — Recording a Follow-up | Stitch | Student | Viva Session | State | `/student/exams/:examId/session` | Node `506312ac1c0e45b18418bb051b24177c` | reference |
 | STITCH-06 | Attempt Grading Review | Stitch | Lecturer | Grading | Route | `/lecturer/exams/:examId/attempts/:attemptId` | Node `55fdd2dd2a784af593a190e4eafe9cba` | reference |
-| STITCH-07 | Question and Rubric Editor | Stitch | Lecturer | Question Bank / Rubrics | Route | `/lecturer/subjects/:subjectId/questions/:questionId` | Node `585c0cb02d4b4fbd9ca29cf0e25e3d92` | reference |
+| STITCH-07 | Question and Rubric Editor | Stitch | Lecturer | Question Bank / Rubrics | Route | `/lecturer/subjects/:subjectId/questions/:questionId` and `/lecturer/subjects/:subjectId/questions/:questionId/edit` | Node `585c0cb02d4b4fbd9ca29cf0e25e3d92` | reference |
 | STITCH-08 | Exam Configuration and Assignment | Stitch | Lecturer | Exams | Route | `/lecturer/exams/:examId/edit` | Node `6421e124837441fca29c2cffd5e09a46` | implemented |
 | STITCH-09 | User Management with Account Editor | Stitch | Admin | Administration | Route | `/admin/users` | Node `65aa25a9d615479e8efcbf5a469ce1ac` | reference |
 | STITCH-10 | Student Results and Exam Record | Stitch | Student | Results | Route | `/student/results` | Node `6f3391a86cd146c09dffb7a7bdce73c9` | reference |
@@ -69,7 +69,7 @@ These complete the 33-route map. “Missing design” means the production scree
 | INF-02 | Lecturer Dashboard | Inferred | Lecturer | Dashboard | Route | `/lecturer` | Existing lecturer layout; no dedicated Stitch frame | implemented |
 | INF-03 | Assigned Subjects | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects` | Existing lecturer layout; no dedicated Stitch frame | implemented |
 | INF-04 | Subject Overview | Inferred | Lecturer | Subjects | Route | `/lecturer/subjects/:subjectId` | Existing lecturer layout; no dedicated Stitch frame | implemented |
-| INF-05 | Create Question | Inferred | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions/new` | Reuse STITCH-07 structure | planned |
+| INF-05 | Create Question | Inferred | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions/new` | Reuse STITCH-07 structure; API-backed create | implemented |
 | INF-06 | Rubric List | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics` | — | missing-design |
 | INF-07 | Create Rubric | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics/new` | Partial patterns in STITCH-07 | missing-design |
 | INF-08 | Rubric Editor | Inferred | Lecturer | Rubrics | Route | `/lecturer/subjects/:subjectId/rubrics/:rubricId` | Partial patterns in STITCH-07 | missing-design |

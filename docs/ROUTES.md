@@ -35,6 +35,7 @@ Additional recovery/callback routes depend on the identity-provider contract and
 | `/lecturer/subjects/:subjectId/questions/generate` | AI draft generation/review | Lecturer; AI output is draft | STITCH-15 — implemented deterministic mock workflow |
 | `/lecturer/subjects/:subjectId/questions/new` | Create question | Lecturer | Reuse STITCH-07 editor |
 | `/lecturer/subjects/:subjectId/questions/:questionId` | Question editor | Lecturer | STITCH-07 |
+| `/lecturer/subjects/:subjectId/questions/:questionId/edit` | Question editor update flow | Lecturer | STITCH-07 |
 | `/lecturer/subjects/:subjectId/rubrics` | Rubric list | Lecturer | Missing design |
 | `/lecturer/subjects/:subjectId/rubrics/new` | Create rubric | Lecturer | Missing design; editor may share STITCH-07 patterns |
 | `/lecturer/subjects/:subjectId/rubrics/:rubricId` | Rubric editor | Lecturer | Missing design |
