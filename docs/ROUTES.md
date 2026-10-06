@@ -30,7 +30,7 @@ Additional recovery/callback routes depend on the identity-provider contract and
 | `/lecturer` | Lecturer dashboard | Lecturer | Missing design |
 | `/lecturer/subjects` | Assigned subjects | Lecturer; backend assignment | Missing design |
 | `/lecturer/subjects/:subjectId` | Subject overview | Lecturer; assigned subject | Missing design |
-| `/lecturer/subjects/:subjectId/materials` | Learning materials | Lecturer; assigned subject | STITCH-16 |
+| `/lecturer/subjects/:subjectId/materials` | Learning materials | Lecturer; assigned subject | STITCH-16 — implemented mock workflow |
 | `/lecturer/subjects/:subjectId/questions` | Question bank | Lecturer; assigned subject | STITCH-02, STITCH-03 overlay |
 | `/lecturer/subjects/:subjectId/questions/generate` | AI draft generation/review | Lecturer; AI output is draft | STITCH-15 |
 | `/lecturer/subjects/:subjectId/questions/new` | Create question | Lecturer | Reuse STITCH-07 editor |

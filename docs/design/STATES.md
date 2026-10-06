@@ -39,7 +39,7 @@ Every implemented screen defines the states relevant to its data and actions. A 
 - unauthorized/forbidden,
 - partial list failure.
 
-STITCH-16 represents ready, processing and failed rows in one populated table. It does not cover route loading, empty, upload failure, delete confirmation/failure or permission states.
+STITCH-16 represents ready, processing and failed rows in one populated table. The frontend implements the registered materials route with loading, empty, validation, upload pending, processing, ready, failed, retry, delete confirmation/failure and responsive states. It accepts PDF, DOCX, PPTX and TXT; limits each file to 25 MB and each selection to 10 files; and rejects zero-byte or normalized filename-plus-size duplicates within a subject. The current repository is mock-only: no parsing, OCR, embeddings, storage or RAG retrieval occurs.
 
 ### AI Question Generation
 

@@ -36,7 +36,7 @@ No production AIVES component currently exists in `src/`; the current app is the
 | STITCH-13 | Device Check, Instructions and Ready | Stitch | Student | Viva Session | Route | `/student/exams/:examId/check` | Node `a1d9e90cca944486b361aa63dbfe3a1e` | reference |
 | STITCH-14 | Final Grade Summary and Publication | Stitch | Lecturer | Grading | State | `/lecturer/exams/:examId/attempts/:attemptId` | Node `a54f94b41e934a03bf1e84874acc7fe0` | reference |
 | STITCH-15 | AI Question Review with Citation Drawer | Stitch | Lecturer | Question Bank | Route | `/lecturer/subjects/:subjectId/questions/generate` | Node `c751422c2b524ab79b1ce88993b8c2ac` | reference |
-| STITCH-16 | Learning Materials and AI Knowledge Sources | Stitch | Lecturer | Learning Materials | Route | `/lecturer/subjects/:subjectId/materials` | Node `d016ceb171b34764945e37c7f6bc58fa` | reference |
+| STITCH-16 | Learning Materials and AI Knowledge Sources | Stitch | Lecturer | Learning Materials | Route | `/lecturer/subjects/:subjectId/materials` | Node `d016ceb171b34764945e37c7f6bc58fa` | implemented |
 
 ### Per-Screen Audit
 
