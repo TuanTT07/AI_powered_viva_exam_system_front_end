@@ -35,3 +35,7 @@ Public runtime variables are documented in `.env.example`:
 Vite development proxies only `/api` to `AIVES_API_PROXY_TARGET` (default `http://localhost:8080`). The proxy target is server-side Vite configuration and is not exposed as a browser variable. Deployed environments need same-origin routing or backend CORS.
 
 Invalid data-source values fail safely to the documented `mock` default. API failures never trigger an automatic mock fallback. No `.env` or secret is committed.
+
+## Automated test isolation
+
+The running application may use local `.env` values, including `VITE_DATA_SOURCE=api`. Vitest runs are isolated from that developer configuration and use mock mode by default. API repository tests must opt in explicitly and provide a mocked API transport; they must never call the deployed backend. Production API failures still propagate as API errors and never fall back to mock data.
