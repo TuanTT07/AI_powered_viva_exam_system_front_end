@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button, Input, Badge, Dialog } from '../../../components/ui/primitives';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../user-hooks';
 import type { UserRole, User } from '../api-user-repository';
@@ -17,17 +18,20 @@ function AccountEditorDialog({
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [role, setRole] = useState<UserRole>(user?.role || 'lecturer');
+  const [identifier, setIdentifier] = useState(user?.identifier || '');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       id: user ? user.id : Math.random().toString(),
       name,
-      identifier: user ? user.identifier : 'NEW-USER',
+      identifier: user ? user.identifier : identifier,
       email,
       role,
       status: 'active',
-      initials: name.substring(0, 2).toUpperCase()
+      initials: name.substring(0, 2).toUpperCase(),
+      password
     });
   };
 
@@ -53,9 +57,11 @@ function AccountEditorDialog({
               <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MẬT KHẨU KHỞI TẠO BAN ĐẦU *</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Bắt buộc đổi khi đăng nhập lần đầu</span>
             </div>
-            <Input value="AkademiaViva@2025!" readOnly />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Nhập mật khẩu khởi tạo" />
           </div>
         )}
+
+        {!user && <div><label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MÃ ĐỊNH DANH *</label><Input value={identifier} onChange={e => setIdentifier(e.target.value)} required placeholder="VD: CB-2026001" /></div>}
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>CHỌN VAI TRÒ HỆ THỐNG *</label>
@@ -101,6 +107,7 @@ export function UserManagementPage() {
         email: savedUser.email,
         roleName: savedUser.role,
         userCode: savedUser.identifier,
+        password: savedUser.password,
       }, { onSuccess: () => setIsAddingUser(false) });
     } else if (editingUser) {
       updateUser.mutate({
@@ -213,7 +220,7 @@ export function UserManagementPage() {
                       {user.initials}
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontWeight: 'bold', color: 'var(--navy-dark)' }}>{user.name}</span>
+                      <Link to={`/admin/users/${user.id}`} style={{ display: 'block', fontWeight: 'bold', color: 'var(--navy-dark)' }}>{user.name}</Link>
                       <span style={{ display: 'block', fontSize: '0.85rem', color: 'var(--secondary)', marginTop: '2px' }}>{user.identifier}</span>
                     </div>
                   </div>
@@ -242,6 +249,7 @@ export function UserManagementPage() {
                 </td>
                 <td style={{ padding: '16px', textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: '8px' }}>
+                    <Link to={`/admin/users/${user.id}`} style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Chi tiết</Link>
                     <button onClick={() => setEditingUser(user)} style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Sửa</button>
                     <button onClick={() => handleDelete(user.id)} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>
                       Xóa

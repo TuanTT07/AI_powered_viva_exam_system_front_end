@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Input, Dialog } from '../../../components/ui/primitives';
 import { useCourses, useSaveCourse, useCourse } from '../course-hooks';
 import type { Subject } from '../api-course-repository';
@@ -243,6 +244,7 @@ export function SubjectManagementPage() {
                   )}
                 </td>
                 <td style={{ padding: '16px', textAlign: 'right' }}>
+                  <Link className="button outline" to={`/admin/courses/${subject.id}`}>Chi tiết</Link>{' '}
                   <Button variant="outline" onClick={() => setEditingSubjectId(subject.id)}>Thiết lập</Button>
                 </td>
               </tr>

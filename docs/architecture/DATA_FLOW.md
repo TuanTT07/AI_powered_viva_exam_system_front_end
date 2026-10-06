@@ -103,6 +103,19 @@ For API mode, the roster capability intentionally composes the existing mock rep
 
 ## Lecturer dashboard and subjects flow
 
+## Admin management flow
+
+```text
+Admin route guard
+→ Admin page query/mutation hook
+→ selected repository (mock or API)
+→ DTO mapper
+→ centralized API client
+→ verified /api/admin endpoints
+```
+
+User detail/reset-password/course-assignment and course lecturer mutations invalidate only the affected user/course query keys. Components do not call `apiClient` directly and API failures are surfaced as errors without a mock fallback.
+
 ```text
 Authenticated Lecturer session
 → subject query/repository boundary

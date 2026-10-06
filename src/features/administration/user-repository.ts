@@ -1,6 +1,6 @@
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { selectRepository } from '../../services/api/repository-selection'
-import { apiUserRepository, type User, type Page } from './api-user-repository'
+import { apiUserRepository, type User, type Page, type UserCourse } from './api-user-repository'
 
 const MOCK_USERS: User[] = [
   { id: '1', name: 'TS. Nguyễn Văn An', identifier: 'CB-201402', email: 'nguyenvanan@academia.edu.vn', role: 'lecturer', status: 'active', subjects: ['Lập trình Java Core', 'OOP'], initials: 'NA' },
@@ -63,7 +63,10 @@ export const mockUserRepository = {
     const index = MOCK_USERS.findIndex(u => u.id === id)
     if (index === -1) throw new Error('Không tìm thấy người dùng')
     MOCK_USERS.splice(index, 1)
-  }
+  },
+  async getById(id: string) { const user = MOCK_USERS.find(u => u.id === id); if (!user) throw new Error('Không tìm thấy người dùng'); return user },
+  async resetPassword(id: string, _newPassword: string) { if (!MOCK_USERS.some(u => u.id === id)) throw new Error('Không tìm thấy người dùng') },
+  async getCourses(id: string): Promise<UserCourse[]> { const user = MOCK_USERS.find(u => u.id === id); if (!user) throw new Error('Không tìm thấy người dùng'); return (user.subjects || []).map((name, index) => ({ id: `mock-course-${index}`, code: `MOCK-${index + 1}`, name, department: 'Khoa CNTT' })) },
 }
 
 export const userRepository = selectRepository(runtimeConfig.dataSource, { mock: mockUserRepository, api: apiUserRepository })

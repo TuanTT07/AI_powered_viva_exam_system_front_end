@@ -8,7 +8,7 @@ import type { AppRole } from '../../types/auth'
 const nav: Record<AppRole, { label: string; to: string }[]> = {
   lecturer: [{ label: 'Tổng quan', to: '/lecturer' }, { label: 'Môn học', to: '/lecturer/subjects' }, { label: 'Rubric', to: '/lecturer/rubrics' }, { label: 'Kỳ thi', to: '/lecturer/exams' }],
   student: [{ label: 'Tổng quan', to: '/student' }, { label: 'Kỳ thi', to: '/student/exams' }, { label: 'Kết quả', to: '/student/results' }],
-  admin: [{ label: 'Tổng quan', to: '/admin' }, { label: 'Người dùng', to: '/admin/users' }, { label: 'Môn học', to: '/admin/subjects' }, { label: 'Cấu hình', to: '/admin/settings' }],
+  admin: [{ label: 'Tổng quan', to: '/admin' }, { label: 'Người dùng', to: '/admin/users' }, { label: 'Môn học', to: '/admin/courses' }, { label: 'Cấu hình', to: '/admin/settings' }],
 }
 
 export function WorkspaceLayout({ role, title }: { role: AppRole; title: string }) {

@@ -154,6 +154,23 @@ Swagger currently has no verified Lecturer-scoped course endpoint. The preferred
 
 ## Date/Time
 
+## Admin management (verified)
+
+Admin repositories use the envelope `{ success, status, message, data }` and map transport DTOs to UI models. The implemented capabilities are:
+
+| Capability | Endpoint |
+|---|---|
+| User detail | `GET /api/admin/users/{id}` |
+| Reset password | `PATCH /api/admin/users/{id}/password` with `{ newPassword }` |
+| User courses | `GET /api/admin/users/{id}/courses` |
+| Roles | `GET /api/admin/roles` |
+| Course delete | `DELETE /api/admin/courses/{id}` |
+| Course lecturers | `GET /api/admin/courses/{courseId}/lecturers` |
+| Assign lecturer | `PUT /api/admin/courses/{courseId}/lecturers/{lecturerId}` |
+| Remove lecturer | `DELETE /api/admin/courses/{courseId}/lecturers/{lecturerId}` |
+
+Admin UI routes are `/admin`, `/admin/users`, `/admin/users/:userId`, `/admin/courses` and `/admin/courses/:courseId`. API mode never falls back to mock data; mock mode remains available through the repository selection boundary.
+
 Backend should provide timezone-safe timestamps.
 
 Frontend should not assume local timezone for official exam eligibility unless contract says so.

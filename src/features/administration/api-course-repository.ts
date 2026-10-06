@@ -1,11 +1,14 @@
-import { apiClient } from '../../services/api/client'
+import { ApiError, apiClient } from '../../services/api/client'
+import { isUuid } from '../question-bank/api-question-repository'
+
+function assertCourseUuid(value: string) { if (!isUuid(value)) throw new ApiError('Mã môn học phải là UUID của backend.', { code: 'INVALID_UUID' }) }
 
 export interface Subject {
   id: string
   code: string
   name: string
   department: string
-  lecturers: { id: string; name: string; initials: string }[]
+  lecturers: { id: string; name: string; initials: string; userCode?: string; email?: string }[]
   questionCount: number
 }
 
@@ -68,6 +71,8 @@ function mapCourseDetailDto(dto: CourseDetailResponseDto): Subject {
       id: l.id,
       name: l.fullName,
       initials: getInitials(l.fullName),
+      userCode: l.userCode,
+      email: l.email,
     })),
   }
 }
@@ -94,6 +99,7 @@ export const apiCourseRepository = {
   },
 
   async getById(id: string): Promise<Subject | null> {
+    assertCourseUuid(id)
     const response = await apiClient.request<ApiResponse<CourseDetailResponseDto>>(`/api/admin/courses/${encodeURIComponent(id)}`)
     if (!response.success) throw new Error(response.message)
     return mapCourseDetailDto(response.data)
@@ -113,6 +119,7 @@ export const apiCourseRepository = {
   },
 
   async update(id: string, payload: { code: string; name: string; department: string }): Promise<Subject> {
+    assertCourseUuid(id)
     const response = await apiClient.request<ApiResponse<CourseDetailResponseDto>>(`/api/admin/courses/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: {
@@ -123,5 +130,31 @@ export const apiCourseRepository = {
     })
     if (!response.success) throw new Error(response.message || 'Lỗi cập nhật môn học')
     return mapCourseDetailDto(response.data)
+  },
+
+  async delete(id: string): Promise<void> {
+    assertCourseUuid(id)
+    const response = await apiClient.request<ApiResponse<unknown>>(`/api/admin/courses/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!response.success) throw new Error(response.message || 'Lỗi xóa môn học')
+  },
+
+  async getLecturers(courseId: string): Promise<Subject['lecturers']> {
+    assertCourseUuid(courseId)
+    const response = await apiClient.request<ApiResponse<LecturerResponseDto[]>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers`)
+    if (!response.success) throw new Error(response.message || 'Lỗi lấy giảng viên phụ trách')
+    return response.data.map(l => ({ id: l.id, name: l.fullName, initials: getInitials(l.fullName), userCode: l.userCode, email: l.email }))
+  },
+
+  async assignLecturer(courseId: string, lecturerId: string): Promise<Subject> {
+    assertCourseUuid(courseId); if (!isUuid(lecturerId)) throw new ApiError('Mã giảng viên phải là UUID của backend.', { code: 'INVALID_UUID' })
+    const response = await apiClient.request<ApiResponse<CourseDetailResponseDto>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers/${encodeURIComponent(lecturerId)}`, { method: 'PUT' })
+    if (!response.success) throw new Error(response.message || 'Lỗi phân công giảng viên')
+    return mapCourseDetailDto(response.data)
+  },
+
+  async removeLecturer(courseId: string, lecturerId: string): Promise<void> {
+    assertCourseUuid(courseId); if (!isUuid(lecturerId)) throw new ApiError('Mã giảng viên phải là UUID của backend.', { code: 'INVALID_UUID' })
+    const response = await apiClient.request<ApiResponse<unknown>>(`/api/admin/courses/${encodeURIComponent(courseId)}/lecturers/${encodeURIComponent(lecturerId)}`, { method: 'DELETE' })
+    if (!response.success) throw new Error(response.message || 'Lỗi gỡ giảng viên')
   }
 }
