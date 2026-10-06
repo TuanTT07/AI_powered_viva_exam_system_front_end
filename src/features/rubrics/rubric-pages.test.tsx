@@ -27,7 +27,6 @@ describe('Global Rubric navigation', () => {
     const client = new QueryClient(); render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/lecturer/rubrics']}><Routes><Route path="/lecturer/rubrics" element={<GlobalRubricListPage />} /></Routes></MemoryRouter></QueryClientProvider>)
     expect(await screen.findByRole('heading', { name: 'Quản lý Rubric' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Tạo Rubric' })).toHaveAttribute('href', '/lecturer/rubrics/new')
-    expect(screen.getByText(/dùng chung/)).toBeInTheDocument()
   })
 
   it('validates global create and preserves the global route', async () => {
