@@ -17,6 +17,21 @@ describe('Question API mapping', () => {
   })
 })
 describe('Question API repository', () => {
+  it('creates and updates with the verified backend request contract', async () => {
+    const request = vi.fn().mockResolvedValue(dto())
+    const repo = createApiQuestionRepository({ request })
+    const input = { courseId: dto().courseId, rubricId: '55555555-5555-4555-8555-555555555555', createdById: dto().createdById, content: '  Nội dung mới  ', bloomLevel: 'PHÂN TÍCH' as const, aiGenerated: false }
+    await repo.create(input)
+    await repo.update(dto().id, input)
+    expect(request).toHaveBeenNthCalledWith(1, '/api/questions', { method: 'POST', body: { ...input, content: 'Nội dung mới', bloomLevel: 'ANALYZE' } })
+    expect(request).toHaveBeenNthCalledWith(2, `/api/questions/${dto().id}`, { method: 'PUT', body: { ...input, content: 'Nội dung mới', bloomLevel: 'ANALYZE' } })
+  })
+  it('rejects mock IDs and invalid write fields before transport', async () => {
+    const request = vi.fn(); const repo = createApiQuestionRepository({ request })
+    await expect(repo.create({ courseId: 'oop-java', rubricId: null, createdById: dto().createdById, content: 'x', bloomLevel: 'PHÂN TÍCH', aiGenerated: false })).rejects.toMatchObject({ code: 'INVALID_UUID' })
+    await expect(repo.create({ courseId: dto().courseId, rubricId: null, createdById: dto().createdById, content: ' ', bloomLevel: 'PHÂN TÍCH', aiGenerated: false })).rejects.toMatchObject({ code: 'INVALID_CONTENT' })
+    expect(request).not.toHaveBeenCalled()
+  })
   it('maps search params and page indexes', async () => {
     const request = vi.fn().mockResolvedValue({ content: [dto()], number: 0, size: 20, totalElements: 1, totalPages: 1 })
     const repo = createApiQuestionRepository({ request })
