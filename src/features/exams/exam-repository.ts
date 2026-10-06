@@ -3,6 +3,8 @@ import type { RosterDraft, RosterStudent } from './roster-types'
 import { rosterEditableStatuses } from './roster-types'
 import type { ExamSchedule, ScheduleDraft } from './schedule-types'
 import { validateSchedule } from './schedule-validation'
+import type { ExamQuestionConfig, QuestionConfigDraft } from './question-config-types'
+import { questionRepository } from '../question-bank/question-repository'
 
 const seed: ExamSession[] = [
   { id: 'EXAM-2024-OOP-01', title: 'Vấn đáp OOP Java - Đợt 1', subjectId: 'oop-java', subjectCode: 'INT2204', subjectName: 'Lập trình Java', scheduledAt: '2024-10-15T08:00:00+07:00', durationMinutes: 15, studentCount: 45, mainQuestionCount: 5, maxFollowUpCount: 2, status: 'IN_PROGRESS' },
@@ -18,11 +20,12 @@ const seed: ExamSession[] = [
   { id: 'EXAM-2025-UX-01', title: 'Vấn đáp Thiết kế tương tác', subjectId: 'ux', subjectCode: 'INT2260', subjectName: 'Thiết kế tương tác', scheduledAt: '2025-08-12T08:00:00+07:00', durationMinutes: 12, studentCount: 30, mainQuestionCount: 4, maxFollowUpCount: 2, status: 'CANCELLED' },
 ]
 
-export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule> }
+export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule>; getQuestionConfig(examId: string): Promise<ExamQuestionConfig | undefined>; saveQuestionConfig(examId: string, draft: QuestionConfigDraft): Promise<ExamQuestionConfig> }
 
 export function createExamRepository(records: ExamSession[] = seed): ExamRepository {
   const rosters = new Map<string, RosterStudent[]>(records.map((exam) => [exam.id, []]))
   const schedules = new Map<string, ExamSchedule>()
+  const questionConfigs = new Map<string, ExamQuestionConfig>()
   rosters.set('EXAM-2025-DB-01', [
     { id: 'ROSTER-EXAM-2025-DB-01-001', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025001', fullName: 'Trần Minh Anh', email: 'sv2025001@example.edu.vn' },
     { id: 'ROSTER-EXAM-2025-DB-01-002', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025002', fullName: 'Lê Hoàng Nam', email: 'sv2025002@example.edu.vn' },
@@ -73,6 +76,8 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
     async removeRosterStudent(examId, rosterId) { ensureEditable(examId); const current = rosters.get(examId) ?? []; const index = current.findIndex((student) => student.id === rosterId); if (index < 0) throw new Error('Sinh viên không tồn tại trong kỳ thi'); current.splice(index, 1); adjustCount(examId, -1) },
     async getSchedule(examId) { if (examId === '__ERROR__') throw new Error('Schedule repository unavailable'); if (!records.some((exam) => exam.id === examId)) throw new Error('Exam not found'); const schedule = schedules.get(examId); return schedule ? { ...schedule, slots: schedule.slots.map((slot) => ({ ...slot })) } : undefined },
     async saveSchedule(examId, draft) { const exam = ensureEditable(examId); if (draft.breakMinutes === 13) throw new Error('Schedule save failed'); const roster = rosters.get(examId) ?? []; const issues = validateSchedule(exam, roster, draft); if (issues.length) throw new Error(issues[0].message); const schedule: ExamSchedule = { examId, breakMinutes: draft.breakMinutes, strategy: draft.strategy, slots: draft.slots.map((slot) => ({ ...slot })), updatedAt: '2026-10-06T00:00:00+07:00' }; schedules.set(examId, schedule); return { ...schedule, slots: schedule.slots.map((slot) => ({ ...slot })) } },
+    async getQuestionConfig(examId) { if (!records.some((exam) => exam.id === examId)) throw new Error('Exam not found'); const config = questionConfigs.get(examId); return config ? { ...config, questionIds: [...config.questionIds] } : undefined },
+    async saveQuestionConfig(examId, draft) { const exam = ensureEditable(examId); if (draft.mode === 'MANUAL' && draft.questionIds.length !== exam.mainQuestionCount) throw new Error(`Manual mode requires exactly ${exam.mainQuestionCount} questions`); if (draft.mode === 'RANDOM_POOL' && draft.questionIds.length < exam.mainQuestionCount) throw new Error(`Random pool requires at least ${exam.mainQuestionCount} questions`); if (new Set(draft.questionIds).size !== draft.questionIds.length) throw new Error('Duplicate question IDs are not allowed'); const questions = await questionRepository.list(exam.subjectId); const eligible = new Map(questions.filter((question) => question.status === 'ĐÃ DUYỆT').map((question) => [question.id, question])); if (draft.questionIds.some((id) => !eligible.has(id))) throw new Error('One or more questions are no longer eligible for this exam'); if (draft.questionIds.length && draft.questionIds[0] === '__ERROR__') throw new Error('Question configuration save failed'); const config: ExamQuestionConfig = { examId: exam.id, mode: draft.mode, questionIds: [...draft.questionIds], updatedAt: '2026-10-06T00:00:00+07:00' }; questionConfigs.set(examId, config); return { ...config, questionIds: [...config.questionIds] } },
   }
 }
 

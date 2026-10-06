@@ -44,6 +44,7 @@ Additional recovery/callback routes depend on the identity-provider contract and
 | `/lecturer/exams/:examId/edit` | Exam configuration | Lecturer; draft/editability from backend | STITCH-08 |
 | `/lecturer/exams/:examId/students` | Student assignments | Lecturer; policy TBD | STITCH-08 partial |
 | `/lecturer/exams/:examId/schedule` | Exam scheduling and time slots | Lecturer; draft/scheduled editable, locked exams read-only | INF-12; inferred from STITCH-08 |
+| `/lecturer/exams/:examId/questions` | Exam question configuration | Lecturer; exam-scoped references to approved subject questions | INF-13; inferred from STITCH-08 |
 | `/lecturer/exams/:examId/monitor` | Live monitoring | Lecturer; authorized exam | Missing design |
 | `/lecturer/exams/:examId/attempts` | Attempt queue/list | Lecturer/grader | STITCH-12 |
 | `/lecturer/exams/:examId/attempts/:attemptId` | Grading workspace | Lecturer/grader; one route with review/summary states | STITCH-06, STITCH-11, STITCH-14 |
