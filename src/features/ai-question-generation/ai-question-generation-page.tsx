@@ -10,10 +10,19 @@ import { type GeneratedQuestion, type GenerationLanguage, type GenerationRequest
 import { useGenerateQuestions, useSaveGeneratedQuestions } from './generation-hooks'
 import { validateGenerationRequest, validateGeneratedQuestions } from './generation-validation'
 import './ai-question-generation.css'
+import { runtimeConfig } from '../../services/api/runtime-config'
 
 const blooms: BloomLevel[] = ['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH']
 
 export function AIQuestionGenerationPage() {
+  const { subjectId = '' } = useParams()
+  if (runtimeConfig.dataSource === 'api') return <ApiGenerationUnsupported subjectId={subjectId} />
+  return <MockAIQuestionGenerationPage />
+}
+
+function ApiGenerationUnsupported({ subjectId }: { subjectId: string }) { return <section className="state"><h2>AI generation chưa khả dụng trong API mode</h2><p>Backend hiện chưa có endpoint AI generation. Chuyển sang mock mode để dùng workflow demo.</p><Link className="button outline" to={`/lecturer/subjects/${subjectId}/questions`}>Về ngân hàng câu hỏi</Link></section> }
+
+function MockAIQuestionGenerationPage() {
   const { subjectId = '' } = useParams()
   const materials = useMaterials(subjectId)
   const topics = useQuestionTopics(subjectId)

@@ -68,6 +68,8 @@ For destructive/high-impact mutations:
 - prevent duplicate submission,
 - do not show success until backend confirms.
 
+Question Bank API mode validates Course and Question UUIDs before requests, keeps detail read-only, and never falls back to mock after network, timeout, 404 or 409 failures. Delete is confirmed and non-optimistic; approval invalidates detail and matching list queries.
+
 ## Grading
 
 If final grade save fails:
