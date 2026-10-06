@@ -17,6 +17,7 @@ export type ExamSession = {
 
 export type ExamListRequest = { q: string; subject: string; status: ExamStatus | ''; page: number; pageSize: number }
 export type ExamListResponse = { items: ExamSession[]; total: number; page: number; pageSize: number; totalPages: number }
+export type ExamDraft = Pick<ExamSession, 'title' | 'subjectId' | 'scheduledAt' | 'durationMinutes' | 'mainQuestionCount' | 'maxFollowUpCount'>
 
 export const examStatusMeta: Record<ExamStatus, { label: string; tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger' }> = {
   DRAFT: { label: 'NHÁP', tone: 'neutral' },
