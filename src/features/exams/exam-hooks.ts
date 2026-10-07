@@ -7,11 +7,18 @@ import type { QuestionConfigDraft } from './question-config-types'
 import { apiExamSchedulingRepository, type AutoScheduleRequestDto, type RescheduleCandidateRequestDto } from './api-exam-scheduling-repository'
 import { apiExamMonitoringRepository } from './api-exam-monitoring-repository'
 import { apiStudentExamRepository } from './api-student-exam-repository'
+import { useSession } from '../../app/providers/use-session'
+import { runtimeConfig } from '../../services/api/runtime-config'
+import { subjectRepository } from '../subjects/subject-repository'
 
-export const examKeys = { all: ['exams'] as const, lists: ['exams', 'list'] as const, list: (request: ExamListRequest) => [...examKeys.lists, request] as const, detail: (examId: string) => [...examKeys.all, 'detail', examId] as const, roster: (examId: string) => [...examKeys.all, 'roster', examId] as const, schedule: (examId: string) => [...examKeys.all, 'schedule', examId] as const, questionConfig: (examId: string) => [...examKeys.all, 'question-config', examId] as const, subjects: () => [...examKeys.all, 'subjects'] as const, summary: () => [...examKeys.all, 'summary'] as const }
+export const examKeys = { all: ['exams'] as const, lists: ['exams', 'list'] as const, list: (request: ExamListRequest) => [...examKeys.lists, request] as const, detail: (examId: string) => [...examKeys.all, 'detail', examId] as const, roster: (examId: string) => [...examKeys.all, 'roster', examId] as const, schedule: (examId: string) => [...examKeys.all, 'schedule', examId] as const, questionConfig: (examId: string) => [...examKeys.all, 'question-config', examId] as const, subjects: (lecturerId: string) => [...examKeys.all, 'subjects', lecturerId] as const, summary: () => [...examKeys.all, 'summary'] as const }
 export function useExams(request: ExamListRequest) { return useQuery({ queryKey: examKeys.list(request), queryFn: () => examRepository.list(request) }) }
 export function useExam(examId: string | undefined) { return useQuery({ queryKey: examKeys.detail(examId ?? ''), queryFn: () => examRepository.get(examId ?? ''), enabled: Boolean(examId) }) }
-export function useExamSubjects() { return useQuery({ queryKey: examKeys.subjects(), queryFn: () => examRepository.subjects(), staleTime: Infinity }) }
+export function useExamSubjects() {
+  const { session } = useSession()
+  const lecturerId = session.user?.id ?? ''
+  return useQuery({ queryKey: examKeys.subjects(lecturerId), queryFn: async () => runtimeConfig.dataSource === 'api' ? (await subjectRepository.list(lecturerId)).map((subject) => ({ id: subject.id, code: subject.code, name: subject.name })) : examRepository.subjects(), enabled: Boolean(session.user), staleTime: Infinity })
+}
 export function useExamSummary() { return useQuery({ queryKey: examKeys.summary(), queryFn: () => examRepository.summary(), staleTime: Infinity }) }
 export function useExamRoster(examId: string | undefined) { return useQuery({ queryKey: examKeys.roster(examId ?? ''), queryFn: () => examRepository.listRoster(examId ?? ''), enabled: Boolean(examId) }) }
 export function useExamSchedule(examId: string | undefined) { return useQuery({ queryKey: examKeys.schedule(examId ?? ''), queryFn: async () => (await examRepository.getSchedule(examId ?? '')) ?? null, enabled: Boolean(examId) }) }

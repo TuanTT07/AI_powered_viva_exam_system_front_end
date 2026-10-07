@@ -146,11 +146,13 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
 
-The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: Lecturer Courses discovery, lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Course Materials, bulk Question Import, AI Question Generation, Viva runtime/WebSocket, Grading and Reports.
+The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Course Materials, bulk Question Import, AI Question Generation, Viva runtime/WebSocket, Grading and Reports.
 
-## Lecturer course assignment (not yet available)
+## Lecturer course assignment (temporary demo contract)
 
-Swagger currently has no verified Lecturer-scoped course endpoint. The preferred future contract is `GET /api/lecturer/courses` (and optionally `GET /api/lecturer/courses/{courseId}`), deriving the Lecturer from the bearer token and enforcing assignment authorization server-side. Lecturer pages must not call the Admin `/api/admin/courses` endpoints.
+The deployed Swagger currently exposes `GET /api/lecturers/{lecturerId}/courses` under `Lecturer - Courses`. It returns the standard `{ success, status, message, data }` envelope with `CourseResponse[]` (`id`, `courseCode`, `courseName`, `department`, `createdAt`). The frontend takes `lecturerId` only from `session.user.id`, validates it as a UUID and never accepts it from URL/query input or hard-codes a demo identity. Lecturer pages call this endpoint directly and never call `/api/admin/**`.
+
+This endpoint is temporary for demo purposes while backend JWT authentication is unavailable. The planned replacement is `GET /api/lecturer/courses`, which must derive the Lecturer UUID from the JWT `sub` claim and enforce assignment authorization server-side. API failures remain errors; they never fall back to mock data. Mock mode continues to use the existing local fixtures.
 
 ## Date/Time
 

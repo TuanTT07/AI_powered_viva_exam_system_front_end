@@ -1,5 +1,4 @@
 import { ApiError, apiClient, type ApiClient } from '../../services/api/client'
-import { runtimeConfig } from '../../services/api/runtime-config'
 import type { ExamDraft, ExamListRequest, ExamSession, ExamStatus } from './exam-types'
 import type { ExamRepository } from './exam-repository'
 
@@ -32,7 +31,7 @@ export function createApiExamRepository(client: Pick<ApiClient, 'request'> = api
     async update(examId, draft) { assertUuid(examId, 'Exam'); const body = payload(draft); const { courseId: _courseId, ...update } = body; return mapExam(await client.request<ExamDto>(`/api/v1/exams/${encodeURIComponent(examId)}`, { method: 'PUT', body: update as UpdateExamDto })) },
     async delete(examId) { assertUuid(examId, 'Exam'); await client.request<void>(`/api/v1/exams/${encodeURIComponent(examId)}`, { method: 'DELETE' }) },
     async updateStatus(examId, status) { assertUuid(examId, 'Exam'); return mapExam(await client.request<ExamDto>(`/api/v1/exams/${encodeURIComponent(examId)}/status`, { method: 'PATCH', body: { status } satisfies StatusDto })) },
-    async subjects() { return runtimeConfig.demoCourseId && isExamManagementUuid(runtimeConfig.demoCourseId) ? [{ id: runtimeConfig.demoCourseId, code: 'DEMO', name: 'Course demo (VITE_DEMO_COURSE_ID)' }] : [] },
+    async subjects() { return [] },
     async summary() { const page = await this.list({ q: '', subject: '', status: '', page: 1, pageSize: 100 }); return page.items.reduce((counts, exam) => { counts[exam.status] += 1; return counts }, { DRAFT: 0, PUBLISHED: 0, SCHEDULED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 } as Record<ExamStatus, number>) },
     async listRoster() { throw new ApiError('Backend chưa có API đọc roster giảng viên.', { code: 'CAPABILITY_UNAVAILABLE', status: 501 }) },
     async addRosterStudent() { throw new ApiError('Backend chưa có API roster giảng viên.', { code: 'CAPABILITY_UNAVAILABLE', status: 501 }) },

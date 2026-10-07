@@ -117,13 +117,13 @@ Admin route guard
 User detail/reset-password/course-assignment and course lecturer mutations invalidate only the affected user/course query keys. Components do not call `apiClient` directly and API failures are surfaced as errors without a mock fallback.
 
 ```text
-Authenticated Lecturer session
+Authenticated Lecturer session (`session.user.id`)
 → subject query/repository boundary
-→ mock assigned-course data (until Lecturer Courses API exists)
+→ `GET /api/lecturers/{lecturerId}/courses` in API mode, or mock assigned-course data in mock mode
 → Dashboard / Subject List / Subject Overview
 → existing feature routes (Question, Rubric, Materials, AI, Exam)
 ```
 
-Course IDs are treated as opaque values. In API mode only the configured `VITE_DEMO_COURSE_ID` can safely open API-backed course features; mock-only IDs render navigation as disabled. No Lecturer page derives assignment from Admin APIs, questions, rubrics or exams.
+Course IDs are treated as opaque values. In API mode only UUIDs returned by the Lecturer Courses endpoint open API-backed course features; mock-only IDs render navigation as disabled. No Lecturer page derives assignment from Admin APIs, questions, rubrics or exams. A failed course request remains an error and never selects mock data.
 
 Exam Management uses the API repository for list/detail/create/update/delete/status when `VITE_DATA_SOURCE=api`. DTOs map `courseId`, `startTime`/`endTime` and `examConfig` into the existing Exam domain. Monitoring and Student My Slot have separate repositories and typed query keys; missing Lecturer roster and Student exam-list endpoints remain demo/unavailable. API failures never select mock data.
