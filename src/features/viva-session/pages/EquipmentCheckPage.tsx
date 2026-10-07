@@ -13,14 +13,7 @@ export function EquipmentCheckPage() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const animationFrameRef = useRef<number>()
-
-  // Dọn dẹp stream khi unmount
-  useEffect(() => {
-    return () => {
-      stopMic()
-    }
-  }, [])
+  const animationFrameRef = useRef<number | null>(null)
 
   const stopMic = () => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
@@ -30,6 +23,13 @@ export function EquipmentCheckPage() {
     audioContextRef.current = null
     analyserRef.current = null
   }
+
+  // Dọn dẹp stream khi unmount
+  useEffect(() => {
+    return () => {
+      stopMic()
+    }
+  }, [])
 
   const startMicTest = async () => {
     try {
