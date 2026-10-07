@@ -9,11 +9,13 @@ function AccountEditorDialog({
   open,
   onClose,
   onSave,
+  isPending
 }: {
   user: User | null;
   open: boolean;
   onClose: () => void;
   onSave: (user: any) => void;
+  isPending?: boolean;
 }) {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -43,11 +45,11 @@ function AccountEditorDialog({
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>HỌ VÀ TÊN NGƯỜI DÙNG *</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ví dụ: TS. Phan Bá Hưng" required />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ví dụ: TS. Phan Bá Hưng" required disabled={isPending} />
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>THƯ ĐIỆN TỬ (EMAIL) *</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hung.pb@academia.edu.vn" required />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hung.pb@academia.edu.vn" required disabled={isPending} />
           </div>
         </div>
 
@@ -57,18 +59,18 @@ function AccountEditorDialog({
               <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MẬT KHẨU KHỞI TẠO BAN ĐẦU *</label>
               <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Bắt buộc đổi khi đăng nhập lần đầu</span>
             </div>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Nhập mật khẩu khởi tạo" />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Nhập mật khẩu khởi tạo" disabled={isPending} />
           </div>
         )}
 
-        {!user && <div><label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MÃ ĐỊNH DANH *</label><Input value={identifier} onChange={e => setIdentifier(e.target.value)} required placeholder="VD: CB-2026001" /></div>}
+        {!user && <div><label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MÃ ĐỊNH DANH *</label><Input value={identifier} onChange={e => setIdentifier(e.target.value)} required placeholder="VD: CB-2026001" disabled={isPending} /></div>}
 
         <div>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>CHỌN VAI TRÒ HỆ THỐNG *</label>
           <div style={{ display: 'flex', gap: '12px' }}>
             {(['admin', 'lecturer', 'student'] as UserRole[]).map((r) => (
-              <label key={r} style={{ flex: 1, padding: '12px', border: `1px solid ${role === r ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '8px', cursor: 'pointer', backgroundColor: role === r ? 'var(--soft)' : 'var(--surface)', textAlign: 'center' }}>
-                <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: 'none' }} />
+              <label key={r} style={{ flex: 1, padding: '12px', border: `1px solid ${role === r ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '8px', cursor: 'pointer', backgroundColor: role === r ? 'var(--soft)' : 'var(--surface)', textAlign: 'center', opacity: isPending ? 0.7 : 1 }}>
+                <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: 'none' }} disabled={isPending} />
                 <span style={{ display: 'block', fontWeight: 'bold', color: 'var(--navy-dark)' }}>
                   {r === 'admin' ? 'Admin' : r === 'lecturer' ? 'Giảng viên' : 'Sinh viên'}
                 </span>
@@ -81,8 +83,8 @@ function AccountEditorDialog({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' }}>
-          <Button type="button" variant="outline" onClick={onClose}>Hủy bỏ</Button>
-          <Button type="submit" variant="primary">Lưu & Kích hoạt</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>Hủy bỏ</Button>
+          <Button type="submit" variant="primary" pending={isPending}>Lưu & Kích hoạt</Button>
         </div>
       </form>
     </Dialog>
@@ -108,14 +110,30 @@ export function UserManagementPage() {
         roleName: savedUser.role,
         userCode: savedUser.identifier,
         password: savedUser.password,
-      }, { onSuccess: () => setIsAddingUser(false) });
+      }, { 
+        onSuccess: () => {
+          setIsAddingUser(false);
+          alert('Tạo người dùng thành công!');
+        },
+        onError: (err: any) => {
+          alert('Lỗi tạo người dùng: ' + (err.message || 'Unknown error'));
+        }
+      });
     } else if (editingUser) {
       updateUser.mutate({
         id: savedUser.id,
         fullName: savedUser.name,
         email: savedUser.email,
         roleName: savedUser.role,
-      }, { onSuccess: () => setEditingUser(null) });
+      }, { 
+        onSuccess: () => {
+          setEditingUser(null);
+          alert('Cập nhật thành công!');
+        },
+        onError: (err: any) => {
+          alert('Lỗi cập nhật: ' + (err.message || 'Unknown error'));
+        }
+      });
     }
   };
 
@@ -124,7 +142,9 @@ export function UserManagementPage() {
 
   const handleDelete = (id: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tài khoản này không?')) {
-      deleteUser.mutate(id);
+      deleteUser.mutate(id, {
+        onError: (err: any) => alert('Lỗi khi xóa: ' + (err.message || 'Unknown error'))
+      });
     }
   };
 
@@ -271,7 +291,8 @@ export function UserManagementPage() {
           user={isAddingUser ? null : editingUser}
           open={isAddingUser || !!editingUser} 
           onClose={() => { setIsAddingUser(false); setEditingUser(null); }} 
-          onSave={handleSaveUser} 
+          onSave={handleSaveUser}
+          isPending={createUser.isPending || updateUser.isPending}
         />
       )}
     </div>
