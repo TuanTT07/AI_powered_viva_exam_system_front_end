@@ -70,7 +70,7 @@ export function LoginPage() {
       <div className="login-shell">
         <div className="login-brand">
           <div className="login-logo" aria-hidden="true">
-            <svg viewBox="0 0 48 48" role="presentation"><path d="M8 10c7 0 11 2 16 6 5-4 9-6 16-6v27c-7 0-11 2-16 6-5-4-9-6-16-6V10Z" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round"/><path d="M24 16v27" fill="none" stroke="currentColor" strokeWidth="3"/></svg>
+            AIVES
           </div>
           <p className="login-kicker">
             <span>KHẢO THÍ ĐIỆN TỬ</span>
