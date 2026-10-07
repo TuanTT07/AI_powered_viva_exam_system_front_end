@@ -1,12 +1,11 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useState } from 'react'
 import { useResetUserPassword, useUpdateUser, useUser, useUserCourses } from '../user-hooks'
 import { useRoles } from '../role-hooks'
 import { ArrowLeft, User, KeyRound, BookOpen, AlertCircle, Loader2, Save, X } from 'lucide-react'
 
 export function AdminUserDetailPage() {
-  const { userId = '' } = useParams(); 
-  const navigate = useNavigate();
+  const { userId = '' } = useParams();
 
   const userQuery = useUser(userId); 
   const coursesQuery = useUserCourses(userId); 
