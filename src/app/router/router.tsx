@@ -30,6 +30,7 @@ import { ExamMonitoringPage } from '../../features/exams/exam-monitoring-page'
 import { LecturerDashboardPage, LecturerSubjectListPage, LecturerSubjectOverviewPage } from '../../features/subjects/lecturer-subject-pages'
 import { AdminUserDetailPage } from '../../features/administration/pages/AdminUserDetailPage'
 import { AdminCourseDetailPage } from '../../features/administration/pages/AdminCourseDetailPage'
+import { EquipmentCheckPage } from '../../features/viva-session/pages/EquipmentCheckPage'
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -76,6 +77,7 @@ const studentRoutes = student.map(([path, title, feature, description]) => {
   if (path === 'results') return { path, element: <StudentResultListPage /> }
   if (path === 'exams/:examId') return { path, element: <StudentExamSlotPage /> }
   if (path === 'exams/:examId/result') return { path, element: <StudentExamResultPage /> }
+  if (path === 'exams/:examId/check') return { path, element: <EquipmentCheckPage /> }
   return { path, element: <Placeholder role="student" title={title} feature={feature} description={description} /> }
 })
 
