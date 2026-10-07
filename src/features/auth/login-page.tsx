@@ -74,7 +74,7 @@ export function LoginPage() {
           </div>
           <p className="login-kicker">
             <span>KHẢO THÍ ĐIỆN TỬ</span>
-            <i>•</i> HỆ THỐNG VIVA AI
+            <i>•</i> AIVES
           </p>
           <h1 id="login-title">Cổng Khảo Thí Học Thuật</h1>
           <p className="login-subtitle">
