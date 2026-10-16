@@ -230,3 +230,19 @@ Only one primary Viva phase is active at a time. Connection/media conditions may
 - **Demo course:** display `Dữ liệu demo` when course assignment or exam summaries use mock data in API mode.
 - **Missing real UUID:** keep mock-only course navigation visible but disabled for API-backed actions; show the required demo configuration variable.
 - **Subject not found/permission denied:** use the existing safe error and role-guard states.
+
+## Source screen adaptation — 2026-10-16
+
+- Lecturer attempt queue and report routes now render source-style banners, cards, filters and tables. API mode reuses the authorized monitoring query/cache. Completed attempts are explicitly distinct from confirmed grades; no grade distribution is derived from completion status. Explicit demo fixtures include synthetic attempt states and sample scores; they are never used as production evidence.
+- Grading includes evidence, rubric and summary compositions within the existing attempt route (`?tab=summary`). API mode shows authorized candidate metadata and contextual unavailable evidence/scoring states. Demo grading validates criterion bounds, distinguishes unsaved edits from a session-only draft, confirms/locks demo values through a dialog and warns before leaving unsaved edits. No grading save, signature or publication endpoint is invented.
+- Student preflight uses real microphone permission and level checks, explicit speaker-hearing confirmation, network availability and cleanup on unmount/late permission resolution. Device checks do not grant exam eligibility. Production Viva shows the authorized slot and keeps answer controls disabled while the session/realtime contract remains unavailable.
+- Demo Viva uses an isolated sequence with bounded follow-ups, explicit processing phases, timeout and disconnect freeze/manual demo resume. Answers are typed demo input; recording/STT and server saving are never implied. Direct access to completion does not produce a submission receipt. Student API results stay empty until a release contract exists; example grades are restricted to mock mode.
+- Responsive columns stack and dense tables scroll. Browser desktop attempt/three-column grading composition was inspected; mobile spot-check could not be confirmed because native browser automation repeatedly lost active state/capture. No live backend mutation or actual microphone recording was performed.
+
+### Resource-based lecturer navigation
+
+The approved sidebar contains resource lists: dashboard, assigned subjects/materials, rubrics and exams. Course-scoped question bank, rubrics and RAG materials are tabs within the subject. Candidate assignments, scheduling, configuration, monitoring, grading, summary and reporting are tabs within the selected exam. Each destination retains its URL; no context-selection modal is needed. Mobile tabs scroll horizontally and the sidebar retains its drawer behavior.
+
+### Complete demonstration fixtures — 2026-10-16
+
+The user requested populated mock screens and restrained status presentation. Explicit mock mode now supplies coherent exam dates, rosters matching sample counts, sequential assigned schedules, approved question sets, synthetic attempt progression and bounded sample scores/distributions. Assigned demo courses have materials and rubric examples. New exams still start empty; API failures never select demo data. A compact “Dữ liệu mẫu” label identifies sample content. Demo draft scores are prefilled for preview and remain distinct from official grades. Read-only restrictions for active/completed exams are unchanged and explained using inline informational notes rather than large yellow panels.

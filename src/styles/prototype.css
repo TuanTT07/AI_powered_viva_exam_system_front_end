@@ -1,0 +1,26 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Source screens use Tailwind utilities. Scope the compatibility reset to these
+   screens so existing dialogs, API form controls and active Viva keep semantics. */
+@layer base {
+.source-screen{font-family:var(--font-sans);color:#0f172a;line-height:1.5;font-size:14px}
+.source-screen h1,.source-screen h2,.source-screen h3,.source-screen p{margin:0;font-family:inherit;letter-spacing:inherit;line-height:inherit;color:inherit}
+.source-screen button,.source-screen input,.source-screen select,.source-screen textarea{font-family:inherit;font-size:inherit;line-height:inherit}
+.source-screen button{cursor:pointer}.source-screen button:disabled{cursor:not-allowed;opacity:.55}
+.source-screen button:not(.button){background:transparent;border:0 solid transparent;padding:0;text-align:inherit}
+.source-screen svg{display:inline-block;vertical-align:middle;flex-shrink:0}
+.source-screen a{text-decoration:none}.source-screen table{border-collapse:collapse}
+.source-screen .button{min-height:36px;padding:8px 14px;font-size:12px;border-radius:8px}
+.source-screen .input{min-height:38px;border-color:#e2e8f0;border-radius:8px;background:#f8fafc;font-size:13px}
+.source-screen select,.source-screen textarea{box-sizing:border-box}
+.source-screen .source-card{border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgb(15 23 42 / 3%)}
+.source-screen .source-title{font-size:30px;font-weight:750;line-height:1.2;letter-spacing:-.035em}
+.source-screen .source-section-title{font-size:16px;font-weight:650;color:#0f172a}
+@media(max-width:767px){.source-screen .source-title{font-size:24px}}
+}

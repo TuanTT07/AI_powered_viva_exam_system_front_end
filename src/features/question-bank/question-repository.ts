@@ -1,3 +1,4 @@
+import { questionDemoExtras } from './mocks/question-demo-extras'
 import type { ImportedQuestionDraft, Question } from './question-types'
 
 export type QuestionImportResult = { imported: number; failed: number }
@@ -7,9 +8,11 @@ export type QuestionRepository = {
   topics(subjectId: string): Promise<string[]>
   import(subjectId: string, drafts: ImportedQuestionDraft[]): Promise<QuestionImportResult>
   save(question: Question): Promise<Question>
+  delete(subjectId: string, questionId: string): Promise<void>
 }
 
 const questions: Question[] = [
+  ...questionDemoExtras,
   { id: 'Q-JAVA-0104', subjectId: 'java', content: 'Phân biệt interface và abstract class trong Java. Khi nào nên dùng loại nào?', topic: 'OOP & Đa hình', bloom: 'PHÂN TÍCH', suggestedAnswer: 'Interface tập trung vào hợp đồng hành vi; abstract class phù hợp khi cần chia sẻ trạng thái và triển khai chung.', rubric: '3 tiêu chí (10đ)', source: 'AI đề xuất', status: 'ĐÃ DUYỆT' },
   { id: 'Q-JAVA-0089', subjectId: 'java', content: 'Trình bày cơ chế giải quyết xung đột băm (Hash Collision) trong HashMap Java 8+.', topic: 'Collections', bloom: 'HIỂU', rubric: '2 tiêu chí (10đ)', source: 'Thủ công', status: 'ĐÃ DUYỆT' },
   { id: 'Q-JAVA-0112', subjectId: 'java', content: 'Phân biệt Checked Exception và Unchecked Exception; cho ví dụ minh họa.', topic: 'Exception', bloom: 'VẬN DỤNG', rubric: '2 tiêu chí (10đ)', source: 'Import', status: 'CHỜ DUYỆT' },
@@ -30,6 +33,7 @@ const subjectTopics: Record<string, string[]> = { java: ['OOP & Đa hình', 'Col
 const clone = <T,>(value: T): T => structuredClone(value)
 
 export const questionRepository: QuestionRepository = {
+  async delete(subjectId, questionId) { const index = questions.findIndex(item => item.subjectId === subjectId && item.id === questionId); if (index >= 0) questions.splice(index, 1) },
   async list(subjectId) { return clone(questions.filter((question) => question.subjectId === subjectId)) },
   async get(subjectId, questionId) { return clone(questions.find((question) => question.subjectId === subjectId && question.id === questionId) ?? null) },
   async topics(subjectId) { return clone(subjectTopics[subjectId] ?? []) },

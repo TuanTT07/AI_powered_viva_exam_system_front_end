@@ -1,3 +1,7 @@
+import { DemoLabel } from '../../components/common/inline-notice'
+import { useAssessmentOverview } from './use-assessment-overview'
+import { AttemptTable } from './views/AttemptTable'
+import { SourceMetric } from '../../components/common/source-page'
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Alert, Button, Dialog } from "../../components/ui/primitives";
@@ -18,6 +22,7 @@ import {
 } from "./exam-hooks";
 import { examRoutes } from "./exam-routes";
 import "./exam-monitoring.css";
+import { SourcePageHeader } from "../../components/common/source-page";
 
 const statuses = [
   "SCHEDULED",
@@ -98,19 +103,8 @@ function ApiMonitoringPage() {
   const data = monitor.data;
   const mutate = target?.action === "reset" ? reset : absent;
   return (
-    <section className="monitoring-page">
-      <header className="monitoring-head">
-        <div>
-          <p className="eyebrow">EXAMS · MONITORING</p>
-          <h1>Giám sát kỳ thi</h1>
-          <p>
-            {data.examTitle || exam.data.title} · {exam.data.id}
-          </p>
-        </div>
-        <Link className="button outline" to={examRoutes.detail(examId)}>
-          Về tổng quan
-        </Link>
-      </header>
+    <section className="source-screen monitoring-page">
+      <SourcePageHeader eyebrow="Khảo thí · Giám sát" title="Giám sát kỳ thi" description={data.examTitle || exam.data.title} actions={<><Link className="button outline" to={examRoutes.detail(examId)}>Tổng quan</Link><Link className="button outline" to={`/lecturer/exams/${examId}/attempts`}>Hồ sơ lượt thi</Link><Link className="button outline" to={`/lecturer/exams/${examId}/report`}>Báo cáo</Link></>} />
       <div className="monitoring-summary" aria-label="Tóm tắt trạng thái">
         {statuses.map((status) => (
           <div key={status}>
@@ -264,10 +258,12 @@ function ApiMonitoringPage() {
 }
 
 function MockMonitoring() {
-  return (
-    <section className="state">
-      <h1>Giám sát kỳ thi</h1>
-      <p>Chưa có dữ liệu giám sát cho kỳ thi này.</p>
-    </section>
-  );
+  const { examId = '' } = useParams()
+  const exam = useExam(examId)
+  const overview = useAssessmentOverview(examId)
+  if (exam.isPending || overview.isPending) return <LoadingPage label="Đang tải giám sát" />
+  if (exam.isError || overview.isError) return <><ErrorState description="Không thể tải giám sát kỳ thi." /><Button onClick={() => { void exam.refetch(); void overview.refetch() }}>Thử lại</Button></>
+  if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
+  const data = overview.data
+  return <section className="source-screen max-w-7xl mx-auto space-y-6"><SourcePageHeader eyebrow="Khảo thí · Giám sát" title="Giám sát kỳ thi" description={exam.data.title} actions={<DemoLabel />} /><div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><SourceMetric label="THÍ SINH" value={data.total} /><SourceMetric label="ĐANG THI" value={data.active ?? 0} tone="amber" /><SourceMetric label="HOÀN TẤT" value={data.completed ?? 0} tone="emerald" /><SourceMetric label="CHỜ ĐẾN LƯỢT" value={data.total - (data.completed ?? 0) - (data.active ?? 0)} tone="slate" /></div><AttemptTable rows={data.rows} examId={examId} allowReview demo /></section>
 }

@@ -22,6 +22,8 @@ import { ExamSchedulingPage } from '../../features/exams/exam-scheduling-page'
 import { ExamQuestionConfigPage } from '../../features/exams/exam-question-config-page'
 import { ExamDetailPage } from '../../features/exams/exam-detail-page'
 import { StudentExamListPage } from '../../features/exams/student-exam-list-page'
+import { ExamAttemptListPage } from '../../features/exams/exam-attempt-list-page'
+import { ExamReportPage } from '../../features/reports/exam-report-page'
 import { GradingWorkspacePage } from '../../features/grading/grading-workspace-page'
 import { StudentExamResultPage } from '../../features/exams/student-exam-result-page'
 import { StudentResultListPage } from '../../features/exams/student-result-list-page'
@@ -31,6 +33,7 @@ import { LecturerDashboardPage, LecturerSubjectListPage, LecturerSubjectOverview
 import { AdminUserDetailPage } from '../../features/administration/pages/AdminUserDetailPage'
 import { AdminCourseDetailPage } from '../../features/administration/pages/AdminCourseDetailPage'
 import { EquipmentCheckPage } from '../../features/viva-session/pages/EquipmentCheckPage'
+
 
 type RouteInfo = [string, string, string, string]
 const lecturer: RouteInfo[] = [
@@ -43,6 +46,8 @@ const pages = (role: AppRole, routes: RouteInfo[]) => [...(role === 'lecturer' ?
   { path: 'rubrics/new', element: <GlobalRubricEditorPage /> },
   { path: 'rubrics/:rubricId/edit', element: <GlobalRubricEditorPage /> },
 ] : []), ...routes.map(([path, title, feature, description]) => {
+  if (role === 'lecturer' && path === 'exams/:examId/attempts') return { path, element: <ExamAttemptListPage /> }
+  if (role === 'lecturer' && path === 'exams/:examId/report') return { path, element: <ExamReportPage /> }
   if (role === 'lecturer' && path === '') return { index: true, element: <LecturerDashboardPage /> }
   if (role === 'lecturer' && path === 'subjects') return { path, element: <LecturerSubjectListPage /> }
   if (role === 'lecturer' && path === 'subjects/:subjectId') return { path, element: <LecturerSubjectOverviewPage /> }

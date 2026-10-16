@@ -1,22 +1,30 @@
+import { DemoLabel } from '../../components/common/inline-notice'
 import { Link, useParams } from 'react-router-dom'
 import { Alert, Button } from '../../components/ui/primitives'
-import { ErrorState, LoadingPage, PermissionDenied, StatusBadge } from '../../components/common/states'
+import { ErrorState, LoadingPage, PermissionDenied } from '../../components/common/states'
 import { useSession } from '../../app/providers/use-session'
 import { runtimeConfig } from '../../services/api/runtime-config'
-import { useStudentMySlot } from './exam-hooks'
-import { examRoutes } from './exam-routes'
+import { StudentPreExamView } from './views/StudentPreExamView'
+import { SourcePageHeader } from '../../components/common/source-page'
+import { useExam, useStudentMySlot } from './exam-hooks'
 
-const labels: Record<string, string> = { SCHEDULED: 'ĐÃ XẾP LỊCH', READY: 'SẴN SÀNG', IN_PROGRESS: 'ĐANG THI', COMPLETED: 'ĐÃ HOÀN TẤT', ABSENT: 'VẮNG', CANCELLED: 'ĐÃ HỦY' }
-const tones: Record<string, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = { SCHEDULED: 'info', READY: 'info', IN_PROGRESS: 'warning', COMPLETED: 'success', ABSENT: 'danger', CANCELLED: 'neutral' }
-const formatTime = (value: string) => new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(value))
 export function StudentExamSlotPage() {
+  return runtimeConfig.dataSource === 'api' ? <ApiStudentExamSlotPage /> : <MockStudentExamSlotPage />
+}
+function MockStudentExamSlotPage() {
+  const { examId = '' } = useParams()
+  const exam = useExam(examId)
+  if (exam.isPending) return <LoadingPage label="Đang tải kỳ thi demo" />
+  if (exam.isError) return <section><ErrorState description={exam.error.message} /><Button onClick={() => void exam.refetch()}>Thử lại</Button></section>
+  if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi demo." />
+  return <section className="source-screen max-w-6xl mx-auto space-y-6 pb-12"><SourcePageHeader eyebrow="Cổng thí sinh · Phòng chờ demo" title={exam.data.title} description={`${exam.data.subjectCode} · ${exam.data.subjectName}`} actions={<Link className="button outline" to="/student/exams">Danh sách kỳ thi</Link>} /><DemoLabel detail="Dữ liệu demo · Chưa có ca thi cá nhân. Bạn có thể thử kiểm tra thiết bị và luồng vấn đáp mô phỏng." /><div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4"><h2 className="text-base font-semibold">Chuẩn bị trước phiên vấn đáp</h2><p className="text-sm text-slate-500">Kiểm tra micro, loa và kết nối. Phiên mô phỏng không tạo lượt thi hoặc kết quả chính thức.</p><Link className="button primary" to={`/student/exams/${examId}/check`}>Kiểm tra thiết bị & thử demo</Link></div></section>
+}
+function ApiStudentExamSlotPage() {
   const { examId = '' } = useParams(); const { session } = useSession(); const studentId = session.user?.roles.includes('student') ? session.user.id : undefined; const slot = useStudentMySlot(examId, studentId)
   if (session.user && !session.user.roles.includes('student')) return <PermissionDenied />
-  if (runtimeConfig.dataSource === 'mock') return <section className="state"><p className="eyebrow">DỮ LIỆU DEMO</p><h1>Ca thi của tôi</h1><p>My Slot chỉ kết nối backend trong API mode.</p></section>
-  if (!studentId) return <section className="state"><Alert tone="danger">Không xác định được Student UUID từ phiên đăng nhập.</Alert></section>
+  if (!studentId) return <section className="state"><Alert tone="danger">Không xác định được phiên đăng nhập. Vui lòng đăng nhập lại.</Alert></section>
   if (slot.isLoading) return <LoadingPage label="Đang tải ca thi của bạn" />
   if (slot.isError) return <section className="state"><Alert tone="danger">{slot.error instanceof Error ? slot.error.message : 'Không thể tải ca thi.'}</Alert><Button onClick={() => slot.refetch()}>Thử lại</Button></section>
   if (!slot.data) return <ErrorState description="Bạn chưa được xếp ca thi hoặc ca thi không tồn tại." />
-  const data = slot.data; const canJoin = data.status === 'READY' || data.status === 'IN_PROGRESS'
-  return <section className="student-slot-page"><nav aria-label="Breadcrumb"><Link to="/student/exams">Kỳ thi của tôi</Link> / <span>{data.examTitle}</span></nav><header><p className="eyebrow">STUDENT · MY SLOT</p><h1>{data.examTitle}</h1><p>{data.courseCode} · {data.courseName}</p><StatusBadge label={labels[data.status]} tone={tones[data.status]} /></header><dl className="exam-detail-facts"><div><dt>Slot</dt><dd>{data.slotNumber}</dd></div><div><dt>Bắt đầu</dt><dd>{formatTime(data.scheduledStartTime)}</dd></div><div><dt>Kết thúc</dt><dd>{formatTime(data.scheduledEndTime)}</dd></div><div><dt>Trạng thái</dt><dd>{labels[data.status]}</dd></div></dl>{data.accessCode && <Alert tone="info">Mã truy cập: <strong>{data.accessCode}</strong></Alert>}{data.status === 'SCHEDULED' && <Alert tone="info">Ca thi chưa mở. Vui lòng quay lại trong thời gian được thông báo.</Alert>}{data.status === 'ABSENT' && <Alert tone="danger">Ca thi được ghi nhận vắng.</Alert>}{data.status === 'COMPLETED' && <Alert tone="success">Ca thi đã hoàn tất.</Alert>}{canJoin && <Link className="button primary" to={`/student/exams/${examId}/session`}>Vào phòng thi</Link>}{!canJoin && <Button disabled>Chưa thể vào phòng thi</Button>}{!canJoin && <Link className="button outline" to={examRoutes.list}>Về danh sách kỳ thi</Link>}</section>
+  return <StudentPreExamView slot={slot.data} />
 }

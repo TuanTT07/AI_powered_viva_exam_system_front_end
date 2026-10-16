@@ -6,6 +6,21 @@
 
 The observed Stitch theme is **Academic Retro Viva**: professional, academic, calm, trustworthy, clear and evidence-oriented. It uses warm paper surfaces, ink-like navy, restrained terracotta accents and editorial typography.
 
+### Product-shell refresh — 2026-10-16
+
+The supplied AIVES prototype is now the visual reference for the authenticated
+application shell. It updates the previous warm-paper shell with a more compact
+operational system: a white left rail, cool slate canvas, royal-blue primary
+actions, thin slate dividers, compact sans-serif headings and modest 7–12px
+radii. This applies equally to Lecturer, Student and Admin portals. It does
+not alter feature semantics, API status, or the explicit visual treatment of
+AI suggestions and lecturer-confirmed scores.
+
+Production implementation keeps the existing semantic variable names for
+feature compatibility, while the current values are defined in `src/index.css`.
+Avoid adding a second isolated Admin design language; Administration uses the
+same shell, controls, focus states and responsive behavior as the other roles.
+
 Avoid:
 
 - neon or sci-fi AI treatments,

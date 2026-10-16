@@ -1,3 +1,4 @@
+import { InlineNotice } from '../../components/common/inline-notice'
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Dialog, Input, Spinner } from '../../components/ui/primitives'
@@ -11,9 +12,10 @@ import type { RosterDraft, RosterImportPreview, RosterStudent } from './roster-t
 import './exam-student-roster.css'
 import { examRoutes } from './exam-routes'
 import { runtimeConfig } from '../../services/api/runtime-config'
+import { ApiCandidateListPage } from './api-candidate-list-page'
 
 export function ExamStudentRosterPage() {
-  return <MockExamStudentRosterPage demoData={runtimeConfig.dataSource === 'api'} />
+  return runtimeConfig.dataSource === 'api' ? <ApiCandidateListPage /> : <MockExamStudentRosterPage />
 }
 
 function MockExamStudentRosterPage({ demoData = false }: { demoData?: boolean }) {
@@ -26,7 +28,7 @@ function MockExamStudentRosterPage({ demoData = false }: { demoData?: boolean })
   const meta = examStatusMeta[exam.data.status]
   return <section className="roster-page"><header className="roster-head"><div><p className="eyebrow">EXAMS · STUDENT ROSTER</p><div className="roster-breadcrumb"><Link to={examRoutes.list}>Kỳ thi</Link><span>/</span><span>Danh sách sinh viên</span></div><h1>Danh sách sinh viên</h1><p>{exam.data.title} · {exam.data.subjectName}</p></div><div className="roster-head-actions"><StatusBadge label={meta.label} tone={meta.tone} /><Link className="button outline" to={examRoutes.schedule(examId)}>Tiếp tục xếp lịch</Link><Link className="button outline" to={examRoutes.detail(examId)}>Quay lại kỳ thi</Link></div></header>
     {demoData && <Alert tone="info">Chưa có sinh viên trong kỳ thi.</Alert>}
-    {!editable && <Alert tone="warning"><strong>Chế độ chỉ đọc.</strong> Kỳ thi {meta.label.toLocaleLowerCase()} nên không thể thêm, import hoặc xoá sinh viên.</Alert>}
+    {!editable && <InlineNotice><strong>Chế độ chỉ đọc.</strong> Kỳ thi {meta.label.toLocaleLowerCase()} nên không thể thêm, import hoặc xoá sinh viên.</InlineNotice>}
     {editable && <div className="roster-toolbar"><Button onClick={() => setAddOpen(true)}>Thêm sinh viên</Button><Button variant="outline" onClick={() => setImportOpen(true)}>Import CSV</Button><a className="button outline" download="aives-exam-student-roster-template.csv" href={rosterImportTemplateUrl}>Tải file mẫu</a></div>}
     <div className="roster-filters"><label htmlFor="roster-search">Tìm sinh viên<Input id="roster-search" value={params.get('q') ?? ''} onChange={(event) => { const next = new URLSearchParams(params); if (event.target.value) next.set('q', event.target.value); else next.delete('q'); setParams(next) }} placeholder="Mã sinh viên, họ tên hoặc email..." /></label><span>{roster.data?.length ?? 0} sinh viên</span></div>
     {roster.isLoading ? <LoadingPage label="Đang tải danh sách sinh viên" /> : roster.isError ? <section className="state"><Alert tone="danger">Không thể tải danh sách sinh viên.</Alert><Button onClick={() => roster.refetch()}>Thử lại</Button></section> : !roster.data?.length ? <EmptyState title="Chưa có sinh viên" description="Thêm thủ công hoặc import danh sách CSV để bắt đầu." /> : !rows.length ? <section className="state"><h2>Không tìm thấy sinh viên</h2><p>Thử tìm theo mã, họ tên hoặc email khác.</p><Button variant="outline" onClick={() => setParams({})}>Xóa tìm kiếm</Button></section> : <div className="roster-table-wrap"><table className="roster-table"><caption className="sr-only">Danh sách sinh viên của {exam.data.title}</caption><thead><tr><th>MÃ SINH VIÊN</th><th>HỌ VÀ TÊN</th><th>EMAIL</th><th>THAO TÁC</th></tr></thead><tbody>{rows.map((student) => <tr key={student.id}><td>{student.studentCode}</td><td>{student.fullName}</td><td>{student.email}</td><td>{editable && <Button variant="danger" onClick={() => setRemove(student)}>Xoá</Button>}</td></tr>)}</tbody></table></div>}

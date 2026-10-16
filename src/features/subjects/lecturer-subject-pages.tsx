@@ -35,7 +35,7 @@ export function LecturerSubjectListPage() {
 
 function FeatureLink({ id, label, to }: { id: string; label: string; to: string }) { const enabled = canOpenFeature(id); return enabled ? <Link className="button outline" to={to}>{label}</Link> : <span className="button outline" aria-disabled="true">{label} · Sắp có</span> }
 export function LecturerSubjectOverviewPage() {
-  const { courseId = '' } = useParams(); const { session } = useSession(); const subject = useLecturerSubject(courseId)
+  const { subjectId = '' } = useParams(); const { session } = useSession(); const subject = useLecturerSubject(subjectId)
   if (session.user && !session.user.roles.includes('lecturer')) return <PermissionDenied />
   if (subject.isLoading) return <LoadingPage label="Đang tải tổng quan môn học" />
   if (subject.isError) return <ErrorState description="Không thể tải tổng quan môn học." />
