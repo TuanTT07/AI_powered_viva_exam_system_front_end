@@ -47,6 +47,32 @@ body{background:var(--app-canvas);font-family:var(--font);letter-spacing:-.011em
 /* Login visual contract: modern academic Viva AI entry */
 .auth{display:flex;flex-direction:column;min-height:100vh;background:#f8fafc;padding:0}
 .login-page{display:flex;flex-direction:column;min-height:100vh;width:100%;background:#f8fafc}
+.login-page button{border:none!important;outline:none;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer}
+.login-page button:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.login-page a{text-decoration:none}
+.login-tab{border:none!important;outline:none!important;background:transparent;color:#475569;font-weight:700;border-radius:8px;padding:8px 6px;font-size:12px;transition:all .15s ease;cursor:pointer}
+.login-tab.active{background:#2563eb!important;color:#fff!important;box-shadow:0 1px 3px rgba(37,99,235,.25)}
+.login-tab:not(.active):hover{color:#0f172a;background:rgba(0,0,0,.04)}
+.login-sso-vnu{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;padding:10px 16px;border:1px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;font-size:13px;font-weight:600;border-radius:12px;transition:all .15s ease;cursor:pointer}
+.login-sso-vnu:hover{background:#dbeafe!important}
+.login-sso-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;padding:10px 16px;border:1px solid #e2e8f0!important;background:#fff!important;color:#334155!important;font-size:13px;font-weight:600;border-radius:12px;transition:all .15s ease;cursor:pointer}
+.login-sso-google:hover{background:#f8fafc!important;border-color:#cbd5e1!important}
+.login-input-wrap{position:relative;width:100%}
+.login-input-wrap svg.input-lead-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#94a3b8;pointer-events:none}
+.login-field-input{width:100%!important;min-height:46px!important;padding:10px 42px 10px 40px!important;border-radius:12px!important;border:1px solid #e2e8f0!important;background:#f8fafc!important;color:#0f172a!important;font-size:13.5px!important;transition:all .15s ease}
+.login-field-input:focus{background:#fff!important;border-color:#2563eb!important;outline:none!important;box-shadow:0 0 0 3px rgba(37,99,235,.15)!important}
+.login-field-input.has-error{border-color:#ef4444!important;background:#fff5f5!important}
+.login-eye-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:6px;border:none!important;outline:none!important;background:transparent!important;color:#94a3b8;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.login-eye-btn:hover{color:#475569;background:rgba(0,0,0,.04)!important}
+.login-forgot-btn{border:none!important;outline:none!important;background:transparent!important;padding:0!important;color:#2563eb!important;font-size:12px;font-weight:600;cursor:pointer}
+.login-forgot-btn:hover{text-decoration:underline!important;color:#1d4ed8!important}
+.login-submit-button{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;background:#2563eb!important;color:#fff!important;border:none!important;outline:none!important;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:all .15s ease;box-shadow:0 8px 20px -4px rgba(37,99,235,.35)}
+.login-submit-button:hover:not(:disabled){background:#1d4ed8!important;transform:translateY(-1px)}
+.login-submit-button:disabled{opacity:.65;cursor:not-allowed}
+.login-bottom-link{display:inline-flex;align-items:center;gap:6px;color:#2563eb!important;font-size:12px;font-weight:600;text-decoration:none!important;cursor:pointer;border:none!important;outline:none!important;background:transparent!important;padding:0}
+.login-bottom-link:hover{color:#1d4ed8!important;text-decoration:underline!important}
+.login-regulations-btn{display:inline-flex;align-items:center;gap:4px;color:#2563eb!important;font-size:12px;font-weight:600;border:none!important;outline:none!important;background:transparent!important;padding:0!important;cursor:pointer}
+.login-regulations-btn:hover{color:#1d4ed8!important;text-decoration:underline!important}
 
 /* AI Studio source page treatment for existing API-backed records. */
 .question-bank{max-width:1280px;margin-inline:auto;gap:24px;padding-bottom:32px}.qb-head{align-items:center}.qb-head h1{font-family:var(--font);font-size:clamp(1.9rem,3vw,2.5rem);font-weight:750;letter-spacing:-.04em;line-height:1.12}.qb-head p{font-size:.9rem;line-height:1.5}.qb-actions{gap:10px}.qb-actions .button{min-height:38px;border-radius:9px}.qb-summary{border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;padding:13px 16px;color:#1d4ed8;font:600 .73rem var(--mono);letter-spacing:.025em}.qb-filters{gap:12px;align-items:end;border:1px solid #e2e8f0;border-radius:12px;background:#fff;padding:16px;box-shadow:0 1px 2px rgb(15 23 42 / 3%)}.qb-filters label{gap:6px;color:#475569;font-size:.76rem;font-weight:700}.qb-filters .input,.qb-filters select{min-height:40px;border-radius:8px;background:#f8fafc}.qb-table-wrap{border-radius:12px}.qb-table-wrap th{background:#f8fafc;color:#64748b;font-size:.66rem}.qb-table-wrap th,.qb-table-wrap td{padding:14px 16px}.qb-table-wrap tbody tr:hover{background:#f8fafc}.qb-table-wrap .button{min-height:32px;border-radius:7px}.qb-pagination{padding:2px 0;color:#64748b}.question-editor{max-width:1000px;margin-inline:auto}.question-editor form section,.rubric-grid article,.rubric-form fieldset{border-radius:12px}.question-editor h1,.rubric-page h1{font-family:var(--font);font-weight:750;letter-spacing:-.04em}

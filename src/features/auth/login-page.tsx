@@ -17,7 +17,7 @@ import {
   Sparkles,
   Info,
 } from "lucide-react";
-import { Button, Dialog } from "../../components/ui/primitives";
+import { Dialog } from "../../components/ui/primitives";
 import { LoadingPage } from "../../components/common/states";
 import { useSession } from "../../app/providers/use-session";
 import { runtimeConfig } from "../../services/api/runtime-config";
@@ -114,7 +114,7 @@ export function LoginPage() {
   };
 
   return (
-    <section className="login-page min-h-screen flex flex-col bg-slate-50 text-slate-800" aria-labelledby="login-title">
+    <section className="login-page" aria-labelledby="login-title">
       {/* Top Header Navigation */}
       <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-6 py-3.5 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -254,19 +254,15 @@ export function LoginPage() {
               {/* Role Selection Tabs */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-2">
-                  VAI TRÒ DỰ THI &amp; LÀM VIỆC
+                  VAI TRÒ DỰ THI
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-xl" role="tablist">
+                <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl" role="tablist">
                   <button
                     type="button"
                     role="tab"
                     aria-selected={activeRole === "student"}
                     onClick={() => handleRoleTabChange("student")}
-                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${
-                      activeRole === "student"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                    }`}
+                    className={`login-tab ${activeRole === "student" ? "active" : ""}`}
                   >
                     Thí sinh
                   </button>
@@ -275,11 +271,7 @@ export function LoginPage() {
                     role="tab"
                     aria-selected={activeRole === "lecturer"}
                     onClick={() => handleRoleTabChange("lecturer")}
-                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${
-                      activeRole === "lecturer"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                    }`}
+                    className={`login-tab ${activeRole === "lecturer" ? "active" : ""}`}
                   >
                     Giám khảo
                   </button>
@@ -288,11 +280,7 @@ export function LoginPage() {
                     role="tab"
                     aria-selected={activeRole === "admin"}
                     onClick={() => handleRoleTabChange("admin")}
-                    className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${
-                      activeRole === "admin"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                    }`}
+                    className={`login-tab ${activeRole === "admin" ? "active" : ""}`}
                   >
                     Quản trị viên
                   </button>
@@ -309,17 +297,17 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setSsoMessage("Cổng VNU SSO hiện đang được tích hợp cùng phòng khảo thí. Trong môi trường thử nghiệm, bạn có thể chọn các vai trò phía trên để đăng nhập trực tiếp.")}
-                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  className="login-sso-vnu"
                 >
-                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>Đăng nhập VNU SSO</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSsoMessage("Đăng nhập bằng Google Workspace (.edu.vn) đang sẵn sàng. Trong môi trường thử nghiệm, bạn có thể chọn các vai trò phía trên để đăng nhập trực tiếp.")}
-                  className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  className="login-sso-google"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
                     <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
                     <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
@@ -336,7 +324,7 @@ export function LoginPage() {
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <span>{ssoMessage}</span>
                   </div>
-                  <button type="button" onClick={() => setSsoMessage(null)} className="text-blue-600 hover:text-blue-900 font-bold">×</button>
+                  <button type="button" onClick={() => setSsoMessage(null)} className="text-blue-600 hover:text-blue-900 font-bold p-0">×</button>
                 </div>
               )}
 
@@ -368,13 +356,13 @@ export function LoginPage() {
                 {/* Email / Student Code Field */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label htmlFor="academic-email" className="text-xs font-bold text-slate-700">
-                      {activeRole === "student" ? "MÃ SỐ SINH VIÊN (MSSV) / EMAIL" : "TÀI KHOẢN EMAIL HỌC THUẬT"}
+                    <label htmlFor="academic-email" className="text-xs font-semibold text-slate-700">
+                      {activeRole === "student" ? "Mã số sinh viên (MSSV)" : activeRole === "admin" ? "Tài khoản Quản trị viên" : "Email học thuật / Giám khảo"}
                     </label>
                     <span className="text-[11px] text-slate-400 font-mono">@academia.edu.vn</span>
                   </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <div className="login-input-wrap">
+                    <Mail className="input-lead-icon" />
                     <input
                       id="academic-email"
                       aria-label="Tài khoản Email học thuật"
@@ -396,9 +384,7 @@ export function LoginPage() {
                           ? "admin@academia.edu.vn"
                           : "lecturer@academia.edu.vn"
                       }
-                      className={`w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                        errors.email ? "border-red-400 bg-red-50/20" : "border-slate-200"
-                      }`}
+                      className={`login-field-input ${errors.email ? "has-error" : ""}`}
                     />
                   </div>
                   {errors.email && (
@@ -411,19 +397,19 @@ export function LoginPage() {
                 {/* Password Field */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
-                    <label htmlFor="password" className="text-xs font-bold text-slate-700">
-                      MẬT KHẨU BẢO MẬT
+                    <label htmlFor="password" className="text-xs font-semibold text-slate-700">
+                      Mật khẩu
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowForgotDialog(true)}
-                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                      className="login-forgot-btn"
                     >
                       Quên mật khẩu?
                     </button>
                   </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <div className="login-input-wrap">
+                    <Lock className="input-lead-icon" />
                     <input
                       id="password"
                       aria-label="Mật khẩu bảo mật"
@@ -438,15 +424,13 @@ export function LoginPage() {
                         clearFeedback();
                       }}
                       placeholder="Nhập mật khẩu..."
-                      className={`w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                        errors.password ? "border-red-400 bg-red-50/20" : "border-slate-200"
-                      }`}
+                      className={`login-field-input ${errors.password ? "has-error" : ""}`}
                     />
                     <button
                       type="button"
                       aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+                      className="login-eye-btn"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -470,24 +454,30 @@ export function LoginPage() {
                 </label>
 
                 {/* Submit Button */}
-                <Button
-                  aria-label={pending ? "Đang xử lý…" : "Đăng nhập vào hệ thống"}
-                  pending={pending}
+                <button
                   type="submit"
-                  className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={pending}
+                  aria-label={pending ? "Đang xử lý…" : "Đăng nhập vào hệ thống"}
+                  className="login-submit-button"
                 >
-                  <span className="font-bold text-sm tracking-wide">Vào Hệ Thống</span>
-                  <ArrowRight className="w-4 h-4 ml-1 inline-block" />
-                </Button>
+                  {pending ? (
+                    <span>Đang xử lý…</span>
+                  ) : (
+                    <>
+                      <span>Vào Hệ Thống</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
               </form>
 
               {/* Bottom Utilities Inside Card */}
               <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
                 <Link
                   to="/exams/demo-exam/check"
-                  className="inline-flex items-center gap-1.5 text-slate-600 hover:text-blue-600 font-semibold transition-colors"
+                  className="login-bottom-link"
                 >
-                  <Mic className="w-3.5 h-3.5 text-blue-600" />
+                  <Mic className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <span>Kiểm tra Mic &amp; Camera</span>
                 </Link>
                 <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
@@ -505,7 +495,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowRegulationsDialog(true)}
-                className="text-slate-600 hover:text-blue-600 font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="login-regulations-btn"
               >
                 <span>Quy chế ca thi</span>
                 <ExternalLink className="w-3 h-3" />
