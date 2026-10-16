@@ -7,7 +7,7 @@ export type RubricRepository = {
   list(subjectId: string): Promise<Rubric[]>
   get(subjectId: string, rubricId: string): Promise<Rubric | null>
   save(rubric: RubricDraft & { id?: string }): Promise<Rubric>
-  delete(rubricId: string): Promise<void>
+  delete(rubricId: string, subjectId?: string): Promise<void>
 }
 
 const rubricStore: Rubric[] = [{

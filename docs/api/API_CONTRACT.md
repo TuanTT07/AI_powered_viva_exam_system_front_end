@@ -1,6 +1,6 @@
 # REST API Contract — Frontend Expectations
 
-> The current backend is described by OpenAPI at `http://localhost:8080/v3/api-docs` and the deployed demo at `https://aives-backend-xxhi.onrender.com/v3/api-docs`. Group 1 Question/Rubric and the verified Group 2 Exam, Monitoring, Scheduling and Student My Slot repositories select API or mock explicitly through `VITE_DATA_SOURCE`.
+> The current backend is described by OpenAPI at `http://localhost:8080/v3/api-docs` and the deployed demo at `https://aives-backend-xxhi.onrender.com/v3/api-docs`. Group 1 Question Bank, Rubric, Documents, AI Generation, and the verified Group 2 Exam, Monitoring, Scheduling and Student My Slot repositories select API or mock explicitly through `VITE_DATA_SOURCE`.
 
 ## Contract Rule
 
@@ -12,16 +12,16 @@ Do not invent fields because a screen needs them.
 
 Browser requests use the native fetch client in `src/services/api/client.ts`. Relative `/api/...` paths are preserved and proxied by Vite to `http://localhost:8080` during development. Deployed environments need same-origin routing or correct backend CORS configuration.
 
-The client supports query parameters, repeated values, JSON bodies, caller headers, abort signals, timeouts, empty/204 responses and safe normalized `ApiError` failures. It does not log request bodies, store tokens or fall back to mock data after an API failure.
+The client supports query parameters, repeated values, JSON bodies, caller headers, abort signals, timeouts, empty/204 responses, binary/blob responses, `FormData` multipart uploads and safe normalized `ApiError` failures. It does not log request bodies, store tokens or fall back to mock data after an API failure.
 
-Question/Rubric responses are raw payloads. Admin responses use the explicit `{ success, status, message, data }` envelope. Repositories must call `unwrapApiEnvelope` only for enveloped responses. `PaginatedResult<T>` normalizes both Spring `Page` (`number`) and Admin `PageResponse` (`page`) shapes.
+Backend responses are typically wrapped in the `{ success, status, message, data }` envelope (`ApiEnvelope<T>`). Repositories use `unwrapResponse` to handle enveloped data seamlessly while tolerating direct payloads. `PaginatedResult<T>` normalizes both Spring `Page` (`number`) and Admin `PageResponse` (`page`) shapes.
 
 ## Common Concepts
 
 Potential entities:
 - User
-- Subject
-- LearningMaterial
+- Subject / Course
+- CourseDocument (Learning Material)
 - Question
 - Rubric
 - Exam
@@ -38,48 +38,43 @@ Potential entities:
 ### Auth
 - session/current user
 - login/logout depending on auth architecture
+- change password (`POST /api/auth/change-password`)
 
-The current backend Swagger does not expose authentication or logout endpoints. Until that contract exists, frontend logout is implemented through `AuthAdapter.signOut()` as local session termination and TanStack Query cache clearing. No JWT, refresh-token or revocation endpoint is assumed.
+The deployed backend exposes `POST /api/auth/login` with `{ email, password }`, `GET /api/auth/me`, and `POST /api/auth/change-password` with `{ currentPassword, newPassword }`. Responses return the shared `{ success, status, message, data }` envelope. Login `data` contains `accessToken`, `tokenType: Bearer`, `expiresIn` seconds and a `UserResponse`; supported roles are `ADMIN`, `LECTURER` and `STUDENT`. The frontend maps these to `admin`, `lecturer` and `student`. There is no logout or refresh endpoint; logout clears the client session and token.
 
-## Question API integration
+## Question API integration (Group 1 - Verified)
 
-The Question Bank integration connects search/list, detail, create, update, approve and delete. `POST /api/questions` and `PUT /api/questions/{id}` use the verified `QuestionRequest` fields (`courseId`, nullable `rubricId`, `createdById`, `content`, `bloomLevel`, `aiGenerated`) and raw `QuestionResponse` payloads. Responses are mapped in `src/features/question-bank/api-question-repository.ts`; localized Bloom labels are converted to backend enums and `DRAFT`/`APPROVED` statuses are preserved.
+The Question Bank integration connects search/list, detail, create, update, approve, delete, template download, Excel import, and AI generation:
 
-Create/edit requires real UUIDs for course, question, rubric (when selected) and authenticated user. The UI never exposes `createdById` as an editable field. Manual create sends `aiGenerated=false`, and backend-created records are expected to be `DRAFT`. The backend currently does not support topic, suggested answer, explanation, keywords or course-scoped Rubrics; API mode labels those fields unavailable and does not send them. Import and AI generation remain mock-only.
+- **Create / Edit**: `POST /api/questions` and `PUT /api/questions/{id}` use the verified `QuestionRequest` fields (`courseId`, optional `rubricId`, `content`, `bloomLevel`, `aiGenerated`). Actor identity is extracted from backend JWT claims; `createdById` is not passed in the request body. Manual creation sends `aiGenerated: false`.
+- **Status Lifecycle**: Questions have statuses `DRAFT` and `APPROVED`. Editing an approved question resets its status to `DRAFT`.
+- **Approve**: `POST /api/questions/{id}/approve` transitions a `DRAFT` question to `APPROVED`.
+- **Excel Import**:
+  - `GET /api/courses/{courseId}/questions/import-template`: Downloads the `.xlsx` question import template binary.
+  - `POST /api/courses/{courseId}/questions/import`: Accepts `multipart/form-data` with `file`. Returns `QuestionImportResult` (`{ importedCount: number, errors: [{ row, field, message }] }`). Even if backend returns HTTP 200, when `errors.length > 0`, the import is treated as failed with detailed row-by-row validation feedback. Imported questions default to `DRAFT`.
+- **AI Question Generation**:
+  - `POST /api/courses/{courseId}/questions/generate`: Generates questions based on course documents using RAG.
+  - Request body: `{ documentIds: UUID[], rubricId?: UUID, bloomLevel?: BloomLevel, count: number, additionalInstructions?: string }`.
+  - Only documents with `indexingStatus: "READY"` may be selected.
+  - Backend saves generated questions into the database as `DRAFT` with `aiGenerated: true`.
+  - The UI presents generated questions and directs the lecturer to review and approve them before they can be used in exams.
 
-## Authentication API
+### Course Documents / Learning Materials (Group 1 - Verified)
+- `GET /api/courses/{courseId}/documents`: Lists all uploaded documents for the course.
+- `POST /api/courses/{courseId}/documents`: Uploads a document via `multipart/form-data` (`file`).
+- `DELETE /api/courses/{courseId}/documents/{id}`: Deletes a document.
+- Document fields include `id`, `fileName`, `fileType`, `fileSize`, `indexingStatus` (`PENDING`, `INDEXING`, `READY`, `FAILED`), `indexingError`, and `uploadedAt`. Only documents with `indexingStatus: "READY"` can be used for AI Question Generation.
 
-The deployed backend exposes `POST /api/auth/login` with `{ email, password }` and `GET /api/auth/me`. Both return the shared `{ success, status, message, data }` envelope. Login `data` contains `accessToken`, `tokenType: Bearer`, `expiresIn` seconds and a `UserResponse`; supported roles are `ADMIN`, `LECTURER` and `STUDENT`. The frontend maps these to `admin`, `lecturer` and `student`. There is no logout or refresh endpoint; logout clears the client session and token.
-
-## Integration order for the next developers
-
-Dev1 should compose Question and Rubric repositories with `selectRepository(runtimeConfig.dataSource, { mock, api })`, call `apiClient.request`, explicitly unwrap only Admin-style envelopes (not Question/Rubric raw responses), map DTOs and preserve existing query keys. Dev2 should follow the same pattern for Admin Users, Roles, Courses and Lecturer Assignment. Neither integration should switch to mock after a network/API error.
+### Course-Scoped Rubrics (Group 1 - Verified)
+- `GET /api/courses/{courseId}/rubrics`: Lists rubrics scoped to a specific course.
+- `POST /api/courses/{courseId}/rubrics`: Creates a rubric under a course with criteria and scoring scales.
+- `GET /api/courses/{courseId}/rubrics/{id}`: Retrieves rubric details.
+- `PUT /api/courses/{courseId}/rubrics/{id}`: Updates rubric details and criteria.
+- `DELETE /api/courses/{courseId}/rubrics/{id}`: Deletes a rubric under a course (HTTP 204 or 200). Deletion invalidates rubric and question caches for that course context.
 
 ### Subjects
 - list assigned subjects
 - subject detail
-
-### Learning Materials
-- list
-- upload
-- processing status
-- delete/replace
-
-### Questions
-- list/filter
-- create
-- update
-- import
-- generate AI drafts
-- approve/reject draft
-
-### Rubrics
-- list
-- create/update
-- detail
-- delete (`DELETE /api/rubrics/{id}`, HTTP 204 No Content)
-
-Rubric deletion requires a real Rubric UUID and uses the shared API client. The frontend waits for the 204 response before removing cached Rubrics. Questions referencing the deleted Rubric remain intact; the backend may set `rubricId`/`rubricName` to null. Rubrics are global in the current API rather than course-scoped, so deletion invalidates Rubric caches and affected Question caches across subject contexts. API failures never fall back to mock data.
 
 ### Exams
 - list (`GET /api/v1/exams`, Spring `PageExamResponse`)
@@ -146,7 +141,7 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
 
-The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Course Materials, bulk Question Import, AI Question Generation, Viva runtime/WebSocket, Grading and Reports.
+The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Viva runtime/WebSocket, Grading and Reports.
 
 ## Lecturer course assignment (temporary demo contract)
 

@@ -1,16 +1,18 @@
 import { ApiError, apiClient } from '../../services/api/client'
+import { unwrapApiEnvelope, type ApiEnvelope } from '../../services/api/transport-types'
 import type { Rubric, RubricCriterion, RubricDraft } from './rubric-types'
 import type { RubricRepository } from './rubric-repository'
 
-type RubricCriterionResponseDto = {
+export type RubricCriterionResponseDto = {
   id: string
   criterionName: string
   description: string
   maxScore: number
 }
 
-type RubricResponseDto = {
+export type RubricResponseDto = {
   id: string
+  courseId?: string
   rubricName: string
   description: string
   criteria: RubricCriterionResponseDto[]
@@ -18,13 +20,13 @@ type RubricResponseDto = {
   createdAt: string
 }
 
-type RubricCriterionRequestDto = {
+export type RubricCriterionRequestDto = {
   criterionName: string
   description: string
   maxScore: number
 }
 
-type RubricRequestDto = {
+export type RubricRequestDto = {
   rubricName: string
   description: string
   criteria: RubricCriterionRequestDto[]
@@ -42,7 +44,7 @@ function mapCriterionDto(dto: RubricCriterionResponseDto): RubricCriterion {
 function mapRubricDto(dto: RubricResponseDto, subjectId: string): Rubric {
   return {
     id: dto.id,
-    subjectId,
+    subjectId: dto.courseId || subjectId,
     name: dto.rubricName,
     description: dto.description || '',
     criteria: (dto.criteria || []).map(mapCriterionDto),
@@ -64,44 +66,77 @@ function mapToRequest(draft: RubricDraft): RubricRequestDto {
 type RubricApiClient = Pick<typeof apiClient, 'request'>
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export const isRubricUuid = (value: string) => uuidPattern.test(value)
-function assertRubricUuid(value: string) { if (!isRubricUuid(value)) throw new ApiError('Mã rubric phải là UUID của backend.', { code: 'INVALID_UUID' }) }
+function assertRubricUuid(value: string, label = 'Mã rubric') {
+  if (!isRubricUuid(value)) throw new ApiError(`${label} phải là UUID của backend.`, { code: 'INVALID_UUID' })
+}
+
+function unwrapResponse<T>(payload: unknown): T {
+  if (payload && typeof payload === 'object' && 'data' in payload && 'success' in payload) {
+    return unwrapApiEnvelope(payload as ApiEnvelope<T>)
+  }
+  return payload as T
+}
 
 export function createApiRubricRepository(client: RubricApiClient = apiClient): RubricRepository {
   return {
     async list(subjectId: string): Promise<Rubric[]> {
-    const response = await client.request<RubricResponseDto[]>('/api/rubrics')
-    // Backend doesn't filter rubrics by course, so we return all of them
-    // and attach the requested subjectId to satisfy the frontend interface
-    return response.map((dto) => mapRubricDto(dto, subjectId))
-  },
-  async get(subjectId: string, rubricId: string): Promise<Rubric | null> {
-    try {
-      const response = await client.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(rubricId)}`)
-      return mapRubricDto(response, subjectId)
-    } catch (error: any) {
-      if (error?.status === 404) return null
-      throw error
-    }
-  },
+      const path = isRubricUuid(subjectId)
+        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics`
+        : '/api/rubrics'
+      try {
+        const raw = await client.request<unknown>(path)
+        const response = unwrapResponse<RubricResponseDto[]>(raw)
+        return (response || []).map((dto) => mapRubricDto(dto, subjectId))
+      } catch (error: any) {
+        if (error?.status === 404 && !isRubricUuid(subjectId)) return []
+        throw error
+      }
+    },
+    async get(subjectId: string, rubricId: string): Promise<Rubric | null> {
+      assertRubricUuid(rubricId, 'Mã rubric')
+      const path = isRubricUuid(subjectId)
+        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics/${encodeURIComponent(rubricId)}`
+        : `/api/rubrics/${encodeURIComponent(rubricId)}`
+      try {
+        const raw = await client.request<unknown>(path)
+        const response = unwrapResponse<RubricResponseDto>(raw)
+        return mapRubricDto(response, subjectId)
+      } catch (error: any) {
+        if (error?.status === 404) return null
+        throw error
+      }
+    },
     async save(draft: RubricDraft & { id?: string }): Promise<Rubric> {
-    const payload = mapToRequest(draft)
-    let response: RubricResponseDto
-    if (draft.id) {
-      response = await client.request<RubricResponseDto>(`/api/rubrics/${encodeURIComponent(draft.id)}`, {
-        method: 'PUT',
-        body: payload,
-      })
-    } else {
-      response = await client.request<RubricResponseDto>('/api/rubrics', {
-        method: 'POST',
-        body: payload,
-      })
-    }
+      const payload = mapToRequest(draft)
+      const isCourseScoped = isRubricUuid(draft.subjectId)
+      let raw: unknown
+      if (draft.id) {
+        assertRubricUuid(draft.id, 'Mã rubric')
+        const path = isCourseScoped
+          ? `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics/${encodeURIComponent(draft.id)}`
+          : `/api/rubrics/${encodeURIComponent(draft.id)}`
+        raw = await client.request<unknown>(path, {
+          method: 'PUT',
+          body: payload,
+        })
+      } else {
+        const path = isCourseScoped
+          ? `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics`
+          : '/api/rubrics'
+        raw = await client.request<unknown>(path, {
+          method: 'POST',
+          body: payload,
+        })
+      }
+      const response = unwrapResponse<RubricResponseDto>(raw)
       return mapRubricDto(response, draft.subjectId)
     },
-    async delete(rubricId: string): Promise<void> {
-      assertRubricUuid(rubricId)
-      await client.request<void>(`/api/rubrics/${encodeURIComponent(rubricId)}`, { method: 'DELETE' })
+    async delete(rubricId: string, subjectId?: string): Promise<void> {
+      assertRubricUuid(rubricId, 'Mã rubric')
+      const path = subjectId && isRubricUuid(subjectId)
+        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics/${encodeURIComponent(rubricId)}`
+        : `/api/rubrics/${encodeURIComponent(rubricId)}`
+      await client.request<void>(path, { method: 'DELETE' })
     },
   }
 }

@@ -11,6 +11,7 @@ export type ApiRequestOptions = {
   signal?: AbortSignal
   timeoutMs?: number
   authenticated?: boolean
+  responseType?: 'json' | 'blob'
 }
 export type ApiErrorOptions = { status?: number; code?: string; fieldErrors?: Record<string, string>; cause?: unknown }
 
@@ -49,7 +50,11 @@ export const apiClient: ApiClient = {
     else options.signal?.addEventListener('abort', onAbort, { once: true })
     const timer = setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs)
     const headers = new Headers(options.headers)
-    headers.set('Accept', headers.get('Accept') ?? 'application/json')
+    if (options.responseType === 'blob') {
+      headers.set('Accept', headers.get('Accept') ?? '*/*')
+    } else {
+      headers.set('Accept', headers.get('Accept') ?? 'application/json')
+    }
     const token = options.authenticated === false ? null : tokenManager.getToken()
     if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`)
@@ -60,6 +65,9 @@ export const apiClient: ApiClient = {
     try {
       const response = await fetch(buildApiUrl(runtimeConfig.apiBaseUrl, path, options.query), { method: options.method ?? 'GET', headers, body, signal: controller.signal })
       if (!response.ok) throw await parseApiError(response)
+      if (options.responseType === 'blob') {
+        return (await response.blob()) as T
+      }
       return await readJsonOrEmpty(response) as T
     } catch (error) {
       if (error instanceof ApiError) throw error

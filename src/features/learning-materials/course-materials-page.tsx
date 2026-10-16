@@ -16,15 +16,12 @@ const statusMeta: Record<CourseMaterial['status'], { label: string; tone: 'neutr
 const date = (value: string) => new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short' }).format(new Date(value))
 
 export function CourseMaterialsPage() {
-  return runtimeConfig.dataSource === 'api' ? <EmptyState title="Học liệu chưa khả dụng" description="Chức năng quản lý học liệu đang được chuẩn bị. Bạn có thể tiếp tục sử dụng ngân hàng câu hỏi." /> : <MockCourseMaterialsPage />
-}
-
-function MockCourseMaterialsPage() {
   const { subjectId = '' } = useParams()
   const materials = useMaterials(subjectId)
   const upload = useUploadMaterials()
   const retry = useRetryMaterial()
   const remove = useDeleteMaterial()
+
   const input = useRef<HTMLInputElement>(null)
   const [selected, setSelected] = useState<File[]>([])
   const [rejected, setRejected] = useState<MaterialFileIssue[]>([])
@@ -42,7 +39,7 @@ function MockCourseMaterialsPage() {
   if (!subjectId) return <EmptyState title="Thiếu học phần" description="Không thể xác định học phần để tải học liệu." />
   const data = materials.data ?? []
   return <>
-    <DemoLabel />
+    {runtimeConfig.dataSource === 'mock' && <DemoLabel />}
     <KnowledgeBaseView subjectId={subjectId} materials={data} uploadPanel={<section className="material-upload" aria-labelledby="upload-title"><div className={`material-dropzone ${dragging ? 'dragging' : ''}`} onDragEnter={() => setDragging(true)} onDragLeave={() => setDragging(false)} onDragOver={(event) => event.preventDefault()} onDrop={drop}>
       <span aria-hidden="true" className="drop-icon">⇧</span><h2 id="upload-title">Kéo thả tài liệu vào đây</h2><p>PDF, DOCX, PPTX hoặc TXT · tối đa 25 MB mỗi tệp · tối đa {MAX_MATERIAL_SELECTION} tệp một lần</p><label className="button outline" htmlFor="material-files">Chọn tệp từ máy tính</label><input accept=".pdf,.docx,.pptx,.txt" aria-label="Chọn tài liệu môn học" id="material-files" multiple onChange={onFiles} ref={input} type="file" />
     </div>

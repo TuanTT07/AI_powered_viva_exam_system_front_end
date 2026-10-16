@@ -12,4 +12,22 @@ export function useGlobalRubrics() { return useQuery({ queryKey: rubricKeys.glob
 export function useGlobalRubric(rubricId: string | undefined) { return useQuery({ queryKey: rubricKeys.globalDetail(rubricId ?? ''), queryFn: () => rubricRepository.get('', rubricId ?? ''), enabled: Boolean(rubricId) }) }
 export function useSaveRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save(draft), onSuccess: () => { client.invalidateQueries({ queryKey: rubricKeys.all }); client.invalidateQueries({ queryKey: questionKeys.all }) } }) }
 export function useSaveGlobalRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save({ ...draft, subjectId: '' }), onSuccess: () => { client.invalidateQueries({ queryKey: rubricKeys.global }); client.invalidateQueries({ queryKey: rubricKeys.all }) } }) }
-export function useDeleteRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (rubricId: string) => rubricRepository.delete(rubricId), onSuccess: (_result, rubricId) => { client.removeQueries({ queryKey: rubricKeys.all }); client.invalidateQueries({ queryKey: rubricKeys.all }); client.removeQueries({ queryKey: [...questionKeys.all, rubricId] }); client.invalidateQueries({ queryKey: questionKeys.all }); client.invalidateQueries({ queryKey: apiQuestionKeys.all }) } }) }
+export function useDeleteRubric(defaultSubjectId?: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (args: string | { rubricId: string; subjectId?: string }) => {
+      const rubricId = typeof args === 'string' ? args : args.rubricId
+      const subjectId = typeof args === 'string' ? defaultSubjectId : (args.subjectId ?? defaultSubjectId)
+      return rubricRepository.delete(rubricId, subjectId)
+    },
+    onSuccess: (_result, args) => {
+      const rubricId = typeof args === 'string' ? args : args.rubricId
+      client.removeQueries({ queryKey: rubricKeys.all })
+      client.invalidateQueries({ queryKey: rubricKeys.all })
+      client.removeQueries({ queryKey: [...questionKeys.all, rubricId] })
+      client.invalidateQueries({ queryKey: questionKeys.all })
+      client.invalidateQueries({ queryKey: apiQuestionKeys.all })
+    },
+  })
+}
+
