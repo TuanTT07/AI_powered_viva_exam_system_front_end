@@ -27,6 +27,7 @@ export function workspaceNavActive(item: WorkspaceNavItem, pathname: string) {
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 export function workspaceTitle(pathname: string, fallback: string) {
+  if (/\/profile$/.test(pathname)) return 'Hồ sơ cá nhân'
   if (/\/questions\/generate/.test(pathname)) return 'AI Sinh Đề RAG'
   if (/\/questions\/(new|[^/]+\/edit)$/.test(pathname)) return 'Soạn thảo câu hỏi & Rubric'
   if (/\/questions$/.test(pathname)) return 'Ngân hàng câu hỏi'
