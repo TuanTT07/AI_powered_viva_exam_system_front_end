@@ -1,87 +1,188 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import {
+  CheckCircle2,
+  ShieldCheck,
+  FileText,
+  Sparkles,
+  Home,
+  BookOpen,
+} from 'lucide-react';
+import { useSession } from '../../../app/providers/use-session';
 
 export function ExamSuccessPage() {
   const navigate = useNavigate();
   const { examId } = useParams();
+  const { session } = useSession();
 
-  const handleReturnHome = () => {
-    navigate('/student');
-  };
+  const [submissionInfo] = useState(() => ({
+    time: new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'full',
+      timeStyle: 'medium',
+    }).format(new Date()),
+    receiptId: `REC-${(examId || 'EXAM').toUpperCase()}-${Date.now().toString().slice(-6)}`,
+  }));
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)', background: 'var(--bg)', padding: '24px' }}>
-      <div style={{ maxWidth: '640px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-        
-        {/* 1. Success Header */}
-        <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.1)' }}>
-            <svg style={{ width: '40px', height: '40px', color: '#16a34a' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--navy-dark)', textTransform: 'uppercase', letterSpacing: '-0.02em', marginBottom: '16px', fontFamily: 'var(--display)' }}>
-            BÀI THI VẤN ĐÁP ĐÃ ĐƯỢC GHI NHẬN & NỘP THÀNH CÔNG
+    <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6 flex flex-col items-center gap-8">
+      {/* 1. Hero Celebration Banner */}
+      <div className="flex flex-col items-center text-center gap-4 max-w-xl">
+        <div className="w-20 h-20 rounded-3xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center shadow-sm">
+          <CheckCircle2 className="w-10 h-10 animate-bounce" />
+        </div>
+
+        <div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-2">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Đã ghi nhận và niêm phong an toàn
+          </span>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold tracking-tight text-[var(--navy-dark)]">
+            Phiên Thi Vấn Đáp Đã Nộp Thành Công
           </h1>
-          <p style={{ color: 'var(--secondary)', fontSize: '1.1rem', maxWidth: '500px', lineHeight: 1.6 }}>
-            Hệ thống đã lưu trữ bản ghi âm. AI đang tiến hành phân tích transcript và đánh giá kết quả...
+          <p className="text-sm sm:text-base text-stone-600 mt-2 leading-relaxed">
+            Hệ thống AIVES đã lưu trữ toàn bộ bản ghi âm và biên bản hội thoại. Phiên thi của bạn đã kết thúc an toàn.
           </p>
         </div>
+      </div>
 
-        {/* 2. Exam Summary Card */}
-        <div className="panel" style={{ width: '100%', padding: '32px', marginBottom: '32px', textAlign: 'left', background: 'var(--surface)' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--navy-dark)', borderBottom: '1px solid var(--border)', paddingBottom: '16px', marginBottom: '24px', fontFamily: 'var(--display)' }}>
-            Tổng kết Phiên Vấn Đáp
-          </h2>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--secondary)', marginBottom: '4px' }}>Thí sinh</span>
-              <span style={{ fontWeight: 600, color: 'var(--text)' }}>Phúc Đạt</span>
+      {/* 2. Official Exam Submission Receipt Card */}
+      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
+        {/* Receipt decorative top stripe */}
+        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[var(--navy-dark)] via-[var(--navy)] to-indigo-600" />
+
+        {/* Receipt Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--border)] pb-6 mb-6 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-serif text-xl font-bold tracking-tight text-[var(--navy-dark)]">AIVES</span>
+              <span className="text-xs font-semibold text-stone-400">|</span>
+              <span className="text-xs uppercase font-bold tracking-wider text-stone-500">Học viện Khảo thí Số hóa</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--secondary)', marginBottom: '4px' }}>Mã đề thi</span>
-              <span style={{ fontFamily: 'var(--mono)', fontWeight: 600, color: '#2563eb' }}>{examId ? 'EXAM-' + examId : 'VIVA-CS101'}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--secondary)', marginBottom: '4px' }}>Thời gian làm bài</span>
-              <span style={{ fontWeight: 600, color: 'var(--text)' }}>12 phút 45 giây</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--secondary)', marginBottom: '4px' }}>Số câu đã trả lời</span>
-              <span style={{ fontWeight: 600, color: 'var(--text)' }}>5/5 câu</span>
-            </div>
+            <h2 className="text-base font-bold text-[var(--navy-dark)]">
+              Biên Nhận Nộp Bài Thi Vấn Đáp Trực Tiếp
+            </h2>
           </div>
 
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', justifyItems: 'space-between', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#bfdbfe', padding: '6px 8px', borderRadius: '6px' }}>
-                <div style={{ width: '4px', height: '12px', background: '#2563eb', borderRadius: '2px', animation: 'pulse 1s infinite', animationDelay: '0ms' }}></div>
-                <div style={{ width: '4px', height: '20px', background: '#2563eb', borderRadius: '2px', animation: 'pulse 1s infinite', animationDelay: '150ms' }}></div>
-                <div style={{ width: '4px', height: '16px', background: '#2563eb', borderRadius: '2px', animation: 'pulse 1s infinite', animationDelay: '300ms' }}></div>
-                <div style={{ width: '4px', height: '8px', background: '#2563eb', borderRadius: '2px', animation: 'pulse 1s infinite', animationDelay: '450ms' }}></div>
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#1e3a8a' }}>Bản ghi âm đã được mã hoá và lưu trữ</p>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#1d4ed8' }}>Dữ liệu âm thanh an toàn. Khớp nối transcript: 100%</p>
-              </div>
-            </div>
-            <svg style={{ width: '24px', height: '24px', color: '#3b82f6' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="flex flex-col sm:items-end">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-stone-500">Mã biên nhận số</span>
+            <span className="font-mono text-sm font-bold text-[var(--navy)] bg-[var(--muted)] px-2.5 py-1 rounded border border-[var(--border)]">
+              {submissionInfo.receiptId}
+            </span>
           </div>
         </div>
 
-        {/* 3. Action Footer */}
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-          <button 
-            className="button"
-            onClick={handleReturnHome}
-            style={{ padding: '16px 32px', background: 'var(--navy-dark)', color: '#fff', fontSize: '1.1rem', borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(8, 18, 52, 0.2)' }}
-          >
-            Quay về Trang chủ
-          </button>
+        {/* Receipt Details Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">Thí sinh</span>
+            <span className="text-sm font-semibold text-[var(--navy-dark)]">
+              {session.user?.displayName || 'Sinh viên'}
+            </span>
+            <span className="text-xs text-stone-400 font-mono">
+              Mã: {session.user?.id || 'SV-AIVES'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">Mã ca thi</span>
+            <span className="text-sm font-mono font-bold text-[var(--navy)]">
+              EXAM-{examId || 'TEST'}
+            </span>
+            <span className="text-xs text-stone-400">Hình thức: Viva AI</span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">Thời điểm nộp bài</span>
+            <span className="text-xs font-semibold text-stone-800 leading-snug">
+              {submissionInfo.time}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">Trạng thái hồ sơ</span>
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Đã hoàn tất
+              </span>
+            </div>
+          </div>
         </div>
-        
+
+        {/* 3. Audio & Transcript Evidence Assurance Box */}
+        <div className="bg-[var(--muted)]/50 border border-[var(--border)] rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-[var(--navy)] flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[var(--navy-dark)]">
+                Bản ghi âm & Biên bản hội thoại đã được mã hóa bảo mật
+              </h3>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Dữ liệu âm thanh 100% nguyên vẹn. Biên bản thoại đã được lưu vào hệ thống phục vụ hội đồng chấm thi và phúc khảo.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 bg-[var(--surface)] px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-emerald-800">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>AES-256 Khảo thí</span>
+          </div>
+        </div>
+
+        {/* 4. Next Steps Timeline */}
+        <div className="border-t border-[var(--border)] pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-4 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--navy)]" />
+            Quy trình xử lý kết quả tiếp theo
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="p-4 bg-[var(--surface)] rounded-xl border border-[var(--border)] flex flex-col gap-1.5">
+              <span className="font-mono text-xs font-bold text-stone-400">01 / ĐÁNH GIÁ SƠ BỘ</span>
+              <strong className="text-stone-900">AI Copilot phân tích</strong>
+              <p className="text-stone-600 leading-relaxed">
+                Động cơ Viva AI trích xuất bằng chứng lập luận và đề xuất điểm theo Rubric đã công bố.
+              </p>
+            </div>
+
+            <div className="p-4 bg-[var(--surface)] rounded-xl border border-[var(--border)] flex flex-col gap-1.5">
+              <span className="font-mono text-xs font-bold text-stone-400">02 / DUYỆT CHÍNH THỨC</span>
+              <strong className="text-stone-900">Giảng viên đối soát</strong>
+              <p className="text-stone-600 leading-relaxed">
+                Giảng viên phụ trách nghe lại bản ghi âm, xem xét gợi ý và quyết định điểm số chính thức.
+              </p>
+            </div>
+
+            <div className="p-4 bg-[var(--surface)] rounded-xl border border-[var(--border)] flex flex-col gap-1.5">
+              <span className="font-mono text-xs font-bold text-stone-400">03 / CÔNG BỐ KẾT QUẢ</span>
+              <strong className="text-stone-900">Nhận bảng điểm & Nhận xét</strong>
+              <p className="text-stone-600 leading-relaxed">
+                Bảng điểm chi tiết và nhận xét năng lực sẽ được hiển thị tại trang Kết quả thi của bạn.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Navigation Action Buttons */}
+      <div className="flex flex-wrap items-center justify-center gap-4 pt-2 pb-12">
+        <button
+          type="button"
+          onClick={() => navigate('/student')}
+          className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-[var(--navy)] hover:bg-[var(--navy-dark)] text-white font-medium rounded-xl text-sm transition-all shadow-xs active:scale-95 cursor-pointer"
+        >
+          <Home className="w-4 h-4" />
+          <span>Về Bảng điều khiển Sinh viên</span>
+        </button>
+
+        <Link
+          to="/student/exams"
+          className="inline-flex items-center gap-2 px-5 py-3.5 text-stone-700 hover:text-stone-900 border border-[var(--border)] hover:bg-stone-50 rounded-xl text-sm font-medium transition-colors"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Xem danh sách ca thi khác</span>
+        </Link>
       </div>
     </div>
   );
