@@ -54,4 +54,13 @@ const demoCourseMaterials: CourseMaterial[] = demoCourses.flatMap(course => Arra
   id: `material-${course.id}-${index + 1}`, subjectId: course.id, filename: `${course.code}_${course.topic}_Chuong_${String(index + 1).padStart(2, '0')}.pdf`, extension: 'PDF' as const, size: (1.5 + index * 0.6) * 1024 * 1024, status: 'READY' as const,
   uploadedAt: '2026-10-10T03:00:00.000Z', updatedAt: '2026-10-10T03:02:00.000Z',
 })))
-export const materialRepository = createMaterialRepository([...seed(), ...demoCourseMaterials])
+import { selectRepository } from '../../services/api/repository-selection'
+import { runtimeConfig } from '../../services/api/runtime-config'
+import { apiMaterialRepository } from './api-material-repository'
+
+export const mockMaterialRepository = createMaterialRepository([...seed(), ...demoCourseMaterials])
+export const materialRepository: MaterialRepository = selectRepository(runtimeConfig.dataSource, {
+  mock: mockMaterialRepository,
+  api: apiMaterialRepository,
+})
+

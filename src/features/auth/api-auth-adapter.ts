@@ -66,3 +66,10 @@ export const apiAuthAdapter: AuthAdapter = {
     tokenManager.clearToken()
   },
 }
+
+export async function apiChangePassword(passwords: { currentPassword: string; newPassword: string }): Promise<void> {
+  await apiClient.request<ApiResponse<void>>('/api/auth/change-password', {
+    method: 'POST',
+    body: passwords,
+  })
+}

@@ -39,14 +39,14 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={onGenerate} disabled={!demoFeatures}
+            onClick={onGenerate}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold rounded-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-2xs"
           >
             <Sparkles className="w-4 h-4 text-indigo-600" />
             <span>AI Sinh Đề RAG</span>
           </button>
           <button
-            onClick={onImport} disabled={!demoFeatures}
+            onClick={onImport}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-[10px] bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
           >
             <Upload className="w-4 h-4 text-slate-500" />
