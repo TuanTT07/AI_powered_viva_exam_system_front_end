@@ -1,4 +1,5 @@
 import React from 'react';
+import { Bot, User, Sparkles } from 'lucide-react';
 
 interface TranscriptMessageProps {
   role: 'ai' | 'student';
@@ -11,41 +12,54 @@ interface TranscriptMessageProps {
 export const TranscriptMessage: React.FC<TranscriptMessageProps> = ({ role, text, timestamp, isPartial, isFollowUp }) => {
   const isAI = role === 'ai';
 
-  let bg = isAI ? 'var(--surface)' : '#eff6ff';
-  let borderColor = isAI ? 'var(--border)' : '#bfdbfe';
-  
-  if (isAI && isFollowUp) {
-    bg = '#fffbeb';
-    borderColor = '#fde68a';
-  }
-
   return (
-    <div style={{ display: 'flex', width: '100%', marginBottom: '16px', justifyItems: isAI ? 'flex-start' : 'flex-end', justifyContent: isAI ? 'flex-start' : 'flex-end' }}>
-      <div style={{ 
-        maxWidth: '80%', 
-        padding: '16px', 
-        background: bg, 
-        border: `1px solid ${borderColor}`,
-        borderRadius: '16px',
-        borderTopLeftRadius: isAI ? '0' : '16px',
-        borderTopRightRadius: !isAI ? '0' : '16px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: isAI ? (isFollowUp ? '#d97706' : 'var(--navy)') : 'var(--secondary)' }}>
-            {isAI ? '🤖 Giám khảo AI' : '👤 Sinh viên'}
+    <div className={`flex w-full mb-4 ${isAI ? 'justify-start' : 'justify-end'}`}>
+      <div
+        className={`max-w-[90%] sm:max-w-[80%] rounded-2xl p-4 shadow-xs transition-all ${
+          isAI
+            ? isFollowUp
+              ? 'bg-amber-50/70 border border-amber-200 text-stone-900 rounded-tl-xs'
+              : 'bg-stone-50 border border-[var(--border)] text-stone-900 rounded-tl-xs'
+            : 'bg-indigo-50/70 border border-indigo-200/80 text-[var(--navy-dark)] rounded-tr-xs'
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          {isAI ? (
+            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${isFollowUp ? 'bg-amber-100 text-amber-800' : 'bg-[var(--navy)] text-white'}`}>
+              <Bot className="w-3.5 h-3.5" />
+            </div>
+          ) : (
+            <div className="w-6 h-6 rounded-lg bg-indigo-200/70 text-indigo-900 flex items-center justify-center text-xs font-bold">
+              <User className="w-3.5 h-3.5" />
+            </div>
+          )}
+
+          <span className={`text-xs font-bold uppercase tracking-wider ${isAI ? (isFollowUp ? 'text-amber-800' : 'text-[var(--navy)]') : 'text-indigo-900'}`}>
+            {isAI ? 'Giám khảo AI' : 'Thí sinh'}
           </span>
-          {isFollowUp && <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#fef3c7', color: '#92400e', borderRadius: '12px', fontWeight: 600 }}>Câu hỏi phụ (Làm rõ ý)</span>}
-          <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', marginLeft: 'auto' }}>{timestamp}</span>
+
+          {isFollowUp && (
+            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+              <Sparkles className="w-3 h-3" />
+              Câu hỏi mở rộng
+            </span>
+          )}
+
+          {timestamp && (
+            <span className="text-[11px] font-medium text-stone-600 ml-auto font-mono">
+              {timestamp}
+            </span>
+          )}
         </div>
-        
-        <p style={{ margin: 0, color: 'var(--text)', lineHeight: 1.6, fontStyle: isPartial ? 'italic' : 'normal', opacity: isPartial ? 0.6 : 1 }}>
+
+        <p className={`text-sm leading-relaxed ${isPartial ? 'italic text-stone-600' : 'text-stone-800'}`}>
           {text}
         </p>
-        
+
         {isPartial && (
-          <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ animation: 'pulse 1s infinite' }}>●</span> Đang nghe...
+          <div className="mt-2 text-xs text-indigo-600 font-medium flex items-center gap-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-600 animate-ping" />
+            Đang nhận diện giọng nói...
           </div>
         )}
       </div>
