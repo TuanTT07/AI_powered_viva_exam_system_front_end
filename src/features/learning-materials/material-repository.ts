@@ -44,4 +44,14 @@ export function createMaterialRepository(initial = seed()): MaterialRepository {
   }
 }
 
-export const materialRepository = createMaterialRepository()
+const demoCourses = [
+  { id: 'oop-java', code: 'INT2204', topic: 'Lap_trinh_Java', count: 8 },
+  { id: 'java-core', code: 'INT2201', topic: 'Java_Core', count: 5 },
+  { id: 'database', code: 'INT2210', topic: 'Co_so_du_lieu', count: 6 },
+  { id: 'operating-systems', code: 'INT2220', topic: 'He_dieu_hanh', count: 3 },
+]
+const demoCourseMaterials: CourseMaterial[] = demoCourses.flatMap(course => Array.from({ length: course.count }, (_, index) => ({
+  id: `material-${course.id}-${index + 1}`, subjectId: course.id, filename: `${course.code}_${course.topic}_Chuong_${String(index + 1).padStart(2, '0')}.pdf`, extension: 'PDF' as const, size: (1.5 + index * 0.6) * 1024 * 1024, status: 'READY' as const,
+  uploadedAt: '2026-10-10T03:00:00.000Z', updatedAt: '2026-10-10T03:02:00.000Z',
+})))
+export const materialRepository = createMaterialRepository([...seed(), ...demoCourseMaterials])

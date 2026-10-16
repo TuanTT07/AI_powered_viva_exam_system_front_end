@@ -1,3 +1,4 @@
+import { InlineNotice } from '../../components/common/inline-notice'
 import { useState } from "react";
 import { Link, useBlocker, useParams } from "react-router-dom";
 import { Alert, Button, Dialog, Input } from "../../components/ui/primitives";
@@ -200,10 +201,10 @@ function MockExamSchedulingPage() {
         </div>
       </header>
       {!editable && (
-        <Alert tone="warning">
+        <InlineNotice>
           <strong>Chế độ chỉ đọc.</strong> Kỳ thi{" "}
           {meta.label.toLocaleLowerCase()} không thể tạo, sửa hoặc lưu lịch.
-        </Alert>
+        </InlineNotice>
       )}
       <section
         className="schedule-summary"

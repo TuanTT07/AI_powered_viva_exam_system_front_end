@@ -18,3 +18,12 @@
 .overview-card{border-radius:3px;background:var(--surface);padding:18px}
 .overview-card strong{font:1.8rem var(--display);color:var(--navy)}
 @media(max-width:800px){.metric-card{border-right:0;border-bottom:1px solid var(--border)}.metric-card:last-child{border-bottom:0}}
+
+/* Supplied AI Studio prototype alignment: compact operational cards, rather than
+   the prior editorial ledger treatment. Data and links remain unchanged. */
+.lecturer-page{gap:24px;max-width:1280px;margin-inline:auto;padding-bottom:32px}
+.lecturer-page h1{font-family:var(--font);font-size:clamp(1.9rem,3vw,2.5rem);font-weight:750;line-height:1.12;letter-spacing:-.04em}
+.lecturer-page h2{font-family:var(--font);font-size:1.08rem;font-weight:700;letter-spacing:-.02em}.lecturer-header{gap:16px;padding-bottom:0;border-bottom:0}.lecturer-header p{font-size:.9rem;line-height:1.5}.lecturer-eyebrow{color:#2563eb;font-weight:700;letter-spacing:.07em}
+.metric-grid{gap:14px;border:0}.metric-card{min-height:124px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgb(15 23 42 / 3%)}.metric-card:last-child{border-right:1px solid #e2e8f0}.metric-card span,.subject-card small,.subject-meta dt{font-family:var(--font);font-size:.72rem;font-weight:600;letter-spacing:0;text-transform:none}.metric-card strong{margin-top:9px;color:#0f172a;font-family:var(--font);font-size:2rem;font-weight:750}
+.dashboard-grid{gap:16px}.metric-card,.subject-card,.dashboard-section{border-radius:12px;padding:20px}.dashboard-section{border:1px solid #e2e8f0;background:#fff;box-shadow:0 1px 2px rgb(15 23 42 / 3%)}.subject-grid{gap:12px}.subject-card{padding:16px;border-radius:10px;background:#f8fafc;box-shadow:none}.subject-card h2{margin:7px 0;font-size:1rem}.subject-meta{gap:8px;margin:15px 0}.subject-meta dd{font-size:.92rem}.link-list li{padding:11px 0;border-bottom:1px solid #f1f5f9}.overview-card{border-radius:9px;background:#f8fafc;padding:14px}.overview-card strong{font-family:var(--font);font-size:1.4rem;font-weight:750;color:#0f172a}
+@media(max-width:800px){.metric-card{border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}.lecturer-actions{width:100%}.lecturer-actions .button{flex:1}}

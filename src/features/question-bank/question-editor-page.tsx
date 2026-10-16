@@ -5,10 +5,9 @@ import {
   LoadingPage,
   PermissionDenied,
 } from "../../components/common/states";
-import { Alert, Button, Dialog, Input } from "../../components/ui/primitives";
+import { Alert, Button, Dialog } from "../../components/ui/primitives";
 import {
   useQuestion,
-  useQuestionTopics,
   useSaveQuestion,
   useApiQuestion,
   useCreateApiQuestion,
@@ -16,12 +15,16 @@ import {
   useApproveApiQuestion,
   useDeleteApiQuestion,
 } from "./question-hooks";
+import { readQuestionEditorDraft } from "./question-editor-draft";
+import { QuestionEditorView } from "./views/QuestionEditorView";
+import { useLecturerSubject } from "../subjects/subject-hooks";
+import type { Rubric } from "../rubrics/rubric-types";
 import { runtimeConfig } from "../../services/api/runtime-config";
-import { useRubrics } from "../rubrics/rubric-hooks";
+import { useRubrics, useGlobalRubrics } from "../rubrics/rubric-hooks";
 import { useSession } from "../../app/providers/use-session";
 import { ApiError } from "../../services/api/client";
 import { isUuid, type QuestionWriteInput } from "./api-question-repository";
-import { bloomLevels, type BloomLevel, type Question } from "./question-types";
+import { type BloomLevel, type Question } from "./question-types";
 
 const listPath = (subjectId: string) =>
   `/lecturer/subjects/${subjectId}/questions`;
@@ -77,108 +80,20 @@ function MockQuestionEditorPage({
   );
 }
 
-function MockQuestionEditorForm({
-  subjectId,
-  initial,
-}: {
-  subjectId: string;
-  initial: Question | null;
-}) {
-  const navigate = useNavigate();
-  const topics = useQuestionTopics(subjectId);
-  const save = useSaveQuestion();
-  const [form, setForm] = useState({
-    topic: initial?.topic ?? "",
-    bloom: initial?.bloom ?? "",
-    duration: "3",
-    content: initial?.content ?? "",
-    answer: initial?.suggestedAnswer ?? "",
-  });
-  const [error, setError] = useState("");
-  const edit = Boolean(initial);
-  const update = (key: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+function MockQuestionEditorForm({ subjectId, initial }: { subjectId: string; initial: Question | null }) {
+  const navigate = useNavigate(), location = useLocation(), subject = useLecturerSubject(subjectId), rubrics = useGlobalRubrics(), save = useSaveQuestion()
+  const resume = readQuestionEditorDraft(location.state)
+  const [content, setContent] = useState(resume?.content ?? initial?.content ?? ''), [bloom, setBloom] = useState<BloomLevel | ''>(resume?.bloom ?? initial?.bloom ?? ''), [rubricId, setRubricId] = useState(resume?.rubricId ?? initial?.rubricId ?? ''), [errors, setErrors] = useState<Record<string, string>>({}), [dirty, setDirty] = useState(Boolean(resume)), [cancelOpen, setCancelOpen] = useState(false)
+  useEffect(() => { const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn) }, [dirty])
   const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (!form.topic || !form.bloom || !form.content.trim()) {
-      setError("Hoàn tất chủ đề, mức Bloom và nội dung câu hỏi trước khi lưu.");
-      return;
-    }
-    const question: Question = {
-      id: initial?.id ?? `Q-${subjectId.toUpperCase()}-${crypto.randomUUID()}`,
-      subjectId,
-      content: form.content.trim(),
-      topic: form.topic,
-      bloom: form.bloom as BloomLevel,
-      suggestedAnswer: form.answer.trim() || undefined,
-      rubricId: initial?.rubricId,
-      rubric: initial?.rubric,
-      source: initial?.source ?? "Thủ công",
-      status: initial?.status ?? "BẢN NHÁP",
-    };
-    save.mutate(question, { onSuccess: () => navigate(listPath(subjectId)) });
-  };
-  return (
-    <section className="question-editor">
-      <EditorHeader
-        subjectId={subjectId}
-        title={
-          edit ? "Soạn thảo câu hỏi & Thiết lập Rubric" : "Tạo câu hỏi vấn đáp"
-        }
-      />
-      <form onSubmit={submit} noValidate>
-        <section>
-          <h2>Thông tin câu hỏi</h2>
-          <p className="eyebrow">MÔN HỌC · {subjectId}</p>
-          <label>
-            Chủ đề chuyên môn
-            <select
-              value={form.topic}
-              onChange={(event) => update("topic", event.target.value)}
-            >
-              <option value="">Chọn chủ đề</option>
-              {(topics.data ?? []).map((topic) => (
-                <option key={topic}>{topic}</option>
-              ))}
-            </select>
-          </label>
-          <BloomSelect
-            value={form.bloom}
-            onChange={(value) => update("bloom", value)}
-          />
-          <label>
-            Thời gian trả lời (phút)
-            <Input
-              min="1"
-              onChange={(event) => update("duration", event.target.value)}
-              type="number"
-              value={form.duration}
-            />
-          </label>
-          <label>
-            Nội dung câu hỏi phát vấn
-            <textarea
-              onChange={(event) => update("content", event.target.value)}
-              value={form.content}
-            />
-          </label>
-          <label>
-            Đáp án cốt lõi & ý chính bắt buộc
-            <textarea
-              onChange={(event) => update("answer", event.target.value)}
-              value={form.answer}
-            />
-          </label>
-        </section>
-        {error && <Alert tone="danger">{error}</Alert>}
-        <EditorFooter
-          pending={save.isPending}
-          label={edit ? "Lưu thay đổi" : "Lưu câu hỏi"}
-          onCancel={() => navigate(listPath(subjectId))}
-        />
-      </form>
-    </section>
-  );
+    event.preventDefault(); const next: Record<string, string> = {}
+    if (!content.trim()) next.content = 'Nhập nội dung câu hỏi.'
+    if (!bloom) next.bloom = 'Chọn mức Bloom.'
+    setErrors(next); if (Object.keys(next).length) return
+    const rubric = rubrics.data?.find(item => item.id === rubricId)
+    save.mutate({ id: initial?.id ?? 'Q-' + crypto.randomUUID(), subjectId, content: content.trim(), bloom: bloom as BloomLevel, topic: initial?.topic ?? 'Chưa phân loại', suggestedAnswer: initial?.suggestedAnswer, rubricId: rubricId || undefined, rubric: rubric?.name, status: initial?.status ?? 'BẢN NHÁP', source: initial?.source ?? 'Thủ công' }, { onSuccess: () => { setDirty(false); navigate(listPath(subjectId)) } })
+  }
+  return <><QuestionEditorView title={initial ? 'Chỉnh sửa câu hỏi' : 'Tạo câu hỏi vấn đáp'} backTo={location.pathname} rubricReturnState={{ returnTo: location.pathname, questionDraft: { content, bloom, rubricId } }} courseLabel={subject.data ? subject.data.code + ' · ' + subject.data.name : 'Học phần đang chọn'} content={content} bloom={bloom} rubricId={rubricId} rubrics={rubrics.data ?? []} rubricLoading={rubrics.isLoading} rubricError={rubrics.isError} pending={save.isPending} errors={errors} onContent={value => { setContent(value); setDirty(true) }} onBloom={value => { setBloom(value); setDirty(true) }} onRubric={value => { setRubricId(value); setDirty(true) }} onSubmit={submit} onCancel={() => dirty ? setCancelOpen(true) : navigate(listPath(subjectId))} onRetryRubrics={() => { void rubrics.refetch() }} createRubric={<Link className="button outline" to="/lecturer/rubrics/new" state={{ returnTo: location.pathname, questionDraft: { content, bloom, rubricId } }}>Tạo Rubric mới</Link>} feedback={<>{save.isError && <Alert tone="danger">Không thể lưu câu hỏi. Vui lòng thử lại.</Alert>}</>} actions={null} /><Dialog open={cancelOpen} title="Rời trang soạn câu hỏi?" onClose={() => setCancelOpen(false)}><p>Các thay đổi chưa lưu sẽ bị mất.</p><div className="dialog-actions"><Button variant="outline" onClick={() => setCancelOpen(false)}>Ở lại</Button><Button onClick={() => navigate(listPath(subjectId))}>Rời trang</Button></div></Dialog></>
 }
 
 export function ApiQuestionEditorPage({
@@ -190,7 +105,6 @@ export function ApiQuestionEditorPage({
 }) {
   const query = useApiQuestion(subjectId, questionId);
   const rubrics = useRubrics(subjectId);
-  const location = useLocation();
   if (!subjectId || !isUuid(subjectId))
     return (
       <section className="state">
@@ -235,15 +149,6 @@ export function ApiQuestionEditorPage({
     );
   return (
     <>
-      <div className="question-editor-rubric-link">
-        <Link
-          className="button outline"
-          to="/lecturer/rubrics/new"
-          state={{ returnTo: location.pathname }}
-        >
-          Tạo Rubric mới
-        </Link>
-      </div>
       <ApiQuestionForm
         key={questionId ?? "new"}
         subjectId={subjectId}
@@ -267,22 +172,25 @@ function ApiQuestionForm({
 }: {
   subjectId: string;
   initial: Question | null;
-  rubrics: { id: string; name: string }[];
+  rubrics: Rubric[];
   rubricLoading: boolean;
   rubricError: boolean;
   onRetryRubrics: () => void;
 }) {
   const navigate = useNavigate();
   const { session } = useSession();
+  const subject = useLecturerSubject(subjectId);
+  const location = useLocation();
   const create = useCreateApiQuestion();
   const update = useUpdateApiQuestion();
   const approve = useApproveApiQuestion();
   const remove = useDeleteApiQuestion();
   const edit = Boolean(initial);
-  const [content, setContent] = useState(initial?.content ?? "");
-  const [bloom, setBloom] = useState<BloomLevel | "">(initial?.bloom ?? "");
-  const [rubricId, setRubricId] = useState(initial?.rubricId ?? "");
-  const [dirty, setDirty] = useState(false);
+  const resume = readQuestionEditorDraft(location.state);
+  const [content, setContent] = useState(resume?.content ?? initial?.content ?? "");
+  const [bloom, setBloom] = useState<BloomLevel | "">(resume?.bloom ?? initial?.bloom ?? "");
+  const [rubricId, setRubricId] = useState(resume?.rubricId ?? initial?.rubricId ?? "");
+  const [dirty, setDirty] = useState(Boolean(resume));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -344,120 +252,8 @@ function ApiQuestionForm({
   if (!session.user || !session.user.roles.includes("lecturer"))
     return <PermissionDenied />;
   return (
-    <section className="question-editor">
-      <EditorHeader
-        subjectId={subjectId}
-        title={edit ? "Chỉnh sửa câu hỏi" : "Tạo câu hỏi vấn đáp"}
-      />
-      <Alert tone="info">
-        Câu hỏi mới sẽ được lưu ở trạng thái bản nháp để bạn kiểm tra trước khi
-        duyệt.
-      </Alert>
-      <form onSubmit={submit} noValidate>
-        <section>
-          <h2>{edit ? "Cập nhật câu hỏi" : "Thông tin câu hỏi"}</h2>
-          {edit && (
-            <p className="form-help">
-              Trạng thái hiện tại: <strong>{initial?.status}</strong> ·{" "}
-              {initial?.aiGenerated ? "AI đề xuất" : "Thủ công"}
-            </p>
-          )}
-          <label htmlFor="question-content">
-            Nội dung câu hỏi
-            <textarea
-              aria-describedby={errors.content ? "content-error" : undefined}
-              aria-invalid={Boolean(errors.content)}
-              id="question-content"
-              value={content}
-              onChange={(event) => updateField(setContent, event.target.value)}
-            />
-          </label>
-          {errors.content && (
-            <p className="field-error" id="content-error">
-              {errors.content}
-            </p>
-          )}
-          <BloomSelect
-            value={bloom}
-            error={errors.bloom}
-            onChange={(value) =>
-              updateField((next) => setBloom(next as BloomLevel), value)
-            }
-          />
-          <label htmlFor="question-rubric">
-            Rubric{rubricLoading && " · đang tải"}
-            <select
-              aria-invalid={Boolean(errors.rubric)}
-              id="question-rubric"
-              value={rubricId}
-              onChange={(event) => updateField(setRubricId, event.target.value)}
-            >
-              <option value="">Không gắn rubric</option>
-              {rubrics.map((rubric) => (
-                <option key={rubric.id} value={rubric.id}>
-                  {rubric.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {rubricError && (
-            <Alert tone="danger">
-              Không thể tải danh mục Rubric.{" "}
-              <Button type="button" variant="outline" onClick={onRetryRubrics}>
-                Thử lại
-              </Button>
-            </Alert>
-          )}
-          {errors.auth && <Alert tone="danger">{errors.auth}</Alert>}
-          {mutationError && (
-            <Alert tone="danger">
-              {mutationError instanceof ApiError
-                ? mutationError.message
-                : "Không thể lưu câu hỏi. Vui lòng thử lại."}
-            </Alert>
-          )}
-          {approve.isError && (
-            <Alert tone="danger">
-              Không thể duyệt câu hỏi. Vui lòng thử lại.
-            </Alert>
-          )}
-          {remove.isError && (
-            <Alert tone="danger">
-              Không thể xoá câu hỏi. Vui lòng thử lại.
-            </Alert>
-          )}
-          <p className="form-help">
-            Bạn có thể gắn Rubric để thống nhất tiêu chí chấm điểm cho câu hỏi.
-          </p>
-        </section>
-        {edit && (
-          <div className="dialog-actions">
-            <Button
-              type="button"
-              pending={approve.isPending}
-              disabled={initial?.status !== "BẢN NHÁP"}
-              onClick={() =>
-                approve.mutate({ subjectId, questionId: initial!.id })
-              }
-            >
-              Duyệt câu hỏi
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              pending={remove.isPending}
-              onClick={() => setConfirmDelete(true)}
-            >
-              Xoá câu hỏi
-            </Button>
-          </div>
-        )}
-        <EditorFooter
-          pending={pending}
-          label={edit ? "Lưu thay đổi" : "Lưu bản nháp"}
-          onCancel={exit}
-        />
-      </form>
+    <>
+      <QuestionEditorView title={edit ? "Chỉnh sửa câu hỏi" : "Tạo câu hỏi vấn đáp"} backTo={location.pathname} rubricReturnState={{ returnTo: location.pathname, questionDraft: { content, bloom, rubricId } }} courseLabel={subject.data ? subject.data.code + " · " + subject.data.name : "Học phần đang chọn"} content={content} bloom={bloom} rubricId={rubricId} rubrics={rubrics} rubricLoading={rubricLoading} rubricError={rubricError} pending={pending} errors={errors} onContent={value => updateField(setContent, value)} onBloom={value => updateField(next => setBloom(next as BloomLevel), value)} onRubric={value => updateField(setRubricId, value)} onSubmit={submit} onCancel={exit} onRetryRubrics={onRetryRubrics} createRubric={<Link className="button outline" to="/lecturer/rubrics/new" state={{ returnTo: location.pathname, questionDraft: { content, bloom, rubricId } }}>Tạo Rubric mới</Link>} feedback={<>{errors.auth && <Alert tone="danger">{errors.auth}</Alert>}{mutationError && <Alert tone="danger">{mutationError instanceof ApiError ? mutationError.message : "Không thể lưu câu hỏi. Vui lòng thử lại."}</Alert>}{approve.isError && <Alert tone="danger">Không thể duyệt câu hỏi. Vui lòng thử lại.</Alert>}{remove.isError && <Alert tone="danger">Không thể xoá câu hỏi. Vui lòng thử lại.</Alert>}</>} actions={edit ? <div className="dialog-actions"><Button type="button" pending={approve.isPending} disabled={dirty || pending || initial?.status !== "BẢN NHÁP"} onClick={() => approve.mutate({ subjectId, questionId: initial!.id })}>Duyệt câu hỏi</Button><Button type="button" variant="danger" disabled={pending} pending={remove.isPending} onClick={() => setConfirmDelete(true)}>Xoá câu hỏi</Button></div> : null} />
       <Dialog
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}
@@ -501,79 +297,6 @@ function ApiQuestionForm({
           </Button>
         </div>
       </Dialog>
-    </section>
-  );
-}
-
-function EditorHeader({
-  subjectId,
-  title,
-}: {
-  subjectId: string;
-  title: string;
-}) {
-  return (
-    <header className="qe-head">
-      <div>
-        <p className="eyebrow">QUESTION BANK · {subjectId}</p>
-        <h1>{title}</h1>
-        <p>Soạn nội dung, mức độ tư duy Bloom và rubric đánh giá.</p>
-      </div>
-      <Link className="button outline" to={listPath(subjectId)}>
-        Quay lại
-      </Link>
-    </header>
-  );
-}
-function BloomSelect({
-  value,
-  onChange,
-  error,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-}) {
-  return (
-    <label htmlFor="question-bloom">
-      Mức độ nhận thức (Bloom)
-      <select
-        aria-describedby={error ? "bloom-error" : undefined}
-        aria-invalid={Boolean(error)}
-        id="question-bloom"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value="">Chọn mức Bloom</option>
-        {bloomLevels.map((level) => (
-          <option key={level}>{level}</option>
-        ))}
-      </select>
-      {error && (
-        <span className="field-error" id="bloom-error">
-          {error}
-        </span>
-      )}
-    </label>
-  );
-}
-function EditorFooter({
-  pending,
-  label,
-  onCancel,
-}: {
-  pending: boolean;
-  label: string;
-  onCancel: () => void;
-}) {
-  return (
-    <footer>
-      <Button type="button" variant="outline" onClick={onCancel}>
-        Hủy bỏ
-      </Button>
-      <Button pending={pending} type="submit">
-        {label}
-      </Button>
-    </footer>
+    </>
   );
 }

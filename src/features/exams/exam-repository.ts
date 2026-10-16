@@ -7,6 +7,7 @@ import type { ExamQuestionConfig, QuestionConfigDraft } from './question-config-
 import { questionRepository } from '../question-bank/question-repository'
 import { apiExamRepository } from './api-exam-repository'
 import { runtimeConfig } from '../../services/api/runtime-config'
+import { createDemoExamSeed, createExamDemoSetup, type ExamDemoSetup } from './mocks/exam-demo-setup'
 import { selectRepository } from '../../services/api/repository-selection'
 
 const seed: ExamSession[] = [
@@ -25,7 +26,8 @@ const seed: ExamSession[] = [
 
 export type ExamRepository = { list(request: ExamListRequest): Promise<ExamListResponse>; get(examId: string): Promise<ExamSession | undefined>; create(draft: ExamDraft): Promise<ExamSession>; update(examId: string, draft: ExamDraft): Promise<ExamSession>; delete(examId: string): Promise<void>; updateStatus(examId: string, status: ExamStatus): Promise<ExamSession>; subjects(): Promise<{ id: string; code: string; name: string }[]>; summary(): Promise<Record<ExamStatus, number>>; listRoster(examId: string): Promise<RosterStudent[]>; addRosterStudent(examId: string, draft: RosterDraft): Promise<RosterStudent>; importRosterStudents(examId: string, drafts: RosterDraft[]): Promise<RosterStudent[]>; removeRosterStudent(examId: string, rosterId: string): Promise<void>; getSchedule(examId: string): Promise<ExamSchedule | undefined>; saveSchedule(examId: string, draft: ScheduleDraft): Promise<ExamSchedule>; getQuestionConfig(examId: string): Promise<ExamQuestionConfig | undefined>; saveQuestionConfig(examId: string, draft: QuestionConfigDraft): Promise<ExamQuestionConfig> }
 
-export function createExamRepository(records: ExamSession[] = seed): ExamRepository {
+export function createExamRepository(initialRecords: ExamSession[] = seed, initialData?: ExamDemoSetup): ExamRepository {
+  const records = initialRecords.map(exam => ({ ...exam }))
   const rosters = new Map<string, RosterStudent[]>(records.map((exam) => [exam.id, []]))
   const schedules = new Map<string, ExamSchedule>()
   const questionConfigs = new Map<string, ExamQuestionConfig>()
@@ -33,6 +35,11 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
     { id: 'ROSTER-EXAM-2025-DB-01-001', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025001', fullName: 'Trần Minh Anh', email: 'sv2025001@example.edu.vn' },
     { id: 'ROSTER-EXAM-2025-DB-01-002', examId: 'EXAM-2025-DB-01', studentCode: 'SV2025002', fullName: 'Lê Hoàng Nam', email: 'sv2025002@example.edu.vn' },
   ])
+  if (initialData) {
+    for (const exam of records) rosters.set(exam.id, initialData.rosters.filter(student => student.examId === exam.id).map(student => ({ ...student })))
+    for (const schedule of initialData.schedules) schedules.set(schedule.examId, structuredClone(schedule))
+    for (const config of initialData.questionConfigs) questionConfigs.set(config.examId, structuredClone(config))
+  }
   const ensureEditable = (examId: string) => { const exam = records.find((item) => item.id === examId); if (!exam) throw new Error('Exam not found'); if (!rosterEditableStatuses.includes(exam.status)) throw new Error('Exam is not editable'); return exam }
   const normalize = (value: string) => value.trim().toLocaleLowerCase()
   const ensureUnique = (examId: string, draft: RosterDraft, ignoreId?: string) => { const current = rosters.get(examId) ?? []; if (current.some((item) => item.id !== ignoreId && normalize(item.studentCode) === normalize(draft.studentCode))) throw new Error('Mã sinh viên đã tồn tại trong kỳ thi'); if (current.some((item) => item.id !== ignoreId && normalize(item.email) === normalize(draft.email))) throw new Error('Email đã tồn tại trong kỳ thi') }
@@ -86,6 +93,7 @@ export function createExamRepository(records: ExamSession[] = seed): ExamReposit
   }
 }
 
-export const mockExamRepository = createExamRepository()
+const demoSeed = createDemoExamSeed(seed)
+export const mockExamRepository = createExamRepository(demoSeed, createExamDemoSetup(demoSeed))
 export const examRepository: ExamRepository = selectRepository(runtimeConfig.dataSource, { mock: mockExamRepository, api: apiExamRepository })
-export const examSeed = seed
+export const examSeed = demoSeed

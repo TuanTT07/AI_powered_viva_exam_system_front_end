@@ -1,0 +1,1 @@
+export const attemptStatusLabels: Record<string, string> = { SCHEDULED: 'Đã xếp lịch', READY: 'Sẵn sàng', IN_PROGRESS: 'Đang thi', COMPLETED: 'Đã hoàn tất lượt thi', ABSENT: 'Vắng', CANCELLED: 'Đã hủy' }

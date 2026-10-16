@@ -1,161 +1,22 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useState } from 'react'
+import { Users, Plus, Trash2 } from 'lucide-react'
+import { Alert, Button, Dialog } from '../../../components/ui/primitives'
+import { LoadingPage } from '../../../components/common/states'
+import { SourcePageHeader } from '../../../components/common/source-page'
 import { useAssignLecturer, useCourse, useCourseLecturers, useDeleteCourse, useRemoveLecturer } from '../course-hooks'
 import { useUsers } from '../user-hooks'
-import { ArrowLeft, BookOpen, Trash2, UserPlus, UserMinus, Loader2, AlertCircle } from 'lucide-react'
 
 export function AdminCourseDetailPage() {
-  const { courseId = '' } = useParams(); 
-  const navigate = useNavigate(); 
-  
-  const courseQuery = useCourse(courseId); 
-  const lecturersQuery = useCourseLecturers(courseId); 
-  const usersQuery = useUsers({ role: 'lecturer', size: 100 }); 
-  
-  const assign = useAssignLecturer(); 
-  const remove = useRemoveLecturer(); 
-  const del = useDeleteCourse(); 
-  
-  const [selected, setSelected] = useState('')
-
-  if (courseQuery.isLoading) return (
-    <div className="flex justify-center items-center h-screen bg-slate-50">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-    </div>
-  );
-
-  const course = courseQuery.data; 
-  if (courseQuery.isError || !course) return (
-    <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-red-500">
-      <AlertCircle className="w-12 h-12 mb-4" />
-      <h2 className="text-xl font-semibold">Không tìm thấy môn học hoặc bạn không có quyền.</h2>
-      <Link to="/admin/courses" className="mt-4 text-blue-600 hover:underline">Quay lại danh sách</Link>
-    </div>
-  );
-
-  const lecturers = lecturersQuery.data || course.lecturers || [];
-  const available = (usersQuery.data?.content || []).filter(u => !lecturers.some(l => l.id === u.id))
-
-  const handleRemoveLecturer = (lecturerId: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn gỡ giảng viên này khỏi môn học?')) {
-      remove.mutate({ courseId, lecturerId });
-    }
-  };
-
-  const handleDeleteCourse = () => {
-    if (window.confirm('CẢNH BÁO: Bạn có thực sự muốn xóa môn học này? Hành động này không thể hoàn tác.')) {
-      del.mutate(courseId, { onSuccess: () => navigate('/admin/courses') })
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
-        
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link 
-              to="/admin/courses"
-              className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Quay lại</span>
-            </Link>
-          </div>
-          <button 
-            onClick={handleDeleteCourse}
-            disabled={del.isPending}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm disabled:opacity-50"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Xóa môn học</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Cột trái: Thông tin môn học */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 p-6 overflow-hidden">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-50 rounded-lg text-blue-600">
-                  <BookOpen className="w-8 h-8" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-slate-800 tracking-tight">{course.name}</h1>
-                  <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
-                    <span className="font-medium bg-slate-100 px-2.5 py-1 rounded-md text-slate-700">Mã: {course.code}</span>
-                    {course.department && <span>Phòng ban: {course.department}</span>}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Cột phải: Quản lý giảng viên */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 p-6 overflow-hidden">
-              <h3 className="text-lg font-semibold text-slate-700 border-b border-gray-100 pb-3 mb-4">
-                Giảng viên phụ trách
-              </h3>
-              
-              {/* Danh sách giảng viên hiện tại */}
-              <div className="space-y-3 mb-6">
-                {lecturers.length === 0 ? (
-                  <p className="text-sm text-slate-500 italic">Chưa có giảng viên nào.</p>
-                ) : (
-                  lecturers.map(lecturer => (
-                    <div key={lecturer.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg group">
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{lecturer.name}</p>
-                        <p className="text-xs text-slate-500">{lecturer.email}</p>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveLecturer(lecturer.id)}
-                        disabled={remove.isPending}
-                        title="Gỡ giảng viên"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
-                      >
-                        <UserMinus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Form phân công thêm */}
-              <div className="border-t border-gray-100 pt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Phân công giảng viên mới
-                </label>
-                <div className="flex flex-col gap-3">
-                  <select
-                    value={selected}
-                    onChange={(e) => setSelected(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition bg-white"
-                  >
-                    <option value="">-- Chọn giảng viên --</option>
-                    {available.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} - {u.email}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => assign.mutate({ courseId, lecturerId: selected }, { onSuccess: () => setSelected('') })}
-                    disabled={!selected || assign.isPending}
-                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm disabled:opacity-50 w-full"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Phân công</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
+  const { courseId = '' } = useParams(), navigate = useNavigate(), course = useCourse(courseId), lecturers = useCourseLecturers(courseId), users = useUsers({ role: 'lecturer', page: 1, size: 100 }), assign = useAssignLecturer(), remove = useRemoveLecturer(), del = useDeleteCourse()
+  const [selected, setSelected] = useState(''), [target, setTarget] = useState<{ id: string; name: string } | null>(null), [deleting, setDeleting] = useState(false), [feedback, setFeedback] = useState('')
+  if (course.isLoading) return <LoadingPage label="Đang tải môn học" />
+  if (course.isError || !course.data) return <section className="state"><Alert tone="danger">Không thể tải môn học.</Alert><Button onClick={() => course.refetch()}>Thử lại</Button><Link to="/admin/courses">Quay lại</Link></section>
+  const assigned = lecturers.data ?? [], available = (users.data?.content ?? []).filter(user => !assigned.some(item => item.id === user.id))
+  return <section className="source-screen max-w-7xl mx-auto space-y-6 pb-16"><SourcePageHeader eyebrow="Học phần & phân công" title={course.data.name} description={`${course.data.code} · ${course.data.department}`} actions={<><Link className="button outline" to={`/admin/courses?edit=${encodeURIComponent(courseId)}`}>Chỉnh sửa môn học</Link><Button variant="danger" onClick={() => setDeleting(true)}>Xóa môn học</Button></>} />{feedback && <Alert tone="success">{feedback}</Alert>}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><section className="lg:col-span-2 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs"><div className="p-5 border-b border-slate-100 flex gap-2 items-center"><Users size={17} className="text-blue-600" /><h2 className="text-sm font-semibold text-slate-900">Giảng viên phụ trách</h2></div>{lecturers.isLoading ? <LoadingPage label="Đang tải giảng viên" /> : lecturers.isError ? <div className="p-5"><Alert tone="danger">Không thể tải danh sách giảng viên.</Alert><Button onClick={() => lecturers.refetch()}>Thử lại</Button></div> : <ul className="divide-y divide-slate-100 list-none m-0 p-0">{assigned.map(lecturer => <li key={lecturer.id} className="flex flex-wrap items-center justify-between gap-3 p-5"><div className="flex gap-3 items-center"><span className="w-9 h-9 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center font-semibold text-xs">{lecturer.initials}</span><div><Link to={`/admin/users/${encodeURIComponent(lecturer.id)}`} className="text-sm font-semibold text-slate-900">{lecturer.name}</Link><p className="text-xs text-slate-500 mt-1">{lecturer.email}</p></div></div><Button variant="outline" onClick={() => { remove.reset(); setTarget(lecturer) }}><Trash2 size={14} />Gỡ phân công</Button></li>)}{!assigned.length && <li className="p-8 text-center text-sm text-slate-500">Chưa có giảng viên phụ trách.</li>}</ul>}</section>
+    <aside className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 self-start"><h2 className="text-sm font-semibold text-slate-900">Phân công giảng viên</h2><label className="text-xs text-slate-500 block" htmlFor="lecturer-assignment">Chọn giảng viên</label><select id="lecturer-assignment" value={selected} disabled={users.isLoading || users.isError || lecturers.isError} onChange={event => setSelected(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"><option value="">Chọn giảng viên để phân công</option>{available.map(user => <option value={user.id} key={user.id}>{user.name} · {user.email}</option>)}</select>{users.isError && <Alert tone="danger">Không thể tải tài khoản giảng viên. <Button onClick={() => users.refetch()}>Thử lại</Button></Alert>}{assign.isError && <Alert tone="danger">{assign.error.message}</Alert>}<Button disabled={!selected || lecturers.isError} pending={assign.isPending} onClick={() => assign.mutate({ courseId, lecturerId: selected }, { onSuccess: () => { setSelected(''); setFeedback('Đã phân công giảng viên.') } })}><Plus size={14} />Phân công</Button></aside></div><Link className="button outline" to="/admin/courses">Về danh sách môn học</Link>
+    <Dialog open={Boolean(target)} title="Gỡ phân công giảng viên?" onClose={() => { if (!remove.isPending) setTarget(null) }}><p>Gỡ {target?.name} khỏi học phần?</p>{remove.isError && <Alert tone="danger">{remove.error.message}</Alert>}<div className="dialog-actions"><Button variant="outline" disabled={remove.isPending} onClick={() => setTarget(null)}>Hủy</Button><Button variant="danger" pending={remove.isPending} onClick={() => target && remove.mutate({ courseId, lecturerId: target.id }, { onSuccess: () => { setTarget(null); setFeedback('Đã gỡ phân công giảng viên.') } })}>Gỡ phân công</Button></div></Dialog>
+    <Dialog open={deleting} title="Xóa môn học?" onClose={() => { if (!del.isPending) setDeleting(false) }}><p>Môn học đã có câu hỏi hoặc kỳ thi có thể không được phép xóa.</p>{del.isError && <Alert tone="danger">{del.error.message}</Alert>}<div className="dialog-actions"><Button variant="outline" disabled={del.isPending} onClick={() => setDeleting(false)}>Hủy</Button><Button variant="danger" pending={del.isPending} onClick={() => del.mutate(courseId, { onSuccess: () => navigate('/admin/courses') })}>Xóa môn học</Button></div></Dialog>
+  </section>
 }

@@ -1,300 +1,34 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, Input, Badge, Dialog } from '../../../components/ui/primitives';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../user-hooks';
-import type { UserRole, User } from '../api-user-repository';
-
-function AccountEditorDialog({
-  user,
-  open,
-  onClose,
-  onSave,
-  isPending
-}: {
-  user: User | null;
-  open: boolean;
-  onClose: () => void;
-  onSave: (user: any) => void;
-  isPending?: boolean;
-}) {
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [role, setRole] = useState<UserRole>(user?.role || 'lecturer');
-  const [identifier, setIdentifier] = useState(user?.identifier || '');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({
-      id: user ? user.id : Math.random().toString(),
-      name,
-      identifier: user ? user.identifier : identifier,
-      email,
-      role,
-      status: 'active',
-      initials: name.substring(0, 2).toUpperCase(),
-      password
-    });
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} title="Hồ sơ Cấp phát Tài khoản Khảo thí">
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-        <p style={{ color: 'var(--secondary)', fontSize: '0.9rem', marginTop: '-12px', marginBottom: '16px' }}>Cấp quyền truy cập hệ thống chấm thi vấn đáp AI cho cán bộ, hội đồng hoặc thí sinh.</p>
-        
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>HỌ VÀ TÊN NGƯỜI DÙNG *</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ví dụ: TS. Phan Bá Hưng" required disabled={isPending} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>THƯ ĐIỆN TỬ (EMAIL) *</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hung.pb@academia.edu.vn" required disabled={isPending} />
-          </div>
-        </div>
-
-        {!user && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MẬT KHẨU KHỞI TẠO BAN ĐẦU *</label>
-              <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Bắt buộc đổi khi đăng nhập lần đầu</span>
-            </div>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required placeholder="Nhập mật khẩu khởi tạo" disabled={isPending} />
-          </div>
-        )}
-
-        {!user && <div><label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>MÃ ĐỊNH DANH *</label><Input value={identifier} onChange={e => setIdentifier(e.target.value)} required placeholder="VD: CB-2026001" disabled={isPending} /></div>}
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--navy)' }}>CHỌN VAI TRÒ HỆ THỐNG *</label>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {(['admin', 'lecturer', 'student'] as UserRole[]).map((r) => (
-              <label key={r} style={{ flex: 1, padding: '12px', border: `1px solid ${role === r ? 'var(--navy)' : 'var(--border)'}`, borderRadius: '8px', cursor: 'pointer', backgroundColor: role === r ? 'var(--soft)' : 'var(--surface)', textAlign: 'center', opacity: isPending ? 0.7 : 1 }}>
-                <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: 'none' }} disabled={isPending} />
-                <span style={{ display: 'block', fontWeight: 'bold', color: 'var(--navy-dark)' }}>
-                  {r === 'admin' ? 'Admin' : r === 'lecturer' ? 'Giảng viên' : 'Sinh viên'}
-                </span>
-                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--secondary)', marginTop: '4px' }}>
-                  {r === 'admin' ? 'Quản trị toàn quyền' : r === 'lecturer' ? 'Khảo thí & chấm điểm' : 'Thí sinh vấn đáp'}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' }}>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>Hủy bỏ</Button>
-          <Button type="submit" variant="primary" pending={isPending}>Lưu & Kích hoạt</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-}
+import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { Plus, Search, Users, Edit3, Trash2 } from 'lucide-react'
+import { Alert, Button, Dialog, Input } from '../../../components/ui/primitives'
+import { LoadingPage } from '../../../components/common/states'
+import { SourceMetric, SourcePageHeader } from '../../../components/common/source-page'
+import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '../user-hooks'
+import { useRoles } from '../role-hooks'
+import type { User } from '../api-user-repository'
 
 export function UserManagementPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeRoleFilter, setActiveRoleFilter] = useState<'all' | UserRole>('all');
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [isAddingUser, setIsAddingUser] = useState(false);
-
-  const usersQuery = useUsers({ keyword: searchTerm, role: activeRoleFilter });
-  const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
-  const deleteUser = useDeleteUser();
-
-  const handleSaveUser = (savedUser: any) => {
-    if (isAddingUser) {
-      createUser.mutate({
-        fullName: savedUser.name,
-        email: savedUser.email,
-        roleName: savedUser.role,
-        userCode: savedUser.identifier,
-        password: savedUser.password,
-      }, { 
-        onSuccess: () => {
-          setIsAddingUser(false);
-          alert('Tạo người dùng thành công!');
-        },
-        onError: (err: any) => {
-          alert('Lỗi tạo người dùng: ' + (err.message || 'Unknown error'));
-        }
-      });
-    } else if (editingUser) {
-      updateUser.mutate({
-        id: savedUser.id,
-        fullName: savedUser.name,
-        email: savedUser.email,
-        roleName: savedUser.role,
-      }, { 
-        onSuccess: () => {
-          setEditingUser(null);
-          alert('Cập nhật thành công!');
-        },
-        onError: (err: any) => {
-          alert('Lỗi cập nhật: ' + (err.message || 'Unknown error'));
-        }
-      });
-    }
-  };
-
-  const users = usersQuery.data?.content || [];
-  const filteredUsers = users;
-
-  const handleDelete = (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa tài khoản này không?')) {
-      deleteUser.mutate(id, {
-        onError: (err: any) => alert('Lỗi khi xóa: ' + (err.message || 'Unknown error'))
-      });
-    }
-  };
-
-  return (
-    <div className="page-container" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      
-      {/* Header & Quick Stats */}
-      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <Badge tone="neutral">Lưu trữ Quyền Hạn v4.8</Badge>
-            <span style={{ color: 'var(--border)' }}>•</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Niên khoá 2024–2025</span>
-          </div>
-          <h1 style={{ margin: 0, fontSize: '2rem', color: 'var(--navy-dark)' }}>Sổ cái Quản trị Người dùng & Phân quyền</h1>
-          <p style={{ margin: '8px 0 0 0', color: 'var(--secondary)', maxWidth: '600px' }}>Danh mục tài khoản học thuật, vai trò phân quyền và trạng thái cấp phép trong hệ thống thi vấn đáp VivaAI.</p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 20px', gap: '24px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold' }}>TỔNG TÀI KHOẢN</span>
-              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{usersQuery.data?.totalElements ?? 0}</span>
-            </div>
-            <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--border)' }}></div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold' }}>HOẠT ĐỘNG</span>
-              <span style={{ fontSize: '1.25rem', color: 'var(--navy)', fontWeight: 'bold' }}>{users.filter(u => u.status === 'active').length}</span>
-            </div>
-            <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--border)' }}></div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 'bold' }}>ĐÃ KHÓA</span>
-              <span style={{ fontSize: '1.25rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{users.filter(u => u.status === 'inactive').length}</span>
-            </div>
-          </div>
-          <Button variant="primary" onClick={() => setIsAddingUser(true)} style={{ height: '100%', padding: '0 24px' }}>
-            + Cấp tài khoản mới
-          </Button>
-        </div>
-      </section>
-
-      {/* Filters */}
-      <section style={{ backgroundColor: 'var(--surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Input 
-          placeholder="Tìm theo họ tên, mã cán bộ/SV, hòm thư..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ flex: 1, minWidth: '300px' }}
-        />
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--secondary)', fontWeight: 'bold', marginRight: '8px' }}>LỌC VAI TRÒ:</span>
-          {(['all', 'admin', 'lecturer', 'student'] as const).map(role => (
-            <button 
-              key={role}
-              onClick={() => setActiveRoleFilter(role)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '4px',
-                border: 'none',
-                fontWeight: 'bold',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                backgroundColor: activeRoleFilter === role ? 'var(--navy)' : 'var(--muted)',
-                color: activeRoleFilter === role ? '#fff' : 'var(--secondary)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {role === 'all' ? `Tất cả` : role === 'admin' ? `Admin` : role === 'lecturer' ? `Giảng viên` : `Sinh viên`}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Table */}
-      <section style={{ backgroundColor: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ backgroundColor: 'var(--muted)', borderBottom: '1px solid var(--border)' }}>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)' }}>Họ và tên & Mã định danh</th>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)' }}>Email học viện</th>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)' }}>Vai trò</th>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)' }}>Phạm vi phụ trách</th>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)' }}>Trạng thái</th>
-              <th style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--secondary)', textAlign: 'right' }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.length > 0 ? filteredUsers.map((user) => (
-              <tr key={user.id} style={{ borderBottom: '1px solid var(--border)', opacity: user.status === 'inactive' ? 0.7 : 1 }}>
-                <td style={{ padding: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: user.role === 'admin' ? 'var(--navy)' : 'var(--muted)', color: user.role === 'admin' ? '#fff' : 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                      {user.initials}
-                    </div>
-                    <div>
-                      <Link to={`/admin/users/${user.id}`} style={{ display: 'block', fontWeight: 'bold', color: 'var(--navy-dark)' }}>{user.name}</Link>
-                      <span style={{ display: 'block', fontSize: '0.85rem', color: 'var(--secondary)', marginTop: '2px' }}>{user.identifier}</span>
-                    </div>
-                  </div>
-                </td>
-                <td style={{ padding: '16px', color: 'var(--secondary)', fontSize: '0.9rem' }}>{user.email}</td>
-                <td style={{ padding: '16px' }}>
-                  <Badge tone={user.role === 'admin' ? 'ai' : 'neutral'}>
-                    {user.role === 'admin' ? 'Admin' : user.role === 'lecturer' ? 'Giảng viên' : 'Sinh viên'}
-                  </Badge>
-                </td>
-                <td style={{ padding: '16px' }}>
-                  {user.subjects && user.subjects.length > 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {user.subjects.map(s => (
-                        <span key={s} style={{ padding: '4px 8px', backgroundColor: 'var(--muted)', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--text)' }}>{s}</span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: '0.85rem', color: 'var(--secondary)' }}>Toàn hệ thống</span>
-                  )}
-                </td>
-                <td style={{ padding: '16px' }}>
-                  <Badge tone={user.status === 'active' ? 'info' : 'danger'}>
-                    {user.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
-                  </Badge>
-                </td>
-                <td style={{ padding: '16px', textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', gap: '8px' }}>
-                    <Link to={`/admin/users/${user.id}`} style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Chi tiết</Link>
-                    <button onClick={() => setEditingUser(user)} style={{ background: 'transparent', border: 'none', color: 'var(--navy)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>Sửa</button>
-                    <button onClick={() => handleDelete(user.id)} style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 'bold', padding: '4px 8px' }}>
-                      Xóa
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: 'var(--secondary)' }}>Không tìm thấy người dùng phù hợp.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-
-      {(isAddingUser || editingUser) && (
-        <AccountEditorDialog 
-          user={isAddingUser ? null : editingUser}
-          open={isAddingUser || !!editingUser} 
-          onClose={() => { setIsAddingUser(false); setEditingUser(null); }} 
-          onSave={handleSaveUser}
-          isPending={createUser.isPending || updateUser.isPending}
-        />
-      )}
-    </div>
-  );
+  const [search, setSearch] = useState(''), [role, setRole] = useState('all'), [page, setPage] = useState(1)
+  const users = useUsers({ keyword: search, role, page, size: 10 }), create = useCreateUser(), update = useUpdateUser(), remove = useDeleteUser()
+  const [editor, setEditor] = useState<User | 'new' | null>(null), [target, setTarget] = useState<User | null>(null), [feedback, setFeedback] = useState('')
+  const pending = create.isPending || update.isPending
+  const save = (draft: UserDraft) => {
+    if (editor === 'new') create.mutate(draft, { onSuccess: () => { setEditor(null); setFeedback('Đã tạo tài khoản.') } })
+    else if (editor) update.mutate({ id: editor.id, fullName: draft.fullName, email: draft.email, roleName: draft.roleName }, { onSuccess: () => { setEditor(null); setFeedback('Đã cập nhật tài khoản.') } })
+  }
+  return <section className="source-screen max-w-7xl mx-auto space-y-6 pb-16"><SourcePageHeader eyebrow="Quản trị tài khoản" title="Quản Lý Người Dùng & Phân Quyền" description="Tài khoản học thuật và vai trò truy cập trong hệ thống AIVES." actions={<Button onClick={() => { create.reset(); update.reset(); setEditor('new') }}><Plus size={16} />Cấp tài khoản mới</Button>} />
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4"><SourceMetric label="TỔNG TÀI KHOẢN" value={users.data?.totalElements ?? '—'} icon={Users} /><SourceMetric label="ĐANG HIỂN THỊ" value={users.data?.content.length ?? '—'} tone="slate" /><SourceMetric label="TRANG HIỆN TẠI" value={`${page} / ${Math.max(1, users.data?.totalPages ?? 1)}`} tone="slate" /></div>
+    {feedback && <Alert tone="success">{feedback}</Alert>}
+    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3"><div className="relative flex-1"><Search size={16} className="absolute left-3 top-3 text-slate-400" /><input aria-label="Tìm tài khoản" value={search} onChange={event => { setSearch(event.target.value); setPage(1) }} placeholder="Tìm theo họ tên, mã cán bộ/SV, email..." className="w-full pl-9 pr-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg" /></div><select aria-label="Lọc vai trò" value={role} onChange={event => { setRole(event.target.value); setPage(1) }} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs"><option value="all">Tất cả vai trò</option><option value="admin">Admin</option><option value="lecturer">Giảng viên</option><option value="student">Sinh viên</option></select></div>
+    {users.isLoading ? <LoadingPage label="Đang tải tài khoản" /> : users.isError ? <section className="state"><Alert tone="danger">Không thể tải danh sách tài khoản.</Alert><Button onClick={() => users.refetch()}>Thử lại</Button></section> : <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs"><div className="overflow-auto"><table className="w-full min-w-[700px] text-left text-xs"><thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px] tracking-wider"><tr><th className="px-4 py-3">Họ Tên &amp; Mã Định Danh</th><th className="px-4 py-3">Email Học Thuật</th><th className="px-4 py-3">Vai Trò</th><th className="px-4 py-3 text-right">Thao Tác</th></tr></thead><tbody className="divide-y divide-slate-100">{users.data?.content.map(user => <tr key={user.id} className="hover:bg-slate-50/80"><td className="px-4 py-3.5"><div className="flex gap-3 items-center"><span className="flex items-center justify-center w-9 h-9 bg-blue-50 text-blue-700 rounded-lg font-semibold">{user.initials}</span><div><Link className="text-sm font-semibold text-slate-900" to={`/admin/users/${encodeURIComponent(user.id)}`}>{user.name}</Link><small className="block mt-0.5 text-slate-400">{user.identifier}</small></div></div></td><td className="px-4 py-3.5 text-slate-500">{user.email}</td><td className="px-4 py-3.5"><span className="bg-slate-100 text-slate-700 border border-slate-200 rounded px-2 py-1 text-[11px] font-medium">{user.role === 'lecturer' ? 'Giảng viên' : user.role === 'student' ? 'Sinh viên' : 'Admin'}</span></td><td className="px-4 py-3.5"><div className="flex gap-2 justify-end"><Link className="button outline" to={`/admin/users/${encodeURIComponent(user.id)}`}>Chi tiết</Link><Button variant="outline" aria-label={`Sửa ${user.name}`} onClick={() => { update.reset(); setEditor(user) }}><Edit3 size={14} /></Button><Button variant="outline" aria-label={`Xóa ${user.name}`} onClick={() => { remove.reset(); setTarget(user) }}><Trash2 size={14} className="text-rose-600" /></Button></div></td></tr>)}{!users.data?.content.length && <tr><td colSpan={4} className="p-10 text-center text-slate-500">Không tìm thấy tài khoản.</td></tr>}</tbody></table></div><div className="flex justify-end items-center gap-3 p-4 border-t border-slate-100 text-xs text-slate-500"><span>Trang {page} / {Math.max(1, users.data?.totalPages ?? 1)}</span><Button variant="outline" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Trước</Button><Button variant="outline" disabled={page >= (users.data?.totalPages ?? 1)} onClick={() => setPage(value => value + 1)}>Sau</Button></div></div>}
+    {editor && <UserEditor key={editor === 'new' ? 'new' : editor.id} user={editor === 'new' ? null : editor} pending={pending} error={create.error ?? update.error} onSave={save} onClose={() => { if (!pending) setEditor(null) }} />}
+    <Dialog open={Boolean(target)} onClose={() => { if (!remove.isPending) setTarget(null) }} title="Xóa tài khoản?"><p>Xóa tài khoản “{target?.name}”? Tài khoản có dữ liệu thi, câu hỏi hoặc chấm điểm có thể không được phép xóa.</p>{remove.isError && <Alert tone="danger">{remove.error.message}</Alert>}<div className="dialog-actions"><Button variant="outline" disabled={remove.isPending} onClick={() => setTarget(null)}>Hủy</Button><Button variant="danger" pending={remove.isPending} onClick={() => target && remove.mutate(target.id, { onSuccess: () => { setTarget(null); setFeedback('Đã xóa tài khoản.') } })}>Xóa tài khoản</Button></div></Dialog>
+  </section>
+}
+type UserDraft = { fullName: string; email: string; roleName: string; userCode: string; password?: string }
+function UserEditor({ user, pending, error, onSave, onClose }: { user: User | null; pending: boolean; error: Error | null; onSave: (draft: UserDraft) => void; onClose: () => void }) {
+  const roles = useRoles(), [name, setName] = useState(user?.name ?? ''), [email, setEmail] = useState(user?.email ?? ''), [role, setRole] = useState(user?.role.toUpperCase() ?? 'LECTURER'), [code, setCode] = useState(user?.identifier ?? ''), [password, setPassword] = useState('')
+  const submit = (event: FormEvent) => { event.preventDefault(); if (!pending) onSave({ fullName: name.trim(), email: email.trim(), roleName: role, userCode: code.trim(), ...(!user ? { password } : {}) }) }
+  return <Dialog open onClose={onClose} title={user ? 'Chỉnh sửa tài khoản' : 'Cấp tài khoản mới'}><form className="grid gap-4 mt-4" onSubmit={submit}><label>Họ và tên<Input required value={name} onChange={event => setName(event.target.value)} /></label><label>Email<Input required type="email" value={email} onChange={event => setEmail(event.target.value)} /></label><label>Mã định danh<Input required readOnly={Boolean(user)} value={code} onChange={event => setCode(event.target.value)} /></label><label>Vai trò<select aria-label="Vai trò" disabled={roles.isLoading || roles.isError} value={role} onChange={event => setRole(event.target.value)} className="w-full border border-slate-200 rounded-lg p-2 mt-1">{roles.data?.map(item => <option key={item.id} value={item.roleName}>{item.roleName}</option>)}</select></label>{roles.isError && <Alert tone="danger">Không thể tải vai trò. <Button type="button" onClick={() => roles.refetch()}>Thử lại</Button></Alert>}{!user && <label>Mật khẩu khởi tạo<Input required type="password" minLength={6} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label>}{error && <Alert tone="danger">{error.message}</Alert>}<div className="dialog-actions"><Button type="button" variant="outline" disabled={pending} onClick={onClose}>Hủy</Button><Button type="submit" pending={pending} disabled={roles.isLoading || roles.isError}>Lưu tài khoản</Button></div></form></Dialog>
 }

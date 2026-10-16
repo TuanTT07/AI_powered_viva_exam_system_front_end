@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useState } from 'react'
+import { Alert, Button } from '../../../components/ui/primitives'
 import { useResetUserPassword, useUpdateUser, useUser, useUserCourses } from '../user-hooks'
 import { useRoles } from '../role-hooks'
 import { ArrowLeft, User, KeyRound, BookOpen, AlertCircle, Loader2, Save, X } from 'lucide-react'
@@ -7,17 +8,18 @@ import { ArrowLeft, User, KeyRound, BookOpen, AlertCircle, Loader2, Save, X } fr
 export function AdminUserDetailPage() {
   const { userId = '' } = useParams();
 
-  const userQuery = useUser(userId); 
-  const coursesQuery = useUserCourses(userId); 
+  const userQuery = useUser(userId);
+  const coursesQuery = useUserCourses(userQuery.data?.role === 'lecturer' ? userId : null);
   const rolesQuery = useRoles();
 
-  const update = useUpdateUser(); 
+  const update = useUpdateUser();
   const reset = useResetUserPassword();
 
-  const [editing, setEditing] = useState(false); 
-  const [name, setName] = useState(''); 
-  const [email, setEmail] = useState(''); 
-  const [role, setRole] = useState('LECTURER'); 
+  const [feedback, setFeedback] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('LECTURER');
   const [password, setPassword] = useState('');
 
   if (userQuery.isLoading) return (
@@ -25,7 +27,7 @@ export function AdminUserDetailPage() {
       <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
     </div>
   );
-  
+
   const user = userQuery.data;
   if (userQuery.isError || !user) return (
     <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-red-500">
@@ -35,22 +37,27 @@ export function AdminUserDetailPage() {
     </div>
   );
 
-  const beginEdit = () => { 
-    setName(user.name); 
-    setEmail(user.email); 
-    setRole(user.role.toUpperCase()); 
+  const beginEdit = () => {
+    setName(user.name);
+    setEmail(user.email);
+    setRole(user.role.toUpperCase());
     setEditing(true);
   };
 
   const isLecturer = user.role.toLowerCase() === 'lecturer';
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+    <div className="source-screen bg-slate-50 p-6 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        
+        {feedback && <Alert tone="success">{feedback}</Alert>}
+        {rolesQuery.isError && <Alert tone="danger">Không thể tải vai trò. <Button onClick={() => rolesQuery.refetch()}>Thử lại</Button></Alert>}
+        {update.isError && <Alert tone="danger">{update.error.message}</Alert>}
+        {reset.isError && <Alert tone="danger">{reset.error.message}</Alert>}
+        {coursesQuery.isError && <Alert tone="danger">Không thể tải môn học phụ trách. <Button onClick={() => coursesQuery.refetch()}>Thử lại</Button></Alert>}
+
         {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
-          <Link 
+          <Link
             to="/admin/users"
             className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium"
           >
@@ -60,7 +67,7 @@ export function AdminUserDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Cột trái: Thông tin tài khoản */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 p-6 overflow-hidden">
@@ -72,8 +79,8 @@ export function AdminUserDetailPage() {
                   <h2 className="text-xl font-bold text-slate-800">Thông tin tài khoản</h2>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
-                  user.role.toLowerCase() === 'admin' 
-                    ? 'bg-purple-100 text-purple-700' 
+                  user.role.toLowerCase() === 'admin'
+                    ? 'bg-purple-100 text-purple-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}>
                   {user.role}
@@ -81,40 +88,40 @@ export function AdminUserDetailPage() {
               </div>
 
               {editing ? (
-                <form 
-                  onSubmit={(e) => { 
-                    e.preventDefault(); 
-                    update.mutate({ id: user.id, fullName: name, email, roleName: role }, { onSuccess: () => setEditing(false) }) 
-                  }} 
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    update.mutate({ id: user.id, fullName: name, email, roleName: role }, { onSuccess: () => setEditing(false) })
+                  }}
                   className="space-y-4"
                 >
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Họ tên</label>
-                    <input 
+                    <label htmlFor="admin-user-name" className="block text-sm font-medium text-slate-700 mb-1">Họ tên</label>
+                    <input
                       type="text"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
-                      value={name} onChange={e => setName(e.target.value)} required 
+                      id="admin-user-name" value={name} onChange={e => setName(e.target.value)} required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input 
-                      type="email"
+                    <label htmlFor="admin-user-email" className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input
+                      id="admin-user-email" type="email"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
-                      value={email} onChange={e => setEmail(e.target.value)} required 
+                      value={email} onChange={e => setEmail(e.target.value)} required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Vai trò</label>
-                    <select 
-                      value={role} onChange={e => setRole(e.target.value)}
+                    <label htmlFor="admin-user-role" className="block text-sm font-medium text-slate-700 mb-1">Vai trò</label>
+                    <select
+                      id="admin-user-role" disabled={rolesQuery.isLoading || rolesQuery.isError} value={role} onChange={e => setRole(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition bg-white"
                     >
                       {(rolesQuery.data || []).map(r => <option key={r.id} value={r.roleName}>{r.roleName}</option>)}
                     </select>
                   </div>
                   <div className="flex items-center gap-3 pt-2">
-                    <button type="submit" disabled={update.isPending} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm disabled:opacity-50">
+                    <button type="submit" disabled={update.isPending || rolesQuery.isLoading || rolesQuery.isError} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm disabled:opacity-50">
                       <Save className="w-4 h-4" /> Lưu
                     </button>
                     <button type="button" onClick={() => setEditing(false)} className="flex items-center gap-2 border border-gray-300 text-slate-600 hover:bg-slate-50 rounded-lg px-4 py-2 transition-colors font-medium">
@@ -136,7 +143,7 @@ export function AdminUserDetailPage() {
                     <p className="text-sm text-slate-500 mb-1">Email</p>
                     <p className="text-slate-700">{user.email}</p>
                   </div>
-                  
+
                   <div className="pt-4 border-t border-gray-100">
                     <button onClick={beginEdit} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm">
                       Chỉnh sửa thông tin
@@ -155,7 +162,7 @@ export function AdminUserDetailPage() {
                   </div>
                   <h3 className="text-lg font-bold text-slate-800">Môn học phụ trách</h3>
                 </div>
-                
+
                 {coursesQuery.isLoading ? (
                   <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 text-blue-600 animate-spin" /></div>
                 ) : coursesQuery.data?.length ? (
@@ -185,32 +192,32 @@ export function AdminUserDetailPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-slate-700">Đặt lại mật khẩu</h3>
               </div>
-              
-              <form 
-                onSubmit={(e) => { 
-                  e.preventDefault(); 
-                  reset.mutate({ id: user.id, newPassword: password }, { 
-                    onSuccess: () => { 
-                      setPassword(''); 
-                      window.alert('Đặt lại mật khẩu thành công!');
-                    } 
-                  }) 
-                }} 
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  reset.mutate({ id: user.id, newPassword: password }, {
+                    onSuccess: () => {
+                      setPassword('');
+                      setFeedback('Đã đặt lại mật khẩu.');
+                    }
+                  })
+                }}
                 className="space-y-3"
               >
                 <div>
-                  <input 
-                    type="password" 
-                    minLength={6} 
-                    placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    required 
+                  <input
+                    aria-label="Mật khẩu mới" type="password"
+                    minLength={6}
+                    placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition"
                   />
                 </div>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={reset.isPending || password.length < 6}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 py-2 transition-colors font-medium shadow-sm disabled:opacity-50"
                 >

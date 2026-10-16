@@ -19,6 +19,14 @@ const rubricStore: Rubric[] = [{
   ],
 }]
 
+for (const [subjectId, subjectName, count] of [['oop-java', 'Lập trình Java', 4], ['java-core', 'Java Core', 3], ['database', 'Cơ sở dữ liệu', 5], ['operating-systems', 'Hệ điều hành', 2]] as const) {
+  for (let index = 0; index < count; index++) rubricStore.push({
+    id: `rubric-${subjectId}-${index + 1}`, subjectId,
+    name: `${subjectName} · ${['Kiến thức nền tảng', 'Phân tích tình huống', 'Ứng dụng thực tế', 'Lập luận & phản biện', 'Tổng hợp kiến thức'][index]}`,
+    criteria: structuredClone(rubricStore[0].criteria).map(criterion => ({ ...criterion, id: `${subjectId}-${index + 1}-${criterion.id}` })),
+  })
+}
+
 const clone = <T,>(value: T): T => structuredClone(value)
 
 export const mockRubricRepository: RubricRepository = {

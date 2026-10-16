@@ -1,187 +1,22 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
-import { Button, Alert, Badge } from '../../../components/ui/primitives'
+import { DemoLabel } from '../../../components/common/inline-notice'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { CheckCircle2, Mic, ShieldCheck, Volume2, Wifi } from 'lucide-react'
+import { Alert, Button } from '../../../components/ui/primitives'
+import { SourcePageHeader } from '../../../components/common/source-page'
+import { useOnline } from '../../../hooks/use-online'
+import { useDeviceCheck } from '../use-device-check'
+import { runtimeConfig } from '../../../services/api/runtime-config'
 
 export function EquipmentCheckPage() {
-  const { examId } = useParams()
+  const { examId = '' } = useParams()
   const navigate = useNavigate()
-  
-  const [micStatus, setMicStatus] = useState<'untested' | 'testing' | 'passed' | 'error'>('untested')
-  const [speakerStatus, setSpeakerStatus] = useState<'untested' | 'playing' | 'passed'>('untested')
-  const [volume, setVolume] = useState(0)
-  
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const animationFrameRef = useRef<number | null>(null)
-
-  const stopMic = () => {
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-    if (audioContextRef.current) audioContextRef.current.close()
-    streamRef.current = null
-    audioContextRef.current = null
-    analyserRef.current = null
-  }
-
-  // Dọn dẹp stream khi unmount
-  useEffect(() => {
-    return () => {
-      stopMic()
-    }
-  }, [])
-
-  const startMicTest = async () => {
-    try {
-      setMicStatus('testing')
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      audioContextRef.current = audioCtx
-      
-      const analyser = audioCtx.createAnalyser()
-      analyser.fftSize = 256
-      analyserRef.current = analyser
-      
-      const source = audioCtx.createMediaStreamSource(stream)
-      source.connect(analyser)
-      
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-      
-      const checkVolume = () => {
-        if (!analyserRef.current) return
-        analyserRef.current.getByteFrequencyData(dataArray)
-        let sum = 0
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i]
-        }
-        const avg = sum / dataArray.length
-        setVolume(avg)
-        
-        // Nếu bắt được âm thanh tương đối (avg > 15), tự động pass sau 2 giây
-        if (avg > 15) {
-          setMicStatus('passed')
-        }
-        
-        animationFrameRef.current = requestAnimationFrame(checkVolume)
-      }
-      checkVolume()
-      
-    } catch (err) {
-      console.error(err)
-      setMicStatus('error')
-    }
-  }
-
-  const testSpeaker = () => {
-    setSpeakerStatus('playing')
-    // Giả lập phát một đoạn âm thanh ngắn (beeps) hoặc có thể dùng file mp3 thực tế
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const oscillator = audioCtx.createOscillator()
-    const gainNode = audioCtx.createGain()
-    
-    oscillator.connect(gainNode)
-    gainNode.connect(audioCtx.destination)
-    
-    oscillator.type = 'sine'
-    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime) // Tần số 440 Hz (Nốt La)
-    
-    // Tạo tiếng tít tít nhỏ
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5)
-    
-    oscillator.start(audioCtx.currentTime)
-    oscillator.stop(audioCtx.currentTime + 0.5)
-    
-    setTimeout(() => {
-      setSpeakerStatus('passed')
-    }, 600)
-  }
-
-  const allPassed = micStatus === 'passed' && speakerStatus === 'passed'
-
-  return (
-    <div className="page-container" style={{ maxWidth: 800, margin: '0 auto', paddingTop: 40 }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--display)', color: 'var(--navy-dark)' }}>Kiểm tra thiết bị</h1>
-        <p style={{ color: 'var(--secondary)' }}>Bạn cần đảm bảo Micro và Loa hoạt động tốt trước khi vào phòng thi vấn đáp.</p>
-      </div>
-
-      <div style={{ display: 'grid', gap: 24 }}>
-        {/* Kiểm tra Micro */}
-        <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🎤 Kiểm tra Microphone
-              {micStatus === 'passed' && <Badge tone="success">Đã xác nhận</Badge>}
-              {micStatus === 'error' && <Badge tone="danger">Lỗi cấp quyền</Badge>}
-            </h2>
-            <Button 
-              variant={micStatus === 'untested' ? 'primary' : 'outline'} 
-              onClick={startMicTest}
-              disabled={micStatus === 'testing' || micStatus === 'passed'}
-            >
-              {micStatus === 'testing' ? 'Đang kiểm tra...' : micStatus === 'passed' ? 'Thử lại' : 'Bắt đầu kiểm tra'}
-            </Button>
-          </div>
-          
-          {micStatus === 'error' && (
-            <Alert tone="danger">Không thể truy cập Microphone. Vui lòng kiểm tra quyền trên trình duyệt của bạn.</Alert>
-          )}
-
-          {micStatus !== 'untested' && micStatus !== 'error' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--bg)', padding: 16, borderRadius: 8 }}>
-              <span style={{ fontSize: '0.9rem', color: 'var(--secondary)' }}>Hãy thử nói "A lô 1 2 3"</span>
-              <div style={{ flex: 1, height: 12, background: 'var(--border)', borderRadius: 6, overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  background: micStatus === 'passed' ? 'var(--success)' : 'var(--primary)', 
-                  width: `${Math.min(100, (volume / 100) * 100)}%`,
-                  transition: 'width 0.1s ease-out, background 0.3s'
-                }} />
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Kiểm tra Loa */}
-        <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔊 Kiểm tra Loa / Tai nghe
-              {speakerStatus === 'passed' && <Badge tone="success">Đã xác nhận</Badge>}
-            </h2>
-            <Button 
-              variant={speakerStatus === 'untested' ? 'primary' : 'outline'} 
-              onClick={testSpeaker}
-              disabled={speakerStatus === 'playing'}
-            >
-              {speakerStatus === 'playing' ? 'Đang phát...' : 'Phát âm thanh'}
-            </Button>
-          </div>
-          <p style={{ color: 'var(--secondary)', margin: 0, fontSize: '0.9rem' }}>
-            Nhấn nút để nghe thử một âm thanh ngắn (tiếng bíp). Nếu bạn nghe rõ thì hệ thống loa của bạn hoạt động bình thường.
-          </p>
-        </section>
-      </div>
-
-      <div style={{ marginTop: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-        <Link to={`/student/exams/${examId}`}>
-          <Button variant="outline">Quay lại</Button>
-        </Link>
-        <Button 
-          variant="primary" 
-          disabled={!allPassed} 
-          onClick={() => {
-            stopMic()
-            navigate(`/student/exams/${examId}/session`)
-          }}
-          style={{ padding: '0 32px' }}
-        >
-          {allPassed ? '🚀 Sẵn sàng - Vào phòng thi' : 'Hoàn tất kiểm tra để tiếp tục'}
-        </Button>
-      </div>
-    </div>
-  )
+  const device = useDeviceCheck()
+  const online = useOnline()
+  const ready = device.mic === 'passed' && device.speaker === 'passed' && online
+  return <section className="source-screen max-w-6xl mx-auto space-y-6 pb-12"><SourcePageHeader eyebrow="Cổng khảo thí thí sinh · Phòng chờ" title="Kiểm tra thiết bị trước khi thi" description="Kiểm tra micro, loa và kết nối trước khi vào phòng vấn đáp." />
+    {runtimeConfig.dataSource === 'mock' && <DemoLabel detail="Phiên demo · Kiểm tra thiết bị thật; phiên thi tiếp theo là mô phỏng." />}
+    <div className="grid lg:grid-cols-12 gap-6"><div className="lg:col-span-7 space-y-4"><section className="bg-white border border-slate-200 rounded-xl overflow-hidden"><div className="p-4 border-b border-slate-200 flex justify-between text-sm font-semibold"><span className="flex items-center gap-2"><Mic size={16} /> Microphone</span><span className="text-blue-600">{device.mic === 'passed' ? 'Đã nhận âm thanh' : device.mic === 'testing' ? 'Đang nghe thử' : 'Chưa xác nhận'}</span></div><div className="bg-slate-900 p-8 md:p-14 flex flex-col items-center gap-6 text-slate-300"><span className="p-6 rounded-full bg-slate-800"><Mic size={36} /></span><p className="text-sm text-center">Hãy nói một câu ngắn để kiểm tra mức âm thanh.</p><meter className="w-full h-4" min={0} max={100} value={device.volume} aria-label="Mức âm thanh micro" /></div><div className="p-4 space-y-3">{device.error && <Alert tone="danger">{device.error}</Alert>}<Button variant="outline" onClick={() => void device.startMic()} disabled={device.mic === 'testing'}>{device.mic === 'untested' ? 'Cho phép và kiểm tra micro' : device.mic === 'testing' ? 'Hãy nói để kiểm tra…' : 'Kiểm tra lại micro'}</Button>{device.mic === 'testing' && <Button variant="outline" onClick={() => void device.startMic()}>Khởi động lại kiểm tra</Button>}</div></section>
+    <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4"><h2 className="text-sm font-semibold flex gap-2 items-center"><Volume2 size={17} /> Loa / tai nghe</h2><p className="text-sm text-slate-500">Phát tiếng bíp, sau đó xác nhận bạn nghe rõ âm thanh.</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={device.speaker === 'playing'} onClick={() => void device.testSpeaker()}>{device.speaker === 'playing' ? 'Đang phát…' : 'Phát âm thanh thử'}</Button>{device.speaker === 'confirm' && <Button onClick={device.confirmSpeaker}>Tôi nghe rõ âm thanh</Button>}{device.speaker === 'passed' && <span className="text-sm text-emerald-700 flex items-center gap-2"><CheckCircle2 size={16} /> Đã xác nhận nghe rõ</span>}</div>{device.speaker === 'error' && <Alert tone="danger">Không thể phát âm thanh. Kiểm tra loa hoặc tai nghe rồi thử lại.</Alert>}</section></div>
+    <aside className="lg:col-span-5 space-y-4"><section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4"><h2 className="text-sm font-semibold flex gap-2 items-center"><ShieldCheck size={17} /> Hướng dẫn trước khi vào thi</h2><ol className="list-decimal pl-5 text-sm text-slate-600 space-y-3"><li>Chọn nơi yên tĩnh, sử dụng tai nghe nếu có.</li><li>Cho phép micro và nói thử để kiểm tra tín hiệu.</li><li>Nghe âm thanh thử và xác nhận loa hoạt động.</li><li>Giữ kết nối mạng ổn định trong suốt phiên thi.</li></ol><p className="text-xs text-slate-500">Kiểm tra thiết bị không xác nhận điều kiện vào thi. Quyền tham gia do hệ thống quyết định.</p></section><section className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between gap-3"><span className="flex gap-2 items-center text-sm font-semibold"><Wifi size={17} /> Kết nối thiết bị</span><span className={`text-xs ${online ? 'text-emerald-700' : 'text-red-700'}`}>{online ? 'Có mạng · chưa xác minh máy chủ' : 'Mất kết nối'}</span></section>{!online && <Alert tone="danger">Kết nối lại mạng để tiếp tục.</Alert>}<div className="border border-blue-200 rounded-xl bg-blue-50 p-5 space-y-4"><h2 className="text-sm font-semibold text-blue-900">Sẵn sàng vào phòng vấn đáp</h2><p className="text-xs text-blue-800">{ready ? 'Thiết bị đã được kiểm tra.' : 'Hoàn tất micro, loa và kết nối mạng để tiếp tục.'}</p><Button disabled={!ready} onClick={() => { device.stop(); navigate(`/student/exams/${examId}/session`) }}>Tiếp tục vào phòng thi</Button></div>{runtimeConfig.dataSource === 'mock' && <Link className="button outline" to={`/student/exams/${examId}/session`}>Xem mô phỏng không dùng micro</Link>}<Link className="button outline" to={`/student/exams/${examId}`}>Quay lại ca thi</Link></aside></div>
+  </section>
 }
