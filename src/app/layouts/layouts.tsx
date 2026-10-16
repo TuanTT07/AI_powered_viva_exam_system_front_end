@@ -59,7 +59,10 @@ export function WorkspaceLayout({ role, title }: { role: AppRole; title: string 
       <div className="flex items-center gap-3 shrink-0">
         {runtimeConfig.dataSource === 'mock' && <DemoLabel />}<span className="shell-role-pill"><span className="w-1.5 h-1.5 bg-blue-600 rounded-full" />{userRole}</span>
         <span className="shell-bell text-slate-400" aria-hidden="true"><Bell size={17} /></span>
-        <div className="shell-profile"><span className="shell-avatar">{initials}</span><div><b>{user?.displayName || userRole}</b><small>{userRole}</small></div></div>
+        <Link to={`/${role}/profile`} className="shell-profile hover:opacity-85 transition-opacity" title="Hồ sơ cá nhân">
+          <span className="shell-avatar">{initials}</span>
+          <div><b>{user?.displayName || userRole}</b><small>{userRole}</small></div>
+        </Link>
         <Button className="shell-logout" pending={pending} variant="outline" onClick={logout}><LogOut size={15} /><span>Đăng xuất</span></Button>
       </div>
     </header>
