@@ -60,3 +60,23 @@ describe('Rubric API repository', () => {
     expect(request).not.toHaveBeenCalled()
   })
 })
+
+describe('Rubric course context regression', () => {
+  it('rejects missing or mock course context for every operation without transport', async () => {
+    const request = vi.fn()
+    const repository = createApiRubricRepository({ request })
+    for (const subjectId of ['', 'java']) {
+      await expect(repository.list(subjectId)).rejects.toMatchObject({ code: 'INVALID_UUID' })
+      await expect(repository.get(subjectId, response.id)).rejects.toMatchObject({ code: 'INVALID_UUID' })
+      await expect(repository.save({ subjectId, name: 'Test', criteria: [] })).rejects.toMatchObject({ code: 'INVALID_UUID' })
+      await expect(repository.delete(response.id, subjectId)).rejects.toMatchObject({ code: 'INVALID_UUID' })
+    }
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('does not turn a failed list into an empty list', async () => {
+    const error = Object.assign(new Error('Not found'), { status: 404 })
+    const request = vi.fn().mockRejectedValue(error)
+    await expect(createApiRubricRepository({ request }).list(courseId)).rejects.toBe(error)
+  })
+})

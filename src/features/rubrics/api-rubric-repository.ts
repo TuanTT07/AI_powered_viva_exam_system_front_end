@@ -80,23 +80,15 @@ function unwrapResponse<T>(payload: unknown): T {
 export function createApiRubricRepository(client: RubricApiClient = apiClient): RubricRepository {
   return {
     async list(subjectId: string): Promise<Rubric[]> {
-      const path = isRubricUuid(subjectId)
-        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics`
-        : '/api/rubrics'
-      try {
-        const raw = await client.request<unknown>(path)
-        const response = unwrapResponse<RubricResponseDto[]>(raw)
-        return (response || []).map((dto) => mapRubricDto(dto, subjectId))
-      } catch (error: any) {
-        if (error?.status === 404 && !isRubricUuid(subjectId)) return []
-        throw error
-      }
+      assertRubricUuid(subjectId, 'Mã môn học')
+      const raw = await client.request<unknown>(`/api/courses/${encodeURIComponent(subjectId)}/rubrics`)
+      const response = unwrapResponse<RubricResponseDto[]>(raw)
+      return (response || []).map((dto) => mapRubricDto(dto, subjectId))
     },
     async get(subjectId: string, rubricId: string): Promise<Rubric | null> {
       assertRubricUuid(rubricId, 'Mã rubric')
-      const path = isRubricUuid(subjectId)
-        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics/${encodeURIComponent(rubricId)}`
-        : `/api/rubrics/${encodeURIComponent(rubricId)}`
+      assertRubricUuid(subjectId, 'Mã môn học')
+      const path = `/api/courses/${encodeURIComponent(subjectId)}/rubrics/${encodeURIComponent(rubricId)}`
       try {
         const raw = await client.request<unknown>(path)
         const response = unwrapResponse<RubricResponseDto>(raw)
@@ -108,21 +100,17 @@ export function createApiRubricRepository(client: RubricApiClient = apiClient): 
     },
     async save(draft: RubricDraft & { id?: string }): Promise<Rubric> {
       const payload = mapToRequest(draft)
-      const isCourseScoped = isRubricUuid(draft.subjectId)
+      assertRubricUuid(draft.subjectId, 'Mã môn học')
       let raw: unknown
       if (draft.id) {
         assertRubricUuid(draft.id, 'Mã rubric')
-        const path = isCourseScoped
-          ? `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics/${encodeURIComponent(draft.id)}`
-          : `/api/rubrics/${encodeURIComponent(draft.id)}`
+        const path = `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics/${encodeURIComponent(draft.id)}`
         raw = await client.request<unknown>(path, {
           method: 'PUT',
           body: payload,
         })
       } else {
-        const path = isCourseScoped
-          ? `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics`
-          : '/api/rubrics'
+        const path = `/api/courses/${encodeURIComponent(draft.subjectId)}/rubrics`
         raw = await client.request<unknown>(path, {
           method: 'POST',
           body: payload,
@@ -133,9 +121,8 @@ export function createApiRubricRepository(client: RubricApiClient = apiClient): 
     },
     async delete(rubricId: string, subjectId?: string): Promise<void> {
       assertRubricUuid(rubricId, 'Mã rubric')
-      const path = subjectId && isRubricUuid(subjectId)
-        ? `/api/courses/${encodeURIComponent(subjectId)}/rubrics/${encodeURIComponent(rubricId)}`
-        : `/api/rubrics/${encodeURIComponent(rubricId)}`
+      assertRubricUuid(subjectId ?? '', 'Mã môn học')
+      const path = `/api/courses/${encodeURIComponent(subjectId!)}/rubrics/${encodeURIComponent(rubricId)}`
       await client.request<void>(path, { method: 'DELETE' })
     },
   }

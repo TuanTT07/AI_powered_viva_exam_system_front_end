@@ -66,6 +66,8 @@ The Question Bank integration connects search/list, detail, create, update, appr
 - Document fields include `id`, `fileName`, `fileType`, `fileSize`, `indexingStatus` (`PENDING`, `INDEXING`, `READY`, `FAILED`), `indexingError`, and `uploadedAt`. Only documents with `indexingStatus: "READY"` can be used for AI Question Generation.
 
 ### Course-Scoped Rubrics (Group 1 - Verified)
+
+The deployed contract has no `/api/rubrics` endpoint. The global lecturer list aggregates rubric lists from assigned courses using the current session identity. Global creation requires selecting an assigned course; updates and deletions retain the rubric course ID. Missing course UUIDs are rejected before transport, and list failures are never converted into an empty success.
 - `GET /api/courses/{courseId}/rubrics`: Lists rubrics scoped to a specific course.
 - `POST /api/courses/{courseId}/rubrics`: Creates a rubric under a course with criteria and scoring scales.
 - `GET /api/courses/{courseId}/rubrics/{id}`: Retrieves rubric details.
@@ -131,7 +133,7 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 | Candidate listing | Mock, labelled `Dữ liệu demo` | No verified lecturer roster endpoint |
 | Candidate removal | Mock, labelled `Dữ liệu demo` | No verified delete endpoint |
 | CSV roster import | Mock, labelled `Dữ liệu demo` | No verified import endpoint |
-| Rubric deletion | API | `DELETE /api/rubrics/{id}` (204 No Content) |
+| Rubric deletion | API | `DELETE /api/courses/{courseId}/rubrics/{id}` |
 | Exam management CRUD/status | API | `/api/v1/exams`, `/api/v1/exams/{id}`, `/api/v1/exams/{id}/status` |
 | Exam monitoring | API | `/api/v1/exams/{examId}/monitor` and attempt reset/absent |
 | Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot?studentId={studentUuid}` |
