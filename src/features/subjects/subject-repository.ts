@@ -1,3 +1,7 @@
+import { questionRepository } from '../question-bank/question-repository'
+import { mockRubricRepository } from '../rubrics/rubric-repository'
+import { mockMaterialRepository } from '../learning-materials/material-repository'
+import { mockExamRepository } from '../exams/exam-repository'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { ApiError, apiClient, type ApiClient } from '../../services/api/client'
 import { unwrapApiEnvelope, type ApiEnvelope } from '../../services/api/transport-types'
@@ -14,7 +18,14 @@ export type SubjectRepository = { list(lecturerId?: string): Promise<LecturerSub
 export function createMockSubjectRepository(config = runtimeConfig): SubjectRepository {
   void config
   return {
-    async list() { return seed.map((subject, index) => ({ ...subject, id: ['oop-java', 'java-core', 'database', 'operating-systems'][index], source: 'mock' as const })) },
+    async list() {
+      const exams = await mockExamRepository.list({ page: 1, pageSize: 100, q: '', subject: '', status: '' })
+      return Promise.all(seed.map(async (subject, index) => {
+        const id = ['oop-java', 'java-core', 'database', 'operating-systems'][index]
+        const [questions, rubrics, materials] = await Promise.all([questionRepository.list(id), mockRubricRepository.list(id), mockMaterialRepository.list(id)])
+        return { ...subject, id, source: 'mock' as const, questionCount: questions.length, draftQuestionCount: questions.filter(question => question.status === 'BẢN NHÁP').length, approvedQuestionCount: questions.filter(question => question.status === 'ĐÃ DUYỆT').length, rubricCount: rubrics.length, materialCount: materials.length, examCount: exams.items.filter(exam => exam.subjectId === id).length }
+      }))
+    },
     async get(id) { return (await this.list()).find((subject) => subject.id === id) },
   }
 }

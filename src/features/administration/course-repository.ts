@@ -3,10 +3,10 @@ import { selectRepository } from '../../services/api/repository-selection'
 import { apiCourseRepository, type Subject, type Page } from './api-course-repository'
 
 const MOCK_SUBJECTS: Subject[] = [
-  { id: '1', code: 'INT2204', name: 'Lập trình OOP', department: 'Khoa CNTT', lecturers: [{ id: 'l1', name: 'TS. Nguyễn Văn A', initials: 'VA' }, { id: 'l2', name: 'ThS. Trần B', initials: 'TB' }], questionCount: 450 },
-  { id: '2', code: 'INT2208', name: 'Kiến trúc máy tính', department: 'Khoa CNTT', lecturers: [{ id: 'l3', name: 'PGS. Hoàng C', initials: 'HC' }], questionCount: 320 },
+  { id: '1', code: 'INT2204', name: 'Lập trình OOP', department: 'Khoa CNTT', lecturers: [{ id: '1', name: 'TS. Nguyễn Văn An', initials: 'VA' }, { id: '2', name: 'TS. Lê Quang Dũng', initials: 'TB' }], questionCount: 450 },
+  { id: '2', code: 'INT2208', name: 'Kiến trúc máy tính', department: 'Khoa CNTT', lecturers: [{ id: '2', name: 'TS. Lê Quang Dũng', initials: 'HC' }], questionCount: 320 },
   { id: '3', code: 'MAT1092', name: 'Đại số tuyến tính', department: 'Khoa Toán Cơ', lecturers: [], questionCount: 0 },
-  { id: '4', code: 'ECO101', name: 'Kinh tế vi mô', department: 'Khoa Kinh tế', lecturers: [{ id: 'l4', name: 'TS. Lê D', initials: 'LD' }], questionCount: 120 },
+  { id: '4', code: 'ECO101', name: 'Kinh tế vi mô', department: 'Khoa Kinh tế', lecturers: [{ id: '5', name: 'Cán bộ Hoàng Văn Tuấn', initials: 'LD' }], questionCount: 120 },
 ]
 
 export const mockCourseRepository = {

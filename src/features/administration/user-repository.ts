@@ -1,3 +1,4 @@
+import { mockCourseRepository } from './course-repository'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { selectRepository } from '../../services/api/repository-selection'
 import { apiUserRepository, type User, type Page, type UserCourse } from './api-user-repository'
@@ -66,7 +67,7 @@ export const mockUserRepository = {
   },
   async getById(id: string) { const user = MOCK_USERS.find(u => u.id === id); if (!user) throw new Error('Không tìm thấy người dùng'); return user },
   async resetPassword(id: string, _newPassword: string) { if (!MOCK_USERS.some(u => u.id === id)) throw new Error('Không tìm thấy người dùng') },
-  async getCourses(id: string): Promise<UserCourse[]> { const user = MOCK_USERS.find(u => u.id === id); if (!user) throw new Error('Không tìm thấy người dùng'); return (user.subjects || []).map((name, index) => ({ id: `mock-course-${index}`, code: `MOCK-${index + 1}`, name, department: 'Khoa CNTT' })) },
+  async getCourses(id: string): Promise<UserCourse[]> { const user = MOCK_USERS.find(u => u.id === id); if (!user) throw new Error('Không tìm thấy người dùng'); return (await mockCourseRepository.search({})).content.filter(course => course.lecturers.some(lecturer => lecturer.id === id)).map(course => ({ id: course.id, code: course.code, name: course.name, department: course.department })) },
 }
 
 export const userRepository = selectRepository(runtimeConfig.dataSource, { mock: mockUserRepository, api: apiUserRepository })

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom'
+import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState, LoadingPage, StatusBadge } from '../../components/common/states'
 import { Alert, Button, Dialog, Input } from '../../components/ui/primitives'
 import { useExam, useExamSubjects, useCreateExam, useUpdateExam } from './exam-hooks'
@@ -28,7 +28,8 @@ function NonEditableExam({ exam }: { exam: ExamSession }) { const meta = examSta
 
 function ExamEditorForm({ mode, initial, subjects }: { mode: 'create' | 'edit'; initial: ExamSession | null; subjects: { id: string; code: string; name: string }[] }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState<ExamFormValues>(() => initial ? examToForm(initial) : examDefaults)
+  const [params] = useSearchParams()
+  const [form, setForm] = useState<ExamFormValues>(() => initial ? examToForm(initial) : { ...examDefaults, subjectId: subjects.some(subject => subject.id === params.get('subject')) ? params.get('subject')! : '' })
   const [errors, setErrors] = useState<ExamFieldErrors>({})
   const [dirty, setDirty] = useState(false)
   const create = useCreateExam()

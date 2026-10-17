@@ -50,7 +50,6 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -135,7 +134,7 @@ export function LoginPage() {
           <div className="flex items-center gap-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="hidden sm:inline">Máy chủ hoạt động • Bảo mật SSL</span>
+              <span className="hidden sm:inline">Cổng đăng nhập AIVES</span>
               <span className="sm:hidden">Sẵn sàng</span>
             </div>
           </div>
@@ -143,7 +142,7 @@ export function LoginPage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-center py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex flex-col justify-center py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Academic & AI Showcase */}
@@ -174,7 +173,7 @@ export function LoginPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm sm:text-base">Giám Khảo AI Tương Tác</h3>
-                    <p className="text-xs font-medium text-blue-600">Âm học chuẩn hóa • Phản hồi tức thì</p>
+                    <p className="text-xs font-medium text-blue-600">Âm học chuẩn hóa • Theo dõi phiên vấn đáp</p>
                   </div>
                 </div>
                 {/* Audio Waveform Animation */}
@@ -201,8 +200,8 @@ export function LoginPage() {
                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
                     <ShieldCheck className="w-4.5 h-4.5" />
                   </div>
-                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Sinh trắc học</h4>
-                  <p className="text-[11px] text-slate-500 leading-normal mt-0.5">Chống gian lận 360°</p>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Thiết bị</h4>
+                  <p className="text-[11px] text-slate-500 leading-normal mt-0.5">Kiểm tra micro & loa</p>
                 </div>
                 <div className="p-4 rounded-xl border border-slate-200/80 bg-white/95 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all">
                   <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
@@ -216,16 +215,16 @@ export function LoginPage() {
               {/* 3 Metrics Row */}
               <div className="pt-4 border-t border-blue-100/90 grid grid-cols-3 gap-3">
                 <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">99.2%</div>
-                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Độ chính xác</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">Câu hỏi</div>
+                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Theo học phần</div>
                 </div>
                 <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">&lt; 120ms</div>
-                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Độ trễ phản hồi</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">Rubric</div>
+                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Tiêu chí minh bạch</div>
                 </div>
                 <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">ISO 27001</div>
-                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Chuẩn bảo mật</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-blue-600 tracking-tight">Giảng viên</div>
+                  <div className="text-[11px] font-semibold text-slate-500 mt-0.5">Xác nhận kết quả</div>
                 </div>
               </div>
             </div>
@@ -234,14 +233,14 @@ export function LoginPage() {
             <div className="rounded-xl border border-slate-200/90 bg-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
                 <Shield className="w-4.5 h-4.5 text-blue-600 shrink-0" />
-                <span>Chuẩn Khảo thí Đào tạo Quốc gia (Bộ GD&ĐT)</span>
+                <span>Quản lý khảo thí theo vai trò</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
-                  FERPA
+                  AIVES
                 </span>
                 <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
-                  AES-256
+                  Vấn đáp
                 </span>
               </div>
             </div>
@@ -357,7 +356,7 @@ export function LoginPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label htmlFor="academic-email" className="text-xs font-semibold text-slate-700">
-                      {activeRole === "student" ? "Mã số sinh viên (MSSV)" : activeRole === "admin" ? "Tài khoản Quản trị viên" : "Email học thuật / Giám khảo"}
+                      {activeRole === "student" ? "Email học thuật" : activeRole === "admin" ? "Tài khoản Quản trị viên" : "Email học thuật / Giám khảo"}
                     </label>
                     <span className="text-[11px] text-slate-400 font-mono">@academia.edu.vn</span>
                   </div>
@@ -379,7 +378,7 @@ export function LoginPage() {
                       }}
                       placeholder={
                         activeRole === "student"
-                          ? "student@academia.edu.vn hoặc MSSV..."
+                          ? "student@academia.edu.vn"
                           : activeRole === "admin"
                           ? "admin@academia.edu.vn"
                           : "lecturer@academia.edu.vn"
@@ -442,16 +441,7 @@ export function LoginPage() {
                   )}
                 </div>
 
-                {/* Remember Me Checkbox */}
-                <label className="flex items-center gap-2.5 text-xs font-medium text-slate-600 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                  />
-                  <span>Ghi nhớ đăng nhập</span>
-                </label>
+                <p className="text-xs text-slate-500">{runtimeConfig.dataSource === 'mock' ? 'Phiên demo được giữ trong tab này; đăng xuất để kết thúc.' : 'Thời hạn phiên đăng nhập do hệ thống quản lý.'}</p>
 
                 {/* Submit Button */}
                 <button
@@ -474,15 +464,15 @@ export function LoginPage() {
               {/* Bottom Utilities Inside Card */}
               <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
                 <Link
-                  to="/exams/demo-exam/check"
+                  to="/device-check"
                   className="login-bottom-link"
                 >
                   <Mic className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Kiểm tra Mic &amp; Camera</span>
+                  <span>Kiểm tra Micro &amp; Loa</span>
                 </Link>
                 <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span>Hệ thống sẵn sàng</span>
+                  <span>Cổng hỗ trợ AIVES</span>
                 </span>
               </div>
             </div>
@@ -490,7 +480,7 @@ export function LoginPage() {
             {/* Helpdesk & Regulation links */}
             <div className="flex items-center justify-between text-xs text-slate-500 px-2 pt-1">
               <div>
-                Hỗ trợ kỹ thuật: <strong className="text-slate-800 font-bold ml-1">1900 6828</strong>
+                Hỗ trợ kỹ thuật: <strong className="text-slate-800 font-bold ml-1">Liên hệ phòng khảo thí</strong>
               </div>
               <button
                 type="button"
@@ -504,7 +494,7 @@ export function LoginPage() {
           </div>
 
         </div>
-      </main>
+      </div>
 
       {/* Dialog: Forgot Password */}
       <Dialog
@@ -525,7 +515,7 @@ export function LoginPage() {
             </li>
           </ul>
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
-            <div>Hotline hỗ trợ: <strong className="text-slate-900 font-bold">1900 6828</strong> (8:00 - 17:30)</div>
+            <div>Hotline hỗ trợ: <strong className="text-slate-900 font-bold">Liên hệ phòng khảo thí</strong> (8:00 - 17:30)</div>
             <div>Email tiếp nhận: <a href="mailto:support@academia.edu.vn" className="text-blue-600 font-semibold">support@academia.edu.vn</a></div>
           </div>
         </div>
@@ -545,7 +535,7 @@ export function LoginPage() {
             <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-lg">
               <strong className="block text-blue-900 font-bold mb-1">1. Thiết bị &amp; Môi trường phòng thi</strong>
               <p className="text-xs text-blue-800">
-                Thí sinh phải kiểm tra Microphone và Camera trước ca thi. Đảm bảo phòng thi yên tĩnh, đủ ánh sáng, góc quay thấy rõ khuôn mặt và không có sự can thiệp của người khác.
+                Thí sinh kiểm tra micro, loa và các thiết bị được yêu cầu trong hướng dẫn của từng kỳ thi. Chọn nơi yên tĩnh và thực hiện theo quy chế được giảng viên công bố.
               </p>
             </div>
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">

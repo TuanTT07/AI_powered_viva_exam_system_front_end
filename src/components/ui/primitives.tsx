@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
-export function Button({ variant = 'primary', pending, className = '', children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'outline' | 'danger'; pending?: boolean }) { return <button className={`button ${variant} ${className}`} disabled={props.disabled || pending} {...props}>{pending ? 'Đang xử lý…' : children}</button> }
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) { return <input className="input" {...props} /> }
+export function Button({ variant = 'primary', pending, disabled, className = '', children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'outline' | 'danger'; pending?: boolean }) { return <button className={`button ${variant} ${className}`} {...props} disabled={disabled || pending} aria-busy={pending || undefined}>{pending ? 'Đang xử lý…' : children}</button> }
+export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) { return <input {...props} className={`input ${className}`} /> }
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'ai' }) { return <span className={`badge ${tone}`}>{children}</span> }
 export function Alert({ children, tone = 'info' }: { children: ReactNode; tone?: 'info' | 'success' | 'warning' | 'danger' }) { return <div className={`alert ${tone}`} role="status">{children}</div> }
 export function Skeleton({ label = 'Đang tải' }: { label?: string }) { return <span aria-label={label} className="skeleton" role="status" /> }

@@ -29,7 +29,7 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
             <span>Kho khảo thí</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-            Ngân Hàng Đề Thi & Thiết Lập Rubric
+            Ngân Hàng Câu Hỏi & Thiết Lập Rubric
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Học phần: <strong className="text-slate-800">{courseLabel}</strong> • Cấp độ tư duy Bloom.
@@ -50,7 +50,7 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-[10px] bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
           >
             <Upload className="w-4 h-4 text-slate-500" />
-            <span>Nhập Excel</span>
+            <span>Nhập CSV</span>
           </button>
           <button
             onClick={onCreate}
@@ -66,7 +66,7 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-            <span>TỔNG SỐ ĐỀ THI</span>
+            <span>TỔNG SỐ CÂU HỎI</span>
             <BookOpen className="w-4 h-4 text-blue-600" />
           </div>
           <div className="mt-2 text-2xl font-bold text-slate-900">{totalCount}</div>
@@ -220,7 +220,7 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
         </div>
 
         <div className="text-xs text-slate-500 font-medium self-end md:self-auto shrink-0">
-          Hiển thị: <strong className="text-slate-900">{filteredQuestions.length}</strong> / {totalCount} đề thi
+          Hiển thị: <strong className="text-slate-900">{filteredQuestions.length}</strong> / {totalCount} câu hỏi
         </div>
       </div>
 
@@ -231,7 +231,7 @@ export function QuestionBankView({ items, courseLabel, totalCount, page, totalPa
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
               <tr>
                 <th className="py-3 px-4 w-12 text-center">STT</th>
-                <th className="py-3 px-4">Mã Đề Thi</th>
+                <th className="py-3 px-4">Mã Câu Hỏi</th>
                 <th className="py-3 px-4 min-w-[320px]">Nội Dung Câu Hỏi & Trọng Tâm</th>
                 <th className="py-3 px-4">Cấp Độ Bloom</th>
                 <th className="py-3 px-4">Chủ Đề</th>

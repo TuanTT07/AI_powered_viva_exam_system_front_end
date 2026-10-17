@@ -55,6 +55,7 @@ export function AdminUserDetailPage() {
         {reset.isError && <Alert tone="danger">{reset.error.message}</Alert>}
         {coursesQuery.isError && <Alert tone="danger">Không thể tải môn học phụ trách. <Button onClick={() => coursesQuery.refetch()}>Thử lại</Button></Alert>}
 
+        <h1 className="text-2xl font-bold text-slate-900">{user.name}</h1>
         {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
           <Link
@@ -83,7 +84,7 @@ export function AdminUserDetailPage() {
                     ? 'bg-purple-100 text-purple-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {user.role}
+                  {user.role === 'lecturer' ? 'Giảng viên' : user.role === 'student' ? 'Sinh viên' : 'Quản trị viên'}
                 </span>
               </div>
 

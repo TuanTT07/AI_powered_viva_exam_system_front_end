@@ -145,7 +145,7 @@ export function QuestionImportDialog({ open, subjectId, onClose, onSuccess }: Pr
       <Dialog open={open} onClose={requestClose} title={isApi ? 'Nhập câu hỏi từ tệp Excel (.xlsx)' : 'Nhập câu hỏi từ tệp CSV'}>
         <div className="import-dialog-content">
           <section className="import-intro">
-            <p className="eyebrow">QUESTION BANK · BATCH IMPORT</p>
+            <p className="eyebrow">NGÂN HÀNG CÂU HỎI · NHẬP HÀNG LOẠT</p>
             <p>
               {isApi
                 ? 'Tải tệp mẫu Excel (.xlsx), điền câu hỏi và tải lên để hệ thống kiểm tra và lưu dưới trạng thái BẢN NHÁP.'

@@ -7,9 +7,9 @@ export const validateGenerationRequest = (request: GenerationRequest, materials:
   const ready = new Set(materials.filter((item) => item.status === 'READY' && item.subjectId === request.subjectId).map((item) => item.id))
   if (!request.materialIds.length) errors.materials = 'Chọn ít nhất một tài liệu đã sẵn sàng.'
   else if (request.materialIds.length > 5 || request.materialIds.some((id) => !ready.has(id))) errors.materials = 'Chỉ được chọn tối đa 5 tài liệu Sẵn sàng của học phần hiện tại.'
-  if (!request.topic || !topics.includes(request.topic)) errors.topic = 'Chọn chủ đề thuộc học phần hiện tại.'
-  if (!['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH'].includes(request.bloom)) errors.bloom = 'Chọn mức Bloom hợp lệ.'
-  if (!Number.isInteger(request.count) || request.count < 1 || request.count > 10) errors.count = 'Số câu phải là số nguyên từ 1 đến 10.'
+  if (request.topic && !topics.includes(request.topic)) errors.topic = 'Chọn chủ đề thuộc học phần hiện tại.'
+  if (!['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH', 'ĐÁNH GIÁ', 'SÁNG TẠO'].includes(request.bloom)) errors.bloom = 'Chọn mức Bloom hợp lệ.'
+  if (!Number.isInteger(request.count) || request.count < 1 || request.count > 20) errors.count = 'Số câu phải là số nguyên từ 1 đến 20.'
   if (!(['vi', 'en'] as GenerationLanguage[]).includes(request.language)) errors.language = 'Chọn ngôn ngữ được hỗ trợ.'
   if (request.rubricId && !rubrics.some((rubric) => rubric.id === request.rubricId && rubric.subjectId === request.subjectId)) errors.rubric = 'Rubric không thuộc học phần hiện tại.'
   return errors

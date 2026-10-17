@@ -87,7 +87,7 @@ export function AIQuestionGenerationPage() {
 
   const request: GenerationRequest = {
     subjectId,
-    materialIds: form.materialIds,
+    materialIds: form.materialIds.length || isApi ? form.materialIds : readyMaterials.slice(0, 5).map(item => item.id),
     topic: form.topic,
     bloom: (form.bloom || "HIỂU") as BloomLevel,
     count: Number(form.count) || 1,
@@ -136,7 +136,7 @@ export function AIQuestionGenerationPage() {
               rubricId: q.rubricId,
               sourceMaterialIds: form.materialIds,
               sourceMaterialNames: readyMaterials
-                .filter((item) => form.materialIds.includes(item.id))
+                .filter((item) => request.materialIds.includes(item.id))
                 .map((item) => item.filename),
               selected: true,
               issues: [],
@@ -168,7 +168,7 @@ export function AIQuestionGenerationPage() {
       {
         request,
         materialNames: readyMaterials
-          .filter((item) => form.materialIds.includes(item.id))
+          .filter((item) => request.materialIds.includes(item.id))
           .map((item) => item.filename),
       },
       {
@@ -236,7 +236,7 @@ export function AIQuestionGenerationPage() {
     <section className="ai-generation-page">
       <header className="ai-generation-head">
         <div>
-          <p className="eyebrow">NGÂN HÀNG CÂU HỎI · AI DRAFT WORKSPACE</p>
+          <p className="eyebrow">NGÂN HÀNG CÂU HỎI · SOẠN NHÁP AI</p>
           <h1>Sinh câu hỏi AI</h1>
           <p>
             Cấu hình nguồn học liệu và rà soát câu hỏi nháp trước khi đưa vào
@@ -255,7 +255,7 @@ export function AIQuestionGenerationPage() {
           <section>
             <h2>1. Cấu hình nguồn</h2>
             <p className="form-help">
-              Chỉ học liệu đã ở trạng thái Sẵn sàng (READY) mới có thể làm nguồn. Nếu không chọn tài liệu nào, hệ thống sẽ sử dụng tất cả học liệu sẵn sàng của môn.
+              Chỉ học liệu đã ở trạng thái Sẵn sàng (READY) mới có thể làm nguồn. {isApi ? 'Nếu không chọn tài liệu nào, hệ thống sẽ sử dụng học liệu sẵn sàng theo cấu hình máy chủ.' : 'Nếu không chọn tài liệu nào, demo sẽ sử dụng tối đa 5 học liệu sẵn sàng đầu tiên của môn.'}
             </p>
             <fieldset>
               <legend>
@@ -411,7 +411,7 @@ export function AIQuestionGenerationPage() {
         <section className="generation-review" aria-labelledby="review-title">
           <div className="review-head">
             <div>
-              <p className="eyebrow">REVIEW · DRAFT QUESTIONS</p>
+              <p className="eyebrow">RÀ SOÁT · CÂU HỎI NHÁP</p>
               <h2 id="review-title">Rà soát câu hỏi sinh bởi AI</h2>
             </div>
             {questions.length > 0 && (

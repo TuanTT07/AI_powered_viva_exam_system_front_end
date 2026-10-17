@@ -10,8 +10,8 @@ export function useRubrics(subjectId: string) { return useQuery({ queryKey: rubr
 export function useRubric(subjectId: string, rubricId: string | undefined) { return useQuery({ queryKey: rubricKeys.detail(subjectId, rubricId ?? ''), queryFn: () => rubricRepository.get(subjectId, rubricId ?? ''), enabled: Boolean(subjectId && rubricId) }) }
 export function useGlobalRubrics() { return useQuery({ queryKey: rubricKeys.global, queryFn: () => rubricRepository.list('') }) }
 export function useGlobalRubric(rubricId: string | undefined) { return useQuery({ queryKey: rubricKeys.globalDetail(rubricId ?? ''), queryFn: () => rubricRepository.get('', rubricId ?? ''), enabled: Boolean(rubricId) }) }
-export function useSaveRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save(draft), onSuccess: () => { client.invalidateQueries({ queryKey: rubricKeys.all }); client.invalidateQueries({ queryKey: questionKeys.all }) } }) }
-export function useSaveGlobalRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save({ ...draft, subjectId: '' }), onSuccess: () => { client.invalidateQueries({ queryKey: rubricKeys.global }); client.invalidateQueries({ queryKey: rubricKeys.all }) } }) }
+export function useSaveRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save(draft), onSuccess: () => { client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.all }); client.invalidateQueries({ queryKey: questionKeys.all }) } }) }
+export function useSaveGlobalRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save({ ...draft, subjectId: '' }), onSuccess: () => { client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.global }); client.invalidateQueries({ queryKey: rubricKeys.all }) } }) }
 export function useDeleteRubric(defaultSubjectId?: string) {
   const client = useQueryClient()
   return useMutation({
@@ -23,7 +23,7 @@ export function useDeleteRubric(defaultSubjectId?: string) {
     onSuccess: (_result, args) => {
       const rubricId = typeof args === 'string' ? args : args.rubricId
       client.removeQueries({ queryKey: rubricKeys.all })
-      client.invalidateQueries({ queryKey: rubricKeys.all })
+      client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.all })
       client.removeQueries({ queryKey: [...questionKeys.all, rubricId] })
       client.invalidateQueries({ queryKey: questionKeys.all })
       client.invalidateQueries({ queryKey: apiQuestionKeys.all })

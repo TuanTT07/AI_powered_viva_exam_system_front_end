@@ -5,10 +5,10 @@ export const subjectKeys = { all: ['lecturer-subjects'] as const, list: (lecture
 export function useLecturerSubjects() {
   const { session } = useSession()
   const lecturerId = session.user?.id ?? ''
-  return useQuery({ queryKey: subjectKeys.list(lecturerId), queryFn: () => subjectRepository.list(lecturerId), enabled: Boolean(session.user), staleTime: 30_000 })
+  return useQuery({ queryKey: subjectKeys.list(lecturerId), queryFn: () => subjectRepository.list(lecturerId), enabled: Boolean(session.user?.roles.includes('lecturer')), staleTime: 30_000 })
 }
 export function useLecturerSubject(id: string | undefined) {
   const { session } = useSession()
   const lecturerId = session.user?.id ?? ''
-  return useQuery({ queryKey: subjectKeys.detail(lecturerId, id ?? ''), queryFn: async () => subjectRepository.get(id ?? '', lecturerId), enabled: Boolean(id && session.user) })
+  return useQuery({ queryKey: subjectKeys.detail(lecturerId, id ?? ''), queryFn: async () => subjectRepository.get(id ?? '', lecturerId), enabled: Boolean(id && session.user?.roles.includes('lecturer')) })
 }
