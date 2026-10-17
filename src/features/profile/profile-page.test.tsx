@@ -1,134 +1,74 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
-import type { AuthenticatedUser } from '../../types/auth'
+import { MemoryRouter } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '../../app/providers/app-providers'
 import { ProfilePage } from './profile-page'
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-const studentUser: AuthenticatedUser = {
-  id: 'student-1',
-  displayName: 'Nguyễn Văn An',
-  roles: ['student'],
+const config = vi.hoisted(() => ({ dataSource: 'mock' }))
+const changePassword = vi.hoisted(() => vi.fn())
+vi.mock('../../services/api/runtime-config', () => ({ runtimeConfig: config }))
+vi.mock('../auth/api-auth-adapter', () => ({ apiChangePassword: changePassword }))
+function renderProfile(role: 'student' | 'lecturer' | 'admin' = 'student') {
+  return render(<SessionProvider adapter={{ getSession: async () => null, signIn: vi.fn(), signOut: vi.fn() }} initialSession={{ status: 'authenticated', user: { id: 'user-1', displayName: 'Nguyễn Văn An', roles: [role] } }}><MemoryRouter><ProfilePage /></MemoryRouter></SessionProvider>)
 }
-
-const lecturerUser: AuthenticatedUser = {
-  id: 'lecturer-1',
-  displayName: 'TS. Trần Văn Bình',
-  roles: ['lecturer'],
-}
-
-const adminUser: AuthenticatedUser = {
-  id: 'admin-1',
-  displayName: 'Quản trị viên Vũ',
-  roles: ['admin'],
-}
-
-function renderProfile(user: AuthenticatedUser) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+beforeEach(() => { config.dataSource = 'mock'; localStorage.clear(); changePassword.mockReset() })
+describe('ProfilePage authority and persistence', () => {
+  it.each(['student', 'lecturer', 'admin'] as const)('shows only confirmed identity for %s', role => {
+    renderProfile(role)
+    expect(screen.getByText('Nguyễn Văn An')).toBeInTheDocument()
+    expect(screen.getByText('user-1')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.queryByText('Bảo vệ 2 lớp đang kích hoạt')).not.toBeInTheDocument()
+    expect(screen.queryByText('94.8%')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /kiểm tra micro/i })).toHaveAttribute('href', '/device-check')
   })
-  const adapter = {
-    getSession: async () => user,
-    signIn: vi.fn(),
-    signOut: vi.fn(),
-  }
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <SessionProvider adapter={adapter} queryClient={queryClient} initialSession={{ status: 'authenticated', user }}>
-        <MemoryRouter initialEntries={['/profile']}>
-          <Routes>
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
-        </MemoryRouter>
-      </SessionProvider>
-    </QueryClientProvider>
-  )
-}
-
-describe('ProfilePage', () => {
-  it('renders student profile overview correctly', async () => {
-    renderProfile(studentUser)
-
-    expect(screen.getAllByText('Nguyễn Văn An').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Thí sinh Vấn đáp')).toBeInTheDocument()
-    expect(screen.getAllByText(/SV-2026-889/).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Thiết bị phòng thi & Môi trường Viva')).toBeInTheDocument()
-    expect(screen.getByText('KỲ THI ĐỦ ĐIỀU KIỆN')).toBeInTheDocument()
-  })
-
-  it('renders lecturer profile overview correctly', async () => {
-    renderProfile(lecturerUser)
-
-    expect(screen.getAllByText('TS. Trần Văn Bình').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Giảng viên / Giám khảo')).toBeInTheDocument()
-    expect(screen.getAllByText(/GV-4021/).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('MÔN HỌC PHỤ TRÁCH')).toBeInTheDocument()
-  })
-
-  it('renders admin profile overview correctly', async () => {
-    renderProfile(adminUser)
-
-    expect(screen.getAllByText('Quản trị viên Vũ').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Quản trị viên hệ thống')).toBeInTheDocument()
-    expect(screen.getAllByText(/AD-001/).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Tình trạng máy chủ & Giám sát toàn hệ thống')).toBeInTheDocument()
-  })
-
-  it('switches to Security tab and validates password changes', async () => {
-    renderProfile(studentUser)
-    const user = userEvent.setup()
-
-    await user.click(screen.getByRole('tab', { name: /bảo mật & mật khẩu/i }))
-    expect(screen.getByRole('heading', { name: /đổi mật khẩu tài khoản học thuật/i })).toBeInTheDocument()
-
-    // Submit empty form
-    await user.click(screen.getByRole('button', { name: /cập nhật mật khẩu/i }))
+  it('validates password data and explicitly avoids claiming a demo password changed', async () => {
+    renderProfile(); const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Bảo mật & Mật khẩu' }))
+    await user.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
     expect(screen.getByText('Vui lòng nhập mật khẩu hiện tại.')).toBeInTheDocument()
-
-    // Short new password
-    await user.type(screen.getByPlaceholderText(/nhập mật khẩu hiện tại/i), 'old-password')
-    await user.type(screen.getByPlaceholderText(/nhập mật khẩu mới/i), '123')
-    await user.click(screen.getByRole('button', { name: /cập nhật mật khẩu/i }))
+    await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'old-secret')
+    await user.type(screen.getByLabelText('Mật khẩu mới', { exact: true }), '123')
+    await user.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
     expect(screen.getByText('Mật khẩu mới phải có tối thiểu 6 ký tự.')).toBeInTheDocument()
-
-    // Mismatched passwords
-    await user.clear(screen.getByPlaceholderText(/nhập mật khẩu mới/i))
-    await user.type(screen.getByPlaceholderText(/nhập mật khẩu mới/i), 'new-password-123')
-    await user.type(screen.getByPlaceholderText(/nhập lại mật khẩu mới/i), 'different-password')
-    await user.click(screen.getByRole('button', { name: /cập nhật mật khẩu/i }))
+    await user.clear(screen.getByLabelText('Mật khẩu mới', { exact: true }))
+    await user.type(screen.getByLabelText('Mật khẩu mới', { exact: true }), 'new-secret')
+    await user.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
     expect(screen.getByText('Mật khẩu xác nhận không khớp.')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Xác nhận mật khẩu mới'), 'new-secret')
+    await user.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
+    expect(screen.getByText(/Mật khẩu tài khoản demo không thay đổi/)).toBeInTheDocument()
+    expect(changePassword).not.toHaveBeenCalled()
   })
-
-  it('switches to Preferences tab and toggles options', async () => {
-    renderProfile(studentUser)
-    const user = userEvent.setup()
-
-    await user.click(screen.getByRole('tab', { name: /tùy chọn & thông báo/i }))
-    expect(screen.getByRole('heading', { name: /tùy chọn trải nghiệm & thông báo/i })).toBeInTheDocument()
-
-    const checkboxes = screen.getAllByRole('checkbox')
-    expect(checkboxes.length).toBeGreaterThanOrEqual(4)
-
-    await user.click(screen.getByRole('button', { name: /lưu cài đặt/i }))
-    expect(screen.getByText('Đã lưu cài đặt tùy chọn thành công!')).toBeInTheDocument()
+  it('persists explicitly local demo preferences across remounts', async () => {
+    const view = renderProfile(); const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn & Thông báo' }))
+    await user.type(screen.getByLabelText('Đơn vị mẫu'), 'Đơn vị demo')
+    await user.click(screen.getByLabelText('Xem thử nhắc lịch thi qua email'))
+    await user.click(screen.getByRole('button', { name: 'Lưu bản xem thử' }))
+    expect(screen.getByText(/Đã lưu bản xem thử trên trình duyệt này/)).toBeInTheDocument()
+    view.unmount(); renderProfile()
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn & Thông báo' }))
+    expect(screen.getByLabelText('Đơn vị mẫu')).toHaveValue('Đơn vị demo')
+    expect(screen.getByLabelText('Xem thử nhắc lịch thi qua email')).not.toBeChecked()
   })
-
-  it('allows inline personal info editing', async () => {
-    renderProfile(studentUser)
-    const user = userEvent.setup()
-
-    await user.click(screen.getByRole('button', { name: /cập nhật thông tin/i }))
-    expect(screen.getByLabelText('Họ và tên hiển thị')).toBeInTheDocument()
-
-    await user.clear(screen.getByLabelText('Họ và tên hiển thị'))
-    await user.type(screen.getByLabelText('Họ và tên hiển thị'), 'Nguyễn Văn An Cập Nhật')
-    await user.click(screen.getByRole('button', { name: /lưu thông tin/i }))
-
-    expect(screen.getByText('Đã cập nhật thông tin cá nhân thành công!')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Nguyễn Văn An Cập Nhật' })).toBeInTheDocument()
+  it('never exposes demo editing or fake save success in API mode', async () => {
+    config.dataSource = 'api'; renderProfile(); const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Tùy chọn & Thông báo' }))
+    expect(screen.queryByRole('button', { name: 'Lưu bản xem thử' })).not.toBeInTheDocument()
+    expect(screen.getByText(/chưa hỗ trợ lưu tùy chọn/)).toBeInTheDocument()
+    expect(localStorage.length).toBe(0)
+  })
+  it('preserves API password inputs and displays failures from the backend', async () => {
+    config.dataSource = 'api'; changePassword.mockRejectedValueOnce(new Error('Mật khẩu hiện tại không đúng'))
+    renderProfile(); const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Bảo mật & Mật khẩu' }))
+    await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'old-secret')
+    await user.type(screen.getByLabelText('Mật khẩu mới', { exact: true }), 'new-secret')
+    await user.type(screen.getByLabelText('Xác nhận mật khẩu mới'), 'new-secret')
+    await user.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
+    expect(await screen.findByText('Mật khẩu hiện tại không đúng')).toBeInTheDocument()
+    expect(screen.getByLabelText('Mật khẩu hiện tại')).toHaveValue('old-secret')
+    expect(screen.queryByText('Đã đổi mật khẩu.')).not.toBeInTheDocument()
   })
 })

@@ -10,11 +10,18 @@ const request = { subjectId: 'java', materialIds: ['ready'], topic: 'Collections
 describe('AI generation validation', () => {
   it('requires ready current-subject material and valid request bounds', () => {
     expect(validateGenerationRequest({ ...request, materialIds: ['processing'] }, materials, ['Collections'], rubrics).materials).toBeTruthy()
-    expect(validateGenerationRequest({ ...request, count: 11 }, materials, ['Collections'], rubrics).count).toBeTruthy()
+    expect(validateGenerationRequest({ ...request, count: 21 }, materials, ['Collections'], rubrics).count).toBeTruthy()
     expect(validateGenerationRequest(request, materials, ['Collections'], rubrics)).toEqual({})
   })
   it('marks later normalized duplicates and empty edits invalid', () => {
     const batch = [{ id: '1', content: 'Same', topic: 'Collections', bloom: 'HIỂU' as const, selected: true, issues: [], sourceMaterialIds: ['ready'], sourceMaterialNames: ['java.pdf'] }, { id: '2', content: ' same ', topic: 'Collections', bloom: 'HIỂU' as const, selected: true, issues: [], sourceMaterialIds: ['ready'], sourceMaterialNames: ['java.pdf'] }, { id: '3', content: '', topic: 'Collections', bloom: 'HIỂU' as const, selected: true, issues: [], sourceMaterialIds: ['ready'], sourceMaterialNames: ['java.pdf'] }]
     expect(validateGeneratedQuestions(batch).map((item) => item.issues.length)).toEqual([0, 1, 1])
   })
+})
+
+it('supports every offered Bloom level and the displayed upper count bound with an optional topic', () => {
+  for (const bloom of ['NHỚ', 'HIỂU', 'VẬN DỤNG', 'PHÂN TÍCH', 'ĐÁNH GIÁ', 'SÁNG TẠO'] as const) {
+    expect(validateGenerationRequest({ ...request, topic: '', count: 20, bloom }, materials, [], rubrics)).toEqual({})
+  }
+  expect(validateGenerationRequest({ ...request, count: 21 }, materials, ['Collections'], rubrics).count).toBeTruthy()
 })

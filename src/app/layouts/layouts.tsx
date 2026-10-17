@@ -21,6 +21,19 @@ export function WorkspaceLayout({ role, title }: { role: AppRole; title: string 
   const [pending, setPending] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobile, setMobile] = useState(() => window.matchMedia?.('(max-width: 767px)').matches ?? false)
+  useEffect(() => {
+    if (!window.matchMedia) return
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => { setMobile(media.matches); if (!media.matches) setMobileOpen(false) }
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (wasOpen.current && !mobileOpen) menu.current?.focus()
+    wasOpen.current = mobileOpen
+  }, [mobileOpen])
   const drawer = useRef<HTMLElement>(null)
   const menu = useRef<HTMLButtonElement>(null)
   const user = session.user
@@ -49,7 +62,7 @@ export function WorkspaceLayout({ role, title }: { role: AppRole; title: string 
   const logout = async () => { if (pending) return; setPending(true); await signOut(); navigate('/login', { replace: true }) }
   return <div className={`source-screen source-workspace shell-${role} ${collapsed ? 'shell-collapsed' : ''}`}>
     <a className="skip" href="#main">Chuyển đến nội dung chính</a>
-    <header className="shell-header">
+    <header inert={mobile && mobileOpen} className="shell-header">
       <div className="flex items-center gap-2.5 min-w-0 text-sm">
         <button ref={menu} className="shell-menu" aria-label="Mở menu điều hướng" aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}><Menu size={20} /></button>
         <Link className="font-semibold text-slate-500 shrink-0" to={`/${role}`}>AIVES</Link><ChevronRight size={16} className="text-slate-400 shrink-0" />
@@ -63,27 +76,27 @@ export function WorkspaceLayout({ role, title }: { role: AppRole; title: string 
           <span className="shell-avatar">{initials}</span>
           <div><b>{user?.displayName || userRole}</b><small>{userRole}</small></div>
         </Link>
-        <Button className="shell-logout" pending={pending} variant="outline" onClick={logout}><LogOut size={15} /><span>Đăng xuất</span></Button>
+        <Button className="shell-logout" aria-label={pending ? 'Đang xử lý…' : 'Đăng xuất'} pending={pending} variant="outline" onClick={logout}><LogOut size={15} /><span>Đăng xuất</span></Button>
       </div>
     </header>
     <div className="shell-body">
       {mobileOpen && <button tabIndex={-1} className="shell-scrim" aria-label="Đóng menu điều hướng" onClick={closeMenu} />}
-      <aside ref={drawer} className={`shell-sidebar ${mobileOpen ? 'shell-open' : ''}`} aria-label="Thanh điều hướng" {...(mobileOpen ? { role: 'dialog', 'aria-modal': true } : {})}>
+      <aside inert={mobile && !mobileOpen} ref={drawer} className={`shell-sidebar ${mobileOpen ? 'shell-open' : ''}`} aria-label="Thanh điều hướng" {...(mobileOpen ? { role: 'dialog', 'aria-modal': true } : {})}>
         <div className="shell-sidebar-scroll">
           <div className="shell-brand-row"><Link className="shell-brand" to={`/${role}`} onClick={() => setMobileOpen(false)}><span className="shell-mark"><Sparkles size={20} /></span><span><b>AIVES <em>v2.4</em></b><small>Viva Exam System</small></span></Link><button className="shell-collapse" onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'}>{collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</button><button className="shell-close" aria-label="Đóng menu" onClick={closeMenu}><X size={20} /></button></div>
           <nav className="shell-nav" aria-label="Điều hướng chính">{groups.map(group => <section key={group.label}><h2>{group.label}</h2><ul>{group.items.map(item => { const Icon = item.icon; return <li key={item.label}><NavLink title={collapsed ? item.label : undefined} to={item.to} end={item.end} className={() => isActive(item) ? 'active' : ''} aria-current={isActive(item) ? 'page' : false} onClick={() => setMobileOpen(false)}><Icon size={16} /><span>{item.label}</span></NavLink></li> })}</ul></section>)}</nav>
         </div>
         <div className="shell-sidebar-footer"><div><span className="shell-seal-dot" /><b>Chuẩn ABET &amp; RAG</b><p>Nền tảng khảo thí vấn đáp AIVES.</p></div></div>
       </aside>
-      <main id="main" tabIndex={-1} className="shell-main">{role === 'lecturer' && examId && <ExamContextNav examId={examId} />}{role === 'lecturer' && subjectId && <SubjectContextNav subjectId={subjectId} />}<Outlet /></main>
+      <main inert={mobile && mobileOpen} id="main" tabIndex={-1} className="shell-main">{role === 'lecturer' && examId && <ExamContextNav examId={examId} />}{role === 'lecturer' && subjectId && <SubjectContextNav subjectId={subjectId} />}<Outlet /></main>
     </div>
 
-    <footer className="shell-footer"><div><span className="shell-footer-mark">A</span><b>AIVES</b><span>•</span><span>Nền Tảng Khảo Thí Vấn Đáp &amp; Rubric Tăng Cường AI</span></div><span>Bản quyền hệ thống © 2026</span></footer>
+    <footer inert={mobile && mobileOpen} className="shell-footer"><div><span className="shell-footer-mark">A</span><b>AIVES</b><span>•</span><span>Nền Tảng Khảo Thí Vấn Đáp &amp; Rubric Tăng Cường AI</span></div><span>Bản quyền hệ thống © 2026</span></footer>
   </div>
 }
 
 export const LecturerLayout = () => <WorkspaceLayout role="lecturer" title="Không gian giảng viên" />
 export const StudentLayout = () => <WorkspaceLayout role="student" title="Cổng thí sinh" />
 export const AdminLayout = () => <WorkspaceLayout role="admin" title="Quản trị hệ thống" />
-export const AuthLayout = () => <main className="auth"><Outlet /></main>
-export function ExamLayout() { return <div className="exam"><header><Link className="brand" to="/student/exams">AIVES <small>Phòng thi vấn đáp</small></Link><small>Kết nối sẽ do backend xác nhận</small></header><main id="main" tabIndex={-1}><Outlet /></main></div> }
+export const AuthLayout = () => <main id="main" className="auth"><Outlet /></main>
+export function ExamLayout() { return <div className="exam"><header><Link className="brand" to="/student/exams">AIVES <small>Phòng thi vấn đáp</small></Link><small>Trạng thái kết nối hiển thị trong phiên thi</small></header><main id="main" tabIndex={-1}><Outlet /></main></div> }

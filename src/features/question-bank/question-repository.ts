@@ -36,7 +36,7 @@ export const questionRepository: QuestionRepository = {
   async delete(subjectId, questionId) { const index = questions.findIndex(item => item.subjectId === subjectId && item.id === questionId); if (index >= 0) questions.splice(index, 1) },
   async list(subjectId) { return clone(questions.filter((question) => question.subjectId === subjectId)) },
   async get(subjectId, questionId) { return clone(questions.find((question) => question.subjectId === subjectId && question.id === questionId) ?? null) },
-  async topics(subjectId) { return clone(subjectTopics[subjectId] ?? []) },
+  async topics(subjectId) { return [...new Set([...(subjectTopics[subjectId] ?? []), ...questions.filter(question => question.subjectId === subjectId).map(question => question.topic)])].filter(Boolean) },
   async import(subjectId, drafts) {
     const imported = drafts.map((draft): Question => ({ ...clone(draft), id: `Q-${subjectId.toUpperCase()}-${crypto.randomUUID()}`, subjectId, source: 'Import', status: 'BẢN NHÁP' }))
     questions.unshift(...imported)

@@ -1,3 +1,4 @@
+import { RouteViewport } from './route-viewport'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAuth, RequireRole } from '../guards/guards'
 import { AdminLayout, AuthLayout, ExamLayout, LecturerLayout, StudentLayout } from '../layouts/layouts'
@@ -92,8 +93,8 @@ const studentRoutes = student.map(([path, title, feature, description]) => {
 })
 
 export const router = createBrowserRouter([{
-  path: '/', errorElement: <RouteError />, children: [
-    { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }] },
+  path: '/', element: <RouteViewport />, errorElement: <RouteError />, children: [
+    { element: <AuthLayout />, children: [{ path: 'login', element: <LoginPage /> }, { path: 'device-check', element: <EquipmentCheckPage standalone /> }] },
         {
       element: <RequireAuth />, children: [
 { element: <RequireRole roles={['lecturer']} />, children: [{ path: 'lecturer', element: <LecturerLayout />, children: [{ path: 'profile', element: <ProfilePage /> }, { path: 'subjects/:subjectId/materials', element: <CourseMaterialsPage /> }, { path: 'subjects/:subjectId/questions/generate', element: <AIQuestionGenerationPage /> }, { path: 'subjects/:subjectId/questions', element: <QuestionBankPage /> }, { path: 'subjects/:subjectId/questions/new', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/questions/:questionId', element: <QuestionEditorPage /> }, { path: 'subjects/:subjectId/rubrics', element: <RubricListPage /> }, { path: 'subjects/:subjectId/rubrics/new', element: <RubricEditorPage /> }, { path: 'subjects/:subjectId/rubrics/:rubricId', element: <RubricEditorPage /> }, { path: 'exams', element: <ExamListPage /> }, { path: 'exams/new', element: <ExamEditorPage /> }, { path: 'exams/:examId/schedule', element: <ExamSchedulingPage /> }, { path: 'exams/:examId/questions', element: <ExamQuestionConfigPage /> }, { path: 'exams/:examId/students', element: <ExamStudentRosterPage /> }, { path: 'exams/:examId/edit', element: <ExamEditorPage /> }, { path: 'exams/:examId', element: <ExamDetailPage /> }, { path: 'exams/:examId/monitor', element: <ExamMonitoringPage /> }, { path: 'exams/:examId/attempts/:attemptId', element: <GradingWorkspacePage /> }, ...pages('lecturer', lecturer.filter(([path]) => !['exams', 'exams/new', 'exams/:examId', 'exams/:examId/edit', 'exams/:examId/students', 'exams/:examId/monitor', 'exams/:examId/attempts/:attemptId'].includes(path)))] }] },

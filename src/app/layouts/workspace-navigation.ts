@@ -27,9 +27,14 @@ export function workspaceNavActive(item: WorkspaceNavItem, pathname: string) {
   return item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 export function workspaceTitle(pathname: string, fallback: string) {
+  if (/^\/student\/results$/.test(pathname)) return 'Kết quả và biên bản'
+  if (/\/check$/.test(pathname)) return 'Kiểm tra thiết bị'
+  if (/\/completed$/.test(pathname)) return 'Biên nhận phiên thi'
+  if (/\/result$/.test(pathname)) return 'Kết quả kỳ thi'
   if (/\/profile$/.test(pathname)) return 'Hồ sơ cá nhân'
   if (/\/questions\/generate/.test(pathname)) return 'AI Sinh Đề RAG'
   if (/\/questions\/(new|[^/]+\/edit)$/.test(pathname)) return 'Soạn thảo câu hỏi & Rubric'
+  if (/\/questions\/[^/]+$/.test(pathname)) return 'Soạn thảo câu hỏi & Rubric'
   if (/\/questions$/.test(pathname)) return 'Ngân hàng câu hỏi'
   if (/\/rubrics\//.test(pathname)) return 'Soạn thảo & Thiết lập Rubric'
   if (/\/rubrics$/.test(pathname)) return 'Quản lý Rubric'
@@ -42,7 +47,7 @@ export function workspaceTitle(pathname: string, fallback: string) {
   if (/\/schedule/.test(pathname)) return 'Lịch trình & Ca thi viva'
   if (/\/exams\/(new|[^/]+\/edit)$/.test(pathname)) return 'Thiết lập kỳ thi'
   if (/\/exams\/[^/]+$/.test(pathname)) return 'Chi tiết kỳ thi'
-  if (/\/exams$/.test(pathname)) return 'Kỳ thi vấn đáp'
+  if (/\/exams$/.test(pathname)) return pathname.startsWith('/student') ? 'Kỳ thi của tôi' : 'Kỳ thi vấn đáp'
   if (/\/subjects\/[^/]+$/.test(pathname)) return 'Tổng quan học phần'
   if (/\/subjects$/.test(pathname)) return 'Môn học phụ trách'
   if (/\/users/.test(pathname)) return 'Quản lý tài khoản'

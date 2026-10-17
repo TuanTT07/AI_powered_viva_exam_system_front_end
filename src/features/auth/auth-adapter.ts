@@ -23,13 +23,16 @@ const developmentUsers: Record<string, AuthenticatedUser> = {
 }
 
 export const developmentAuthAdapter: AuthAdapter = {
-  async getSession() { return null },
+  async getSession() {
+    try { return developmentUsers[sessionStorage.getItem('aives.demo.session.v1') ?? ''] ?? null } catch { return null }
+  },
   async signIn({ email, password }) {
     const user = developmentUsers[email]
     if (!user || password !== demoPassword) throw new AuthenticationError('Email hoặc mật khẩu không chính xác.')
+    sessionStorage.setItem('aives.demo.session.v1', email)
     return user
   },
-  async signOut() {},
+  async signOut() { sessionStorage.removeItem('aives.demo.session.v1') },
 }
 
 export const unavailableAuthAdapter: AuthAdapter = {
