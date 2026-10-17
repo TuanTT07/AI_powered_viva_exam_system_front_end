@@ -25,7 +25,7 @@ Feature repositories remain the boundary between pages and data sources. They se
 
 Question Bank is the first real feature integration: API mode owns raw Spring Page search, UUID validation, DTO mapping, detail, create, update, approve and delete. Create/update mutations obtain `createdById` from the authenticated backend session, map Bloom/status enums, and invalidate only the affected course list plus detail cache. Import, AI generation, exam question configuration and exam readiness remain explicitly mock-backed until their backend contracts exist. API query keys include datasource, course and server filters so mock and API caches cannot mix.
 
-Rubric deletion follows the same repository boundary. A confirmed `DELETE /api/rubrics/{id}` receives HTTP 204 before Rubric list/detail caches and relevant Question caches are invalidated. The operation is global because the backend Rubric API has no course scope; the UI keeps Questions and renders a null Rubric reference as “Chưa gắn Rubric”.
+Rubrics use `/api/courses/{courseId}/rubrics` for every API operation. The global list loads assigned courses for the authenticated lecturer and requests their rubric lists in parallel; failures remain visible errors. Global creation requires a course selection, and edit/delete preserve the original course. Confirmed deletion invalidates rubric and relevant question caches. Explicit mock mode retains its isolated global rubric store.
 ```
 
 ## AI Question Generation

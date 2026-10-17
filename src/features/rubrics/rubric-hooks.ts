@@ -1,3 +1,5 @@
+import { useSession } from '../../app/providers/use-session'
+import { subjectRepository } from '../subjects/subject-repository'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { rubricRepository } from './rubric-repository'
 import type { RubricDraft } from './rubric-types'
@@ -8,10 +10,25 @@ import { apiQuestionKeys, questionKeys } from '../question-bank/question-hooks'
 export const rubricKeys = { all: ['rubrics'] as const, global: ['rubrics', 'global'] as const, list: (subjectId: string) => [...rubricKeys.all, subjectId] as const, detail: (subjectId: string, rubricId: string) => [...rubricKeys.list(subjectId), rubricId] as const, globalDetail: (rubricId: string) => [...rubricKeys.global, rubricId] as const }
 export function useRubrics(subjectId: string) { return useQuery({ queryKey: rubricKeys.list(subjectId), queryFn: () => rubricRepository.list(subjectId), enabled: Boolean(subjectId) && (runtimeConfig.dataSource === 'mock' || isUuid(subjectId)) }) }
 export function useRubric(subjectId: string, rubricId: string | undefined) { return useQuery({ queryKey: rubricKeys.detail(subjectId, rubricId ?? ''), queryFn: () => rubricRepository.get(subjectId, rubricId ?? ''), enabled: Boolean(subjectId && rubricId) }) }
-export function useGlobalRubrics() { return useQuery({ queryKey: rubricKeys.global, queryFn: () => rubricRepository.list('') }) }
-export function useGlobalRubric(rubricId: string | undefined) { return useQuery({ queryKey: rubricKeys.globalDetail(rubricId ?? ''), queryFn: () => rubricRepository.get('', rubricId ?? ''), enabled: Boolean(rubricId) }) }
+export function useGlobalRubrics() {
+  const { session } = useSession()
+  const lecturerId = session.user?.id ?? ''
+  return useQuery({
+    queryKey: [...rubricKeys.global, lecturerId],
+    enabled: runtimeConfig.dataSource === 'mock' || Boolean(session.user?.roles.includes('lecturer')),
+    queryFn: async () => {
+      if (runtimeConfig.dataSource === 'mock') return rubricRepository.list('')
+      const subjects = await subjectRepository.list(lecturerId)
+      return (await Promise.all(subjects.map(subject => rubricRepository.list(subject.id)))).flat()
+    },
+  })
+}
+export function useGlobalRubric(rubricId: string | undefined) {
+  const all = useGlobalRubrics()
+  return { ...all, data: all.data?.find(rubric => rubric.id === rubricId) }
+}
 export function useSaveRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save(draft), onSuccess: () => { client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.all }); client.invalidateQueries({ queryKey: questionKeys.all }) } }) }
-export function useSaveGlobalRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save({ ...draft, subjectId: '' }), onSuccess: () => { client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.global }); client.invalidateQueries({ queryKey: rubricKeys.all }) } }) }
+export function useSaveGlobalRubric() { const client = useQueryClient(); return useMutation({ mutationFn: (draft: RubricDraft & { id?: string }) => rubricRepository.save(draft), onSuccess: () => { client.invalidateQueries({ queryKey: ['lecturer-subjects'] }); client.invalidateQueries({ queryKey: rubricKeys.global }); client.invalidateQueries({ queryKey: rubricKeys.all }) } }) }
 export function useDeleteRubric(defaultSubjectId?: string) {
   const client = useQueryClient()
   return useMutation({
