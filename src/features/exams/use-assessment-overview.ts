@@ -19,7 +19,7 @@ export function useAssessmentOverview(examId: string) {
   })
   const roster = useQuery<RosterStudent[], Error, AssessmentOverview>({
     queryKey: examKeys.roster(examId), queryFn: () => examRepository.listRoster(examId), enabled: !api && Boolean(examId),
-    select: data => createDemoAssessment(exam.data, data),
+    select: data => createDemoAssessment(exam.data ?? undefined, data),
   })
   return api ? monitoring : roster
 }
