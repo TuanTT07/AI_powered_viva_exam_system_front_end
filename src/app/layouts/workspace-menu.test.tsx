@@ -16,6 +16,19 @@ function mount(entry = '/lecturer/exams') {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 describe('resource navigation', () => {
+  it('opens and closes the mobile navigation drawer from the menu trigger', async () => {
+    mount()
+    const user = userEvent.setup()
+    const menu = screen.getByRole('button', { name: 'Mở menu điều hướng' })
+
+    await user.click(menu)
+    expect(screen.getByRole('dialog', { name: 'Thanh điều hướng' })).toBeInTheDocument()
+    expect(menu).toHaveAttribute('aria-expanded', 'true')
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Thanh điều hướng' })).not.toBeInTheDocument()
+    expect(menu).toHaveFocus()
+  })
   it('opens resource lists without selection modals or hidden query requests', async () => {
     const subjects = vi.spyOn(subjectRepository, 'list'), exams = vi.spyOn(examRepository, 'list')
     const router = mount(), user = userEvent.setup()

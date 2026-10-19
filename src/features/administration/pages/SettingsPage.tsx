@@ -6,25 +6,25 @@ export function SettingsPage() {
       icon: Sparkles,
       title: 'Tham số AI khảo thí',
       description: 'Mô hình, ngôn ngữ và các tham số xử lý AI.',
-      tone: 'bg-blue-50 text-blue-600 border-blue-100',
+      tone: 'bg-blue-50 text-blue-700 border-blue-200',
     },
     {
       icon: ShieldCheck,
       title: 'Quy chế & An toàn học thuật',
       description: 'Quy tắc bảo vệ dữ liệu và chính sách tham gia kỳ thi.',
-      tone: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      tone: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     },
     {
       icon: Database,
       title: 'Tích hợp dữ liệu',
       description: 'Kết nối học vụ và quản lý dữ liệu hệ thống.',
-      tone: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+      tone: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     },
     {
       icon: Settings,
       title: 'Vận hành phòng thi',
       description: 'Quản lý cấu hình phòng thi và giới hạn phiên thi.',
-      tone: 'bg-violet-50 text-violet-600 border-violet-100',
+      tone: 'bg-violet-50 text-violet-700 border-violet-200',
     },
   ]
 
@@ -58,10 +58,10 @@ export function SettingsPage() {
                 <Icon size={22} />
               </div>
               <h2 className="text-base font-bold text-slate-900">{title}</h2>
-              <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
+              <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
             </div>
             <div className="pt-2">
-              <span className="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-500">
+              <span className="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
                 Chưa khả dụng
               </span>
             </div>
