@@ -235,28 +235,50 @@ export function UserManagementPage() {
         />
       )}
 
-      <Dialog
-        open={Boolean(target)}
-        onClose={() => { if (!remove.isPending) setTarget(null) }}
-        title="Xóa tài khoản?"
-      >
-        <p className="text-sm text-slate-600">
-          Xóa tài khoản “{target?.name}”? Tài khoản có dữ liệu thi, câu hỏi hoặc chấm điểm có thể không được phép xóa.
-        </p>
-        {remove.isError && <Alert tone="danger">{remove.error.message}</Alert>}
-        <div className="dialog-actions">
-          <Button variant="outline" disabled={remove.isPending} onClick={() => setTarget(null)}>
-            Hủy
-          </Button>
-          <Button
-            variant="danger"
-            pending={remove.isPending}
-            onClick={() => target && remove.mutate(target.id, { onSuccess: () => { setTarget(null); setFeedback('Đã xóa tài khoản.') } })}
-          >
-            Xóa tài khoản
-          </Button>
-        </div>
-      </Dialog>
+      {target && (
+        <Dialog
+          open={Boolean(target)}
+          onClose={() => { if (!remove.isPending) setTarget(null) }}
+          title="Xác nhận xóa tài khoản"
+        >
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200/80 flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                <Trash2 size={18} />
+              </div>
+              <div className="text-xs text-rose-900 leading-relaxed">
+                <p className="font-semibold text-sm text-rose-950 mb-1">
+                  Bạn có chắc chắn muốn xóa tài khoản này?
+                </p>
+                <p>
+                  Họ tên: <strong className="font-semibold">{target.name}</strong>
+                </p>
+                <p>
+                  Mã định danh: <span className="font-mono">{target.identifier}</span> · Email: <span className="font-mono">{target.email}</span>
+                </p>
+                <p className="mt-2 text-rose-700">
+                  Lưu ý: Hành động này không thể hoàn tác. Các tài khoản đã có dữ liệu kỳ thi, câu hỏi hoặc lịch sử chấm điểm có thể bị từ chối xóa để đảm bảo toàn vẹn dữ liệu học thuật.
+                </p>
+              </div>
+            </div>
+
+            {remove.isError && <Alert tone="danger">{remove.error.message}</Alert>}
+
+            <div className="dialog-actions flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button variant="outline" disabled={remove.isPending} onClick={() => setTarget(null)}>
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="danger"
+                pending={remove.isPending}
+                onClick={() => target && remove.mutate(target.id, { onSuccess: () => { setFeedback(`Đã xóa tài khoản "${target.name}".`); setTarget(null) } })}
+              >
+                Xác nhận xóa tài khoản
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </section>
   )
 }
