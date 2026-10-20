@@ -130,30 +130,59 @@ export const apiUserRepository = {
   async create(payload: { fullName: string; email: string; roleName: string; userCode: string; password?: string }): Promise<User> {
     const controller = new AbortController()
 
-    // Helper to check if user already exists in DB (e.g. if backend saved to DB but hung on SMTP)
+    // Multi-strategy check to verify if user was already committed to DB (handles slow SMTP / Render hang)
     const checkDbForUser = async (): Promise<User | null> => {
       try {
-        const result = await apiUserRepository.search({ keyword: payload.email, size: 5 })
-        const match = result.content.find(
+        // Strategy 1: Search by userCode keyword
+        if (payload.userCode) {
+          const byCode = await apiUserRepository.search({ keyword: payload.userCode, size: 10 })
+          const matchCode = byCode.content.find(
+            u => u.identifier.toLowerCase() === payload.userCode.toLowerCase() ||
+                 u.email.toLowerCase() === payload.email.toLowerCase()
+          )
+          if (matchCode) return matchCode
+        }
+
+        // Strategy 2: Search recent users without keyword (bypasses keyword query bugs in backend)
+        const recent = await apiUserRepository.search({ size: 20 })
+        const matchRecent = recent.content.find(
+          u => u.email.toLowerCase() === payload.email.toLowerCase() ||
+               (payload.userCode && u.identifier.toLowerCase() === payload.userCode.toLowerCase())
+        )
+        if (matchRecent) return matchRecent
+
+        // Strategy 3: Search by email keyword
+        const byEmail = await apiUserRepository.search({ keyword: payload.email, size: 10 })
+        const matchEmail = byEmail.content.find(
           u => u.email.toLowerCase() === payload.email.toLowerCase() ||
                u.identifier.toLowerCase() === payload.userCode.toLowerCase()
         )
-        return match ?? null
+        if (matchEmail) return matchEmail
+
+        return null
       } catch {
         return null
       }
     }
 
-    // In case backend is stuck on SMTP after DB insert, poll DB after 8s
     let resolvedUser: User | null = null
-    const pollTimer = setTimeout(async () => {
-      if (resolvedUser) return
-      const found = await checkDbForUser()
-      if (found && !resolvedUser) {
-        resolvedUser = found
-        controller.abort()
-      }
-    }, 8_000)
+    const timerIds: ReturnType<typeof setTimeout>[] = []
+    const clearTimers = () => timerIds.forEach(clearTimeout)
+
+    // Poll DB at 3s, 6s, 10s, 15s in case backend hangs on external email/SMTP service after DB insert
+    const delays = [3_000, 6_000, 10_000, 15_000]
+    delays.forEach(delay => {
+      const timer = setTimeout(async () => {
+        if (resolvedUser) return
+        const found = await checkDbForUser()
+        if (found && !resolvedUser) {
+          resolvedUser = found
+          clearTimers()
+          controller.abort()
+        }
+      }, delay)
+      timerIds.push(timer)
+    })
 
     try {
       const raw = await apiClient.request<unknown>('/api/admin/users', {
@@ -162,23 +191,27 @@ export const apiUserRepository = {
         signal: controller.signal,
         timeoutMs: Math.max(runtimeConfig.apiTimeoutMs, 60_000),
       })
-      clearTimeout(pollTimer)
+      clearTimers()
       const data = extractResponsePayload(raw)
       return mapUserDto(data, payload)
     } catch (err: any) {
-      clearTimeout(pollTimer)
+      clearTimers()
 
-      // If pollTimer already found user in DB and aborted the stuck request
+      // If poll timer already found the created user in DB and aborted the hanging POST request
       if (resolvedUser) {
         return resolvedUser
       }
 
-      // If 409 Conflict occurred
+      // If 409 Conflict: check if the user is already in DB (from a previous attempt)
       if (err?.status === 409 || err?.message?.includes('409') || err?.message?.toLowerCase().includes('conflict')) {
+        const found = await checkDbForUser()
+        if (found) {
+          return found
+        }
         throw new Error('Email hoặc Mã định danh đã tồn tại trong hệ thống. Vui lòng kiểm tra lại.')
       }
 
-      // If request timed out, was aborted, or had network error: check if user was saved in DB!
+      // If timeout, abort, or network error: do a search check to see if DB was already updated
       const isTimeoutOrNetwork = err?.code === 'TIMEOUT' || err?.code === 'NETWORK_ERROR' || err?.code === 'ABORTED' || err?.message?.includes('hết thời gian chờ')
       if (isTimeoutOrNetwork) {
         const found = await checkDbForUser()
