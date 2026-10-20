@@ -73,6 +73,12 @@ describe('LoginPage', () => {
     expect(await screen.findByLabelText('Tài khoản Email học thuật')).toBeInTheDocument()
   })
 
+  it('explains when the protected API session has expired', async () => {
+    const adapter = signedOutAdapter(vi.fn())
+    render(<SessionProvider adapter={adapter}><MemoryRouter initialEntries={[{ pathname: '/login', state: { sessionExpired: true } }]}><Routes><Route path="/login" element={<LoginPage />} /></Routes></MemoryRouter></SessionProvider>)
+    expect(await screen.findByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.')).toBeInTheDocument()
+  })
+
   it('redirects an already authenticated visitor away from Login', async () => {
     render(<SessionProvider initialSession={{ status: 'authenticated', user: lecturer }}><MemoryRouter initialEntries={['/login']}><Routes><Route path="/login" element={<LoginPage />} /><Route path="/lecturer" element={<p>Lecturer destination</p>} /></Routes></MemoryRouter></SessionProvider>)
     expect(await screen.findByText('Lecturer destination')).toBeInTheDocument()

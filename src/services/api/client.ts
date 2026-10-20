@@ -25,6 +25,17 @@ export class ApiError extends Error {
 
 export type ApiClient = { request<T>(path: string, options?: ApiRequestOptions): Promise<T> }
 
+const unauthorizedListeners = new Set<() => void>()
+
+export function onApiUnauthorized(listener: () => void): () => void {
+  unauthorizedListeners.add(listener)
+  return () => unauthorizedListeners.delete(listener)
+}
+
+function notifyUnauthorized() {
+  unauthorizedListeners.forEach((listener) => listener())
+}
+
 export function buildApiUrl(baseUrl: string, path: string, query?: ApiRequestOptions['query']): string {
   if (/^[a-z][a-z\d+.-]*:/i.test(path) || path.startsWith('//')) throw new ApiError('Đường dẫn API không hợp lệ.', { code: 'INVALID_PATH' })
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
@@ -64,7 +75,11 @@ export const apiClient: ApiClient = {
     else if (options.body !== undefined) body = options.body as BodyInit
     try {
       const response = await fetch(buildApiUrl(runtimeConfig.apiBaseUrl, path, options.query), { method: options.method ?? 'GET', headers, body, signal: controller.signal })
-      if (!response.ok) throw await parseApiError(response)
+      if (!response.ok) {
+        const error = await parseApiError(response)
+        if (options.authenticated !== false && error.status === 401) notifyUnauthorized()
+        throw error
+      }
       if (options.responseType === 'blob') {
         return (await response.blob()) as T
       }
