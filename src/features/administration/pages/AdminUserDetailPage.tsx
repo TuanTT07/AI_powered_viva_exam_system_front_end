@@ -1,12 +1,13 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useState } from 'react'
-import { Alert, Button } from '../../../components/ui/primitives'
-import { useResetUserPassword, useUpdateUser, useUser, useUserCourses } from '../user-hooks'
+import { Alert, Button, Dialog } from '../../../components/ui/primitives'
+import { useDeleteUser, useResetUserPassword, useUpdateUser, useUser, useUserCourses } from '../user-hooks'
 import { useRoles } from '../role-hooks'
-import { ArrowLeft, User, KeyRound, BookOpen, AlertCircle, Loader2, Save, X, Sparkles } from 'lucide-react'
+import { ArrowLeft, User, KeyRound, BookOpen, AlertCircle, Loader2, Save, X, Sparkles, Trash2 } from 'lucide-react'
 
 export function AdminUserDetailPage() {
   const { userId = '' } = useParams()
+  const navigate = useNavigate()
 
   const userQuery = useUser(userId)
   const coursesQuery = useUserCourses(userQuery.data?.role === 'lecturer' ? userId : null)
@@ -14,9 +15,11 @@ export function AdminUserDetailPage() {
 
   const update = useUpdateUser()
   const reset = useResetUserPassword()
+  const remove = useDeleteUser()
 
   const [feedback, setFeedback] = useState('')
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('LECTURER')
@@ -73,6 +76,13 @@ export function AdminUserDetailPage() {
               <ArrowLeft className="w-4 h-4" />
               <span>Quay lại</span>
             </Link>
+            <Button
+              variant="danger"
+              onClick={() => { remove.reset(); setConfirmDelete(true) }}
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Xóa tài khoản</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -250,6 +260,51 @@ export function AdminUserDetailPage() {
           </div>
         </div>
       </div>
+
+      {confirmDelete && (
+        <Dialog
+          open={confirmDelete}
+          onClose={() => { if (!remove.isPending) setConfirmDelete(false) }}
+          title="Xác nhận xóa tài khoản"
+        >
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200/80 flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                <Trash2 size={18} />
+              </div>
+              <div className="text-xs text-rose-900 leading-relaxed">
+                <p className="font-semibold text-sm text-rose-950 mb-1">
+                  Bạn có chắc chắn muốn xóa tài khoản này?
+                </p>
+                <p>
+                  Họ tên: <strong className="font-semibold">{user.name}</strong>
+                </p>
+                <p>
+                  Mã định danh: <span className="font-mono">{user.identifier}</span> · Email: <span className="font-mono">{user.email}</span>
+                </p>
+                <p className="mt-2 text-rose-700">
+                  Lưu ý: Hành động này không thể hoàn tác. Các tài khoản đã có dữ liệu kỳ thi, câu hỏi hoặc lịch sử chấm điểm có thể bị từ chối xóa để đảm bảo toàn vẹn dữ liệu học thuật.
+                </p>
+              </div>
+            </div>
+
+            {remove.isError && <Alert tone="danger">{remove.error.message}</Alert>}
+
+            <div className="dialog-actions flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button variant="outline" disabled={remove.isPending} onClick={() => setConfirmDelete(false)}>
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="danger"
+                pending={remove.isPending}
+                onClick={() => remove.mutate(user.id, { onSuccess: () => navigate('/admin/users') })}
+              >
+                Xác nhận xóa tài khoản
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </section>
   )
 }
