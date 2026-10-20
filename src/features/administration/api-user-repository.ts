@@ -26,7 +26,7 @@ export type Page<T> = {
   size: number
 }
 
-type UserResponseDto = {
+export type UserResponseDto = {
   id: string
   userCode: string
   fullName: string
@@ -36,33 +36,57 @@ type UserResponseDto = {
   updatedAt?: string
 }
 
-type ApiResponse<T> = {
+export type ApiResponse<T> = {
   success: boolean
   status: number
   message: string
   data: T
 }
 
-function mapUserDto(dto: UserResponseDto): User {
-  const roleStr = (dto.roleName || '').toLowerCase()
-  const role: UserRole = roleStr === 'admin' ? 'admin' : roleStr === 'student' ? 'student' : 'lecturer'
+function extractResponsePayload<T>(raw: unknown): T | null {
+  if (raw === null || raw === undefined) return null
+  if (typeof raw === 'object') {
+    if ('success' in raw) {
+      const envelope = raw as { success: boolean; data?: unknown; message?: string }
+      if (!envelope.success) {
+        throw new Error(envelope.message || 'Yêu cầu API thất bại.')
+      }
+      return (envelope.data !== undefined ? envelope.data : null) as T | null
+    }
+    return raw as T
+  }
+  return raw as T
+}
+
+export function mapUserDto(
+  dto: unknown,
+  fallback?: { fullName?: string; email?: string; roleName?: string; userCode?: string; id?: string }
+): User {
+  const obj = dto && typeof dto === 'object' ? (dto as Record<string, any>) : {}
+  const rawId = obj.id || (typeof dto === 'string' && dto ? dto : '') || fallback?.id || Math.random().toString()
   
-  // Create initials from name
-  const nameParts = (dto.fullName || '').split(' ')
-  const initials = nameParts.length >= 2 
-    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-    : (dto.fullName?.substring(0, 2) || 'US').toUpperCase()
+  const rawRole = String(obj.roleName || obj.role || fallback?.roleName || '').toLowerCase()
+  const role: UserRole = rawRole.includes('admin') ? 'admin' : rawRole.includes('student') ? 'student' : 'lecturer'
+
+  const fullName = String(obj.fullName || obj.name || fallback?.fullName || 'Người dùng').trim()
+  const userCode = String(obj.userCode || obj.code || obj.identifier || fallback?.userCode || '').trim()
+  const email = String(obj.email || fallback?.email || '').trim()
+
+  const words = fullName.split(/\s+/).filter(Boolean)
+  const initials = words.length >= 2
+    ? (words[0][0] + words[words.length - 1][0]).toUpperCase()
+    : (fullName.substring(0, 2) || 'US').toUpperCase()
 
   return {
-    id: dto.id,
-    name: dto.fullName,
-    identifier: dto.userCode,
-    email: dto.email,
+    id: String(rawId),
+    name: fullName,
+    identifier: userCode,
+    email,
     role,
-    status: 'active', // Backend doesn't support user status yet
+    status: 'active',
     initials,
-    createdAt: dto.createdAt,
-    updatedAt: dto.updatedAt,
+    createdAt: obj.createdAt ? String(obj.createdAt) : undefined,
+    updatedAt: obj.updatedAt ? String(obj.updatedAt) : undefined,
   }
 }
 
@@ -74,63 +98,88 @@ export const apiUserRepository = {
     query.page = Math.max(0, (params.page ?? 1) - 1)
     query.size = params.size ?? 10
 
-    const response = await apiClient.request<ApiResponse<Page<UserResponseDto>>>('/api/admin/users', { query })
-    if (!response.success) throw new Error(response.message || 'Lỗi lấy danh sách người dùng')
-    
-    const pageData = response.data
+    const raw = await apiClient.request<unknown>('/api/admin/users', { query })
+    const pageData = extractResponsePayload<any>(raw) || {}
+
+    const rawContent = Array.isArray(pageData.content)
+      ? pageData.content
+      : Array.isArray(pageData)
+      ? pageData
+      : []
+
+    const content = rawContent.map((item: any) => mapUserDto(item))
+    const totalElements = typeof pageData.totalElements === 'number' ? pageData.totalElements : content.length
+    const totalPages = typeof pageData.totalPages === 'number' ? pageData.totalPages : Math.max(1, Math.ceil(totalElements / (params.size ?? 10)))
+    const page = typeof pageData.page === 'number'
+      ? pageData.page + 1
+      : typeof pageData.number === 'number'
+      ? pageData.number + 1
+      : (params.page ?? 1)
+    const size = typeof pageData.size === 'number' ? pageData.size : params.size ?? 10
+
     return {
-      content: pageData.content.map(mapUserDto),
-      totalElements: pageData.totalElements,
-      totalPages: pageData.totalPages,
-      page: pageData.page + 1,
-      size: pageData.size,
+      content,
+      totalElements,
+      totalPages,
+      page,
+      size,
     }
   },
-  
+
   async create(payload: { fullName: string; email: string; roleName: string; userCode: string; password?: string }): Promise<User> {
-    const response = await apiClient.request<ApiResponse<UserResponseDto>>('/api/admin/users', {
+    const raw = await apiClient.request<unknown>('/api/admin/users', {
       method: 'POST',
       body: payload,
     })
-    if (!response.success) throw new Error(response.message || 'Lỗi tạo người dùng')
-    return mapUserDto(response.data)
+    const data = extractResponsePayload(raw)
+    return mapUserDto(data, payload)
   },
 
   async update(id: string, payload: { fullName: string; email: string; roleName: string }): Promise<User> {
     if (!isUuid(id)) throw new ApiError('Mã tài khoản phải là UUID của backend.', { code: 'INVALID_UUID' })
-    const response = await apiClient.request<ApiResponse<UserResponseDto>>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    const raw = await apiClient.request<unknown>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: payload,
     })
-    if (!response.success) throw new Error(response.message || 'Lỗi cập nhật người dùng')
-    return mapUserDto(response.data)
+    const data = extractResponsePayload(raw)
+    return mapUserDto(data, { ...payload, id, userCode: '' })
   },
 
   async getById(id: string): Promise<User> {
     if (!isUuid(id)) throw new ApiError('Mã tài khoản phải là UUID của backend.', { code: 'INVALID_UUID' })
-    const response = await apiClient.request<ApiResponse<UserResponseDto>>(`/api/admin/users/${encodeURIComponent(id)}`)
-    if (!response.success) throw new Error(response.message || 'Lỗi lấy chi tiết người dùng')
-    return mapUserDto(response.data)
+    const raw = await apiClient.request<unknown>(`/api/admin/users/${encodeURIComponent(id)}`)
+    const data = extractResponsePayload(raw)
+    if (!data) throw new Error('Không tìm thấy người dùng')
+    return mapUserDto(data, { id })
   },
 
   async resetPassword(id: string, newPassword: string): Promise<void> {
     if (!isUuid(id)) throw new ApiError('Mã tài khoản phải là UUID của backend.', { code: 'INVALID_UUID' })
-    const response = await apiClient.request<ApiResponse<unknown>>(`/api/admin/users/${encodeURIComponent(id)}/password`, { method: 'PATCH', body: { newPassword } })
-    if (!response.success) throw new Error(response.message || 'Lỗi đặt lại mật khẩu')
+    const raw = await apiClient.request<unknown>(`/api/admin/users/${encodeURIComponent(id)}/password`, {
+      method: 'PATCH',
+      body: { newPassword },
+    })
+    extractResponsePayload(raw)
   },
 
   async getCourses(id: string): Promise<UserCourse[]> {
     if (!isUuid(id)) throw new ApiError('Mã tài khoản phải là UUID của backend.', { code: 'INVALID_UUID' })
-    const response = await apiClient.request<ApiResponse<{ id: string; courseCode: string; courseName: string; department: string }[]>>(`/api/admin/users/${encodeURIComponent(id)}/courses`)
-    if (!response.success) throw new Error(response.message || 'Lỗi lấy môn học phụ trách')
-    return response.data.map(course => ({ id: course.id, code: course.courseCode, name: course.courseName, department: course.department }))
+    const raw = await apiClient.request<unknown>(`/api/admin/users/${encodeURIComponent(id)}/courses`)
+    const data = extractResponsePayload<any[]>(raw) || []
+    const list = Array.isArray(data) ? data : []
+    return list.map(course => ({
+      id: course.id,
+      code: course.courseCode || course.code || '',
+      name: course.courseName || course.name || '',
+      department: course.department || '',
+    }))
   },
 
   async delete(id: string): Promise<void> {
     if (!isUuid(id)) throw new ApiError('Mã tài khoản phải là UUID của backend.', { code: 'INVALID_UUID' })
-    const response = await apiClient.request<ApiResponse<any>>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    const raw = await apiClient.request<unknown>(`/api/admin/users/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     })
-    if (!response.success) throw new Error(response.message || 'Lỗi xóa người dùng')
-  }
+    extractResponsePayload(raw)
+  },
 }

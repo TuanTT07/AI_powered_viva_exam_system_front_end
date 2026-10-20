@@ -14,8 +14,24 @@ export function UserManagementPage() {
   const pending = create.isPending || update.isPending
 
   const save = (draft: UserDraft) => {
-    if (editor === 'new') create.mutate(draft, { onSuccess: () => { setEditor(null); setFeedback('Đã tạo tài khoản.') } })
-    else if (editor) update.mutate({ id: editor.id, fullName: draft.fullName, email: draft.email, roleName: draft.roleName }, { onSuccess: () => { setEditor(null); setFeedback('Đã cập nhật tài khoản.') } })
+    if (editor === 'new') {
+      create.mutate(draft, {
+        onSuccess: () => {
+          setEditor(null)
+          setFeedback('Đã tạo tài khoản mới thành công.')
+        },
+      })
+    } else if (editor) {
+      update.mutate(
+        { id: editor.id, fullName: draft.fullName, email: draft.email, roleName: draft.roleName },
+        {
+          onSuccess: () => {
+            setEditor(null)
+            setFeedback('Đã cập nhật tài khoản thành công.')
+          },
+        }
+      )
+    }
   }
 
   return (
@@ -94,7 +110,20 @@ export function UserManagementPage() {
         </div>
       </div>
 
-      {feedback && <Alert tone="success">{feedback}</Alert>}
+      {feedback && (
+        <Alert tone="success">
+          <div className="flex items-center justify-between">
+            <span>{feedback}</span>
+            <button
+              type="button"
+              onClick={() => setFeedback('')}
+              className="text-xs text-emerald-800 hover:text-emerald-950 font-medium underline ml-4 cursor-pointer"
+            >
+              Đóng
+            </button>
+          </div>
+        </Alert>
+      )}
 
       {/* Filter Toolbar */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row gap-3 shadow-xs">
@@ -325,14 +354,22 @@ function UserEditor({ user, pending, error, onSave, onClose }: { user: User | nu
           Vai trò
           <select
             aria-label="Vai trò"
-            disabled={roles.isLoading || roles.isError}
+            disabled={roles.isLoading}
             value={role}
             onChange={event => setRole(event.target.value)}
             className="w-full border border-slate-200 rounded-lg p-2 mt-1"
           >
-            {roles.data?.map(item => (
-              <option key={item.id} value={item.roleName}>{item.roleName}</option>
-            ))}
+            {roles.data && roles.data.length > 0 ? (
+              roles.data.map(item => (
+                <option key={item.id} value={item.roleName}>{item.roleName}</option>
+              ))
+            ) : (
+              <>
+                <option value="LECTURER">LECTURER</option>
+                <option value="STUDENT">STUDENT</option>
+                <option value="ADMIN">ADMIN</option>
+              </>
+            )}
           </select>
         </label>
         {roles.isError && (
@@ -361,8 +398,8 @@ function UserEditor({ user, pending, error, onSave, onClose }: { user: User | nu
           <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
             Hủy
           </Button>
-          <Button type="submit" pending={pending} disabled={roles.isLoading || roles.isError}>
-            Lưu tài khoản
+          <Button type="submit" pending={pending}>
+            {user ? 'Lưu thay đổi' : 'Tạo tài khoản'}
           </Button>
         </div>
       </form>

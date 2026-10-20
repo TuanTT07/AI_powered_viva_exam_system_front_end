@@ -34,4 +34,40 @@ describe('Admin API repositories', () => {
     ])
     request.mockRestore()
   })
+  it('creates user successfully across different backend response shapes', async () => {
+    const payload = { fullName: 'Nguyễn Văn Test', email: 'test@academia.edu.vn', roleName: 'LECTURER', userCode: 'CB-999', password: 'Password123!' }
+
+    // Case 1: Standard envelope with UserResponseDto
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValueOnce(envelope({ id, userCode: 'CB-999', fullName: 'Nguyễn Văn Test', email: 'test@academia.edu.vn', roleName: 'LECTURER' }) as never)
+    const res1 = await apiUserRepository.create(payload)
+    expect(res1.name).toBe('Nguyễn Văn Test')
+    expect(res1.identifier).toBe('CB-999')
+    expect(res1.role).toBe('lecturer')
+
+    // Case 2: Envelope with data=null (falls back to payload)
+    request.mockResolvedValueOnce(envelope(null) as never)
+    const res2 = await apiUserRepository.create(payload)
+    expect(res2.name).toBe('Nguyễn Văn Test')
+    expect(res2.identifier).toBe('CB-999')
+    expect(res2.role).toBe('lecturer')
+
+    // Case 3: Direct UserResponseDto without envelope
+    request.mockResolvedValueOnce({ id, userCode: 'CB-999', fullName: 'Nguyễn Văn Test', email: 'test@academia.edu.vn', roleName: 'LECTURER' } as never)
+    const res3 = await apiUserRepository.create(payload)
+    expect(res3.name).toBe('Nguyễn Văn Test')
+    expect(res3.identifier).toBe('CB-999')
+    expect(res3.role).toBe('lecturer')
+
+    // Case 4: Envelope with string ID
+    request.mockResolvedValueOnce(envelope(id) as never)
+    const res4 = await apiUserRepository.create(payload)
+    expect(res4.id).toBe(id)
+    expect(res4.name).toBe('Nguyễn Văn Test')
+
+    // Case 5: Error response
+    request.mockResolvedValueOnce({ success: false, status: 400, message: 'Mã cán bộ đã tồn tại' } as never)
+    await expect(apiUserRepository.create(payload)).rejects.toThrow('Mã cán bộ đã tồn tại')
+
+    request.mockRestore()
+  })
 })
