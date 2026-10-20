@@ -128,13 +128,67 @@ export const apiUserRepository = {
   },
 
   async create(payload: { fullName: string; email: string; roleName: string; userCode: string; password?: string }): Promise<User> {
-    const raw = await apiClient.request<unknown>('/api/admin/users', {
-      method: 'POST',
-      body: payload,
-      timeoutMs: Math.max(runtimeConfig.apiTimeoutMs, 60_000),
-    })
-    const data = extractResponsePayload(raw)
-    return mapUserDto(data, payload)
+    const controller = new AbortController()
+
+    // Helper to check if user already exists in DB (e.g. if backend saved to DB but hung on SMTP)
+    const checkDbForUser = async (): Promise<User | null> => {
+      try {
+        const result = await apiUserRepository.search({ keyword: payload.email, size: 5 })
+        const match = result.content.find(
+          u => u.email.toLowerCase() === payload.email.toLowerCase() ||
+               u.identifier.toLowerCase() === payload.userCode.toLowerCase()
+        )
+        return match ?? null
+      } catch {
+        return null
+      }
+    }
+
+    // In case backend is stuck on SMTP after DB insert, poll DB after 8s
+    let resolvedUser: User | null = null
+    const pollTimer = setTimeout(async () => {
+      if (resolvedUser) return
+      const found = await checkDbForUser()
+      if (found && !resolvedUser) {
+        resolvedUser = found
+        controller.abort()
+      }
+    }, 8_000)
+
+    try {
+      const raw = await apiClient.request<unknown>('/api/admin/users', {
+        method: 'POST',
+        body: payload,
+        signal: controller.signal,
+        timeoutMs: Math.max(runtimeConfig.apiTimeoutMs, 60_000),
+      })
+      clearTimeout(pollTimer)
+      const data = extractResponsePayload(raw)
+      return mapUserDto(data, payload)
+    } catch (err: any) {
+      clearTimeout(pollTimer)
+
+      // If pollTimer already found user in DB and aborted the stuck request
+      if (resolvedUser) {
+        return resolvedUser
+      }
+
+      // If 409 Conflict occurred
+      if (err?.status === 409 || err?.message?.includes('409') || err?.message?.toLowerCase().includes('conflict')) {
+        throw new Error('Email hoặc Mã định danh đã tồn tại trong hệ thống. Vui lòng kiểm tra lại.')
+      }
+
+      // If request timed out, was aborted, or had network error: check if user was saved in DB!
+      const isTimeoutOrNetwork = err?.code === 'TIMEOUT' || err?.code === 'NETWORK_ERROR' || err?.code === 'ABORTED' || err?.message?.includes('hết thời gian chờ')
+      if (isTimeoutOrNetwork) {
+        const found = await checkDbForUser()
+        if (found) {
+          return found
+        }
+      }
+
+      throw err
+    }
   },
 
   async update(id: string, payload: { fullName: string; email: string; roleName: string }): Promise<User> {
