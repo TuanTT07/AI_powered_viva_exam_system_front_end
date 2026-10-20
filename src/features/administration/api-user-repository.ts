@@ -1,4 +1,5 @@
 import { ApiError, apiClient } from '../../services/api/client'
+import { runtimeConfig } from '../../services/api/runtime-config'
 import { isUuid } from '../question-bank/api-question-repository'
 
 export type UserRole = 'admin' | 'lecturer' | 'student'
@@ -130,6 +131,7 @@ export const apiUserRepository = {
     const raw = await apiClient.request<unknown>('/api/admin/users', {
       method: 'POST',
       body: payload,
+      timeoutMs: Math.max(runtimeConfig.apiTimeoutMs, 60_000),
     })
     const data = extractResponsePayload(raw)
     return mapUserDto(data, payload)
