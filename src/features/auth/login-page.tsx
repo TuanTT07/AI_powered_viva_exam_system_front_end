@@ -148,7 +148,7 @@ export function LoginPage() {
           {/* Left Column: Academic & AI Showcase */}
           <div className="lg:col-span-7 space-y-6 lg:pr-2">
             {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-bold tracking-wide uppercase shadow-2xs">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               <span>AIVES VIVAAI 4.0</span>
             </div>
@@ -173,7 +173,7 @@ export function LoginPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm sm:text-base">Giám Khảo AI Tương Tác</h3>
-                    <p className="text-xs font-medium text-blue-600">Âm học chuẩn hóa • Theo dõi phiên vấn đáp</p>
+                    <p className="text-xs font-medium text-blue-700">Âm học chuẩn hóa • Theo dõi phiên vấn đáp</p>
                   </div>
                 </div>
                 {/* Audio Waveform Animation */}
@@ -291,6 +291,12 @@ export function LoginPage() {
                 <h2 className="text-xl font-bold text-slate-900 tracking-tight">Đăng nhập</h2>
               </div>
 
+              {location.state?.sessionExpired && (
+                <div role="status" className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.
+                </div>
+              )}
+
               {/* SSO Options */}
               <div className="space-y-2">
                 <button
@@ -330,7 +336,7 @@ export function LoginPage() {
               {/* Divider */}
               <div className="relative flex items-center justify-center my-3">
                 <div className="border-t border-slate-200 w-full" />
-                <span className="absolute bg-white px-3 text-[11px] font-bold text-slate-400 tracking-wider">HOẶC</span>
+                <span className="absolute bg-white px-3 text-[11px] font-bold text-slate-600 tracking-wider">HOẶC</span>
               </div>
 
               {/* Login Form */}
@@ -358,7 +364,7 @@ export function LoginPage() {
                     <label htmlFor="academic-email" className="text-xs font-semibold text-slate-700">
                       {activeRole === "student" ? "Email học thuật" : activeRole === "admin" ? "Tài khoản Quản trị viên" : "Email học thuật / Giám khảo"}
                     </label>
-                    <span className="text-[11px] text-slate-400 font-mono">@academia.edu.vn</span>
+                    <span className="text-[11px] text-slate-600 font-mono">@academia.edu.vn</span>
                   </div>
                   <div className="login-input-wrap">
                     <Mail className="input-lead-icon" />

@@ -4,10 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../app/providers/app-providers'
 import { useSession } from '../../app/providers/use-session'
+import { RequireAuth } from '../../app/guards/guards'
 import { WorkspaceLayout } from '../../app/layouts/layouts'
+import { LoginPage } from './login-page'
 import type { AuthenticatedUser } from '../../types/auth'
 import type { AuthAdapter } from './auth-adapter'
 import { developmentAuthAdapter, unavailableAuthAdapter } from './auth-adapter'
+import { apiClient } from '../../services/api/client'
 
 const lecturer: AuthenticatedUser = { id: 'l1', displayName: 'Giảng viên A', roles: ['lecturer'] }
 const adapterFor = (overrides: Partial<AuthAdapter> = {}): AuthAdapter => ({ getSession: async () => lecturer, signIn: async () => lecturer, signOut: async () => {}, ...overrides })
@@ -36,6 +39,22 @@ describe('logout', () => {
     const user = userEvent.setup(); const button = screen.getByRole('button', { name: 'Đăng xuất' }); await user.click(button); expect(await screen.findByRole('button', { name: 'Đang xử lý…' })).toBeDisabled(); await user.click(screen.getByRole('button', { name: 'Đang xử lý…' })); expect(signOut).toHaveBeenCalledTimes(1); resolve?.(); expect(await screen.findByText('Login page')).toBeInTheDocument()
   })
   it('still logs out when the adapter rejects', async () => { const client = new QueryClient(); const adapter = adapterFor({ signOut: async () => { throw new Error('remote unavailable') } }); render(<QueryClientProvider client={client}><SessionProvider initialSession={{ status: 'authenticated', user: lecturer }} adapter={adapter} queryClient={client}><TestSignOut /></SessionProvider></QueryClientProvider>); await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out test' })); await waitFor(() => expect(screen.getByText('unauthenticated')).toBeInTheDocument()) })
+  it('ends an active session after an authenticated API request returns 401', async () => {
+    const signOut = vi.fn(async () => {})
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
+    render(<SessionProvider initialSession={{ status: 'authenticated', user: lecturer }} adapter={adapterFor({ signOut })}><SessionExpiryTrigger /></SessionProvider>)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Trigger expiry' }))
+    await waitFor(() => expect(screen.getByText('unauthenticated')).toBeInTheDocument())
+    expect(screen.getByText('expired')).toBeInTheDocument()
+    expect(signOut).toHaveBeenCalledTimes(1)
+  })
+  it('shows the expiry notice after a protected request returns 401', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
+    render(<SessionProvider initialSession={{ status: 'authenticated', user: lecturer }} adapter={adapterFor()}><MemoryRouter initialEntries={['/lecturer']}><Routes><Route element={<RequireAuth />}><Route path="/lecturer" element={<SessionExpiryTrigger />} /></Route><Route path="/login" element={<LoginPage />} /></Routes></MemoryRouter></SessionProvider>)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Trigger expiry' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Phiên đăng nhập đã hết hạn')
+  })
 })
 
 function TestSignOut() { const { session, signOut } = useSession(); return <><span>{session.status}</span><button onClick={() => void signOut()}>Sign out test</button></> }
+function SessionExpiryTrigger() { const { session, sessionExpired } = useSession(); return <><span>{session.status}</span><span>{sessionExpired ? 'expired' : 'active'}</span><button onClick={() => { void apiClient.request('/api/private').catch(() => undefined) }}>Trigger expiry</button></> }

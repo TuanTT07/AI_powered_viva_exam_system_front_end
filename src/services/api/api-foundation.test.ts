@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ApiError, apiClient, buildApiUrl } from './client'
+import { ApiError, apiClient, buildApiUrl, onApiUnauthorized } from './client'
 import { normalizeApiPage, normalizeSpringPage, unwrapApiEnvelope } from './transport-types'
 import { DEFAULT_API_TIMEOUT_MS, normalizeApiBaseUrl, parseRuntimeConfig } from './runtime-config'
 import { selectRepository } from './repository-selection'
@@ -23,6 +23,17 @@ describe('API client', () => {
   it('handles DELETE 204 and successful empty bodies', async () => { vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 })).mockResolvedValueOnce(new Response('', { status: 200 }))); await expect(apiClient.request('/api/test', { method: 'DELETE' })).resolves.toBeUndefined(); await expect(apiClient.request('/api/empty')).resolves.toBeUndefined() })
   it('normalizes backend errors and field validation', async () => { vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: false, status: 400, message: 'Dữ liệu sai', data: { email: 'Email không hợp lệ' } }), { status: 400, headers: { 'Content-Type': 'application/json' } }))); const error = await apiClient.request('/api/test').catch((value: unknown) => value as ApiError); expect(error).toMatchObject({ status: 400, message: 'Dữ liệu sai', fieldErrors: { email: 'Email không hợp lệ' } }) })
   it.each([404, 409, 500])('preserves HTTP status %s', async (status) => { vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status }))); await expect(apiClient.request('/api/test')).rejects.toMatchObject({ status }) })
+  it('notifies session recovery only for authenticated 401 responses', async () => {
+    const listener = vi.fn()
+    const unsubscribe = onApiUnauthorized(listener)
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response('', { status: 401 }))))
+    await expect(apiClient.request('/api/private')).rejects.toMatchObject({ status: 401 })
+    await expect(apiClient.request('/api/login', { authenticated: false })).rejects.toMatchObject({ status: 401 })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 403 })))
+    await expect(apiClient.request('/api/forbidden')).rejects.toMatchObject({ status: 403 })
+    expect(listener).toHaveBeenCalledTimes(1)
+    unsubscribe()
+  })
   it('normalizes network, timeout and caller cancellation', async () => { vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline'))); await expect(apiClient.request('/api/test')).rejects.toMatchObject({ code: 'NETWORK_ERROR' }); vi.useFakeTimers(); const timeoutFetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true }))); vi.stubGlobal('fetch', timeoutFetch); const timeout = apiClient.request('/api/test', { timeoutMs: 10 }); const timeoutExpectation = expect(timeout).rejects.toMatchObject({ code: 'TIMEOUT' }); await vi.advanceTimersByTimeAsync(10); await timeoutExpectation; vi.useRealTimers(); const controller = new AbortController(); const abortFetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true }))); vi.stubGlobal('fetch', abortFetch); const aborted = apiClient.request('/api/test', { signal: controller.signal }); controller.abort(); await expect(aborted).rejects.toMatchObject({ code: 'ABORTED' }) })
   it('rejects malformed success and error JSON without exposing HTML', async () => { vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response('not-json', { status: 200 })).mockResolvedValueOnce(new Response('<html>proxy error</html>', { status: 502 }))); await expect(apiClient.request('/api/test')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' }); await expect(apiClient.request('/api/test')).rejects.toMatchObject({ status: 502, message: 'Yêu cầu thất bại (502).' }) })
 })
