@@ -104,13 +104,13 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
       )
     },
 
-    async studentResults(attemptId: string) {
+    async studentResults(attemptId: string, signal?: AbortSignal) {
       const res = await client.request<ApiResponse<{
         questionOrder: number
         finalScore: number
         feedback: string | null
         publishedAt: string
-      }[]>>(`/api/v1/student/exams/${encodeURIComponent(attemptId)}/results`)
+      }[]>>(`/api/v1/student/exams/${encodeURIComponent(attemptId)}/results`, signal ? { signal } : undefined)
       return res.data
     },
 
