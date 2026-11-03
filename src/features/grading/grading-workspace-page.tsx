@@ -81,7 +81,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     try {
       await apiEvaluationService.gradeWithAi(attemptId)
       await evalQuery.refetch()
-      setActionMessage('Đã kích hoạt AI chấm điểm thành công từ Backend Dev3!')
+      setActionMessage('Đã kích hoạt AI chấm điểm thành công!')
     } catch (err: unknown) {
       setActionMessage(err instanceof Error ? err.message : 'Không thể kích hoạt AI chấm điểm.')
     } finally {
@@ -112,7 +112,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         finalScore,
         finalizedAt: res.updatedAt ?? new Date().toISOString(),
       })
-      setActionMessage('Đã chốt điểm thành công qua API Backend Dev3!')
+      setActionMessage('Đã chốt điểm thành công!')
       await evalQuery.refetch()
     } catch (err: unknown) {
       setActionMessage(err instanceof Error ? err.message : 'Chốt điểm thất bại.')
@@ -151,7 +151,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
       <GradingWorkspaceView
-        name={candidate?.studentName ?? 'Thí sinh (Đánh giá Dev3)'}
+        name={candidate?.studentName ?? 'Thí sinh'}
         code={candidate?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
         transcript={transcript}
@@ -167,7 +167,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
           <div className="space-y-2">
             {evaluation ? (
               <Alert tone="info">
-                <strong>Kết nối API Dev3:</strong> Điểm AI đề xuất: <strong>{evaluation.aiSuggestedScore ?? '—'} / {evaluation.maxScore}</strong>. Trạng thái: <strong>{evaluation.status}</strong>.
+                <strong>Gợi ý từ AI:</strong> Điểm đề xuất: <strong>{evaluation.aiSuggestedScore ?? '—'} / {evaluation.maxScore}</strong>. Trạng thái: <strong>{evaluation.status}</strong>.
               </Alert>
             ) : (
               <Alert>
@@ -187,7 +187,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
             </Button>
             {!evaluation && (
               <Button variant="outline" disabled={triggering} onClick={handleTriggerAi}>
-                {triggering ? 'Đang gọi AI...' : 'Gọi AI chấm điểm (API Dev3)'}
+                {triggering ? 'Đang gọi AI...' : 'Gọi AI chấm điểm'}
               </Button>
             )}
             <Button
@@ -201,8 +201,8 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       />
 
       {/* Confirm Final Grade Dialog */}
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Xác nhận & Chốt điểm (API Dev3)?">
-        <p>Bạn sẽ chốt điểm chính thức cho câu hỏi này và đồng bộ lên server Backend Dev3.</p>
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Xác nhận chốt điểm?">
+        <p>Bạn có chắc chắn muốn chốt điểm chính thức cho câu hỏi này không?</p>
         <div className="dialog-actions">
           <Button variant="outline" disabled={isFinalizing} onClick={() => setConfirmOpen(false)}>
             Hủy
