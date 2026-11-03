@@ -9,7 +9,7 @@ import { ApiError } from '../../../services/api/client'
 import { useOnline } from '../../../hooks/use-online'
 import type { StudentExamSlot } from '../../exams/api-student-exam-repository'
 import { studentExamPath } from '../../exams/student-exam-navigation'
-import { interviewApi } from '../interview-api'
+import { interviewApi, type InterviewPrompt } from '../interview-api'
 import type { AnswerReceipt } from '../speech-api'
 import type { TranscriptMessageProps } from '../components/TranscriptMessage'
 import { ApiSpeechRoom } from './ApiSpeechRoom'
@@ -43,6 +43,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const online = useOnline()
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
+  const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const key = ['student-interview', userId, slot.attemptId] as const
 
   const appendHistory = useCallback(
@@ -91,6 +92,10 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     }
   }, [snapshot, appendHistory])
 
+  useEffect(() => {
+    if (snapshot?.prompt) setActivePrompt(snapshot.prompt)
+  }, [snapshot?.prompt])
+
   const busyChanged = useCallback((next: boolean) => {
     // Cancel a read before media starts so a late response cannot replace its prompt.
     if (next) void client.cancelQueries({ queryKey: ['student-interview', userId, slot.attemptId] })
@@ -118,13 +123,23 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     <ErrorState description={current.error.message} />
     <Button disabled={!online || current.isFetching} onClick={() => void current.refetch()}>Đồng bộ lại phiên thi</Button>{back}
   </>
+
   if (!snapshot || !current.isFetchedAfterMount) return online ? <LoadingPage label="Đang lấy trạng thái phiên thi" /> : <><ErrorState description="Mất kết nối mạng. Kết nối lại để lấy trạng thái phiên thi." />{back}</>
-  if (snapshot.status === 'AWAITING_ANSWER' && snapshot.prompt) return <ApiSpeechRoom
-    key={`${userId}:${slot.attemptId}:${snapshot.prompt.questionTurnId}`}
-    slot={slot} prompt={snapshot.prompt} userId={userId} name={name}
-    history={history}
-    onBusyChange={busyChanged} onAnswerSaved={answerSaved}
-  />
+  if (snapshot.status !== 'READY' && snapshot.status !== 'COMPLETED' && (snapshot.prompt ?? activePrompt)) {
+    return (
+      <ApiSpeechRoom
+        key={`${userId}:${slot.attemptId}`}
+        slot={slot}
+        prompt={(snapshot.prompt ?? activePrompt)!}
+        userId={userId}
+        name={name}
+        history={history}
+        isProcessing={snapshot.status === 'PROCESSING'}
+        onBusyChange={busyChanged}
+        onAnswerSaved={answerSaved}
+      />
+    )
+  }
 
   const isCompleted = snapshot.status === 'COMPLETED'
   const isReady = snapshot.status === 'READY'

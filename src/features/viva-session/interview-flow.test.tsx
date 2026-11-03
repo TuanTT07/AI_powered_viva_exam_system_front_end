@@ -53,7 +53,11 @@ beforeEach(() => {
     if (deny) throw new ApiError('Không có quyền', { status: 403 })
     if (path.endsWith('/current')) return envelope(server) as never
     if (path.endsWith('/start')) { expect(options?.method).toBe('POST'); server = { attemptId, status: 'AWAITING_ANSWER', prompt }; return envelope(server) as never }
-    if (path.endsWith('/playback')) return envelope({ questionTurnId: turnId, text: prompt.text, ttsProvider: 'browser', language: 'vi-VN' }) as never
+    if (path.endsWith('/playback')) {
+      const match = path.match(/questions\/([^/]+)\/playback/)
+      const currentTurnId = match ? match[1] : turnId
+      return envelope({ questionTurnId: currentTurnId, text: prompt.text, ttsProvider: 'browser', language: 'vi-VN' }) as never
+    }
     if (path.endsWith('/speech/answers/' + answerId)) return envelope({ transcriptTurnId: '88888888-8888-4888-8888-888888888888', text: 'Câu trả lời được lưu trước khi mất kết nối.' }) as never
     if (path.endsWith('/speech-ticket')) return envelope({ ticket: 'test-ticket', expiresAt: new Date(Date.now() + 60_000).toISOString(), websocketPath: '/ws/interview/speech' }) as never
     throw new Error(`Unexpected test transport: ${path}`)
@@ -90,6 +94,9 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     server = { attemptId, status: 'AWAITING_ANSWER', prompt: { ...prompt, questionTurnId: '66666666-6666-4666-8666-666666666666', text: 'Câu hỏi tiếp theo từ hệ thống.' } }
     await view.sync()
     expect((await screen.findAllByText('Câu hỏi tiếp theo từ hệ thống.')).length).toBeGreaterThan(0)
+    // Live WebSocket connection is preserved without closing
+    expect(media.close).not.toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: 'Bắt đầu trả lời' })).toBeInTheDocument()
     server = { attemptId, status: 'COMPLETED', prompt: null }
     await view.sync()
     await screen.findAllByText('Phiên thi đã hoàn tất')

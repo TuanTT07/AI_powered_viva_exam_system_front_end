@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 import { Button } from "../../../components/ui/primitives";
 import { InlineNotice } from "../../../components/common/inline-notice";
 import { UnsavedChangesGuard } from "../../../components/common/unsaved-changes-guard";
@@ -34,6 +35,7 @@ export function ApiSpeechRoom({
   userId,
   name,
   history = [],
+  isProcessing = false,
 }: {
   slot: StudentExamSlot;
   prompt: InterviewPrompt;
@@ -42,9 +44,10 @@ export function ApiSpeechRoom({
   userId: string;
   name: string;
   history?: TranscriptMessageProps[];
+  isProcessing?: boolean;
 }) {
   const questionTurnId = prompt.questionTurnId;
-  const { state, connect, speak, start, stop } = useSpeechAnswer(
+  const { state, connect, speak, start, stop, clearStaleAnswer } = useSpeechAnswer(
     slot.attemptId,
     questionTurnId,
     userId,
@@ -98,8 +101,24 @@ export function ApiSpeechRoom({
       <VivaSessionView
         name={name}
         title={slot.examTitle}
-        question={prompt.text}
-        phase={phases[state.phase]}
+        question={
+          isProcessing ? (
+            <div className="py-6 space-y-2 text-center">
+              <div className="inline-flex p-3 rounded-full bg-blue-50 text-blue-600 animate-spin mb-1">
+                <Sparkles size={22} />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">
+                Giám khảo AI đang xử lý câu trả lời...
+              </h4>
+              <p className="text-xs text-slate-500">
+                Vui lòng chờ hệ thống cấp lượt hỏi tiếp theo hoặc xác nhận hoàn tất.
+              </p>
+            </div>
+          ) : (
+            prompt.text
+          )
+        }
+        phase={isProcessing ? "Hệ thống đang xử lý lượt thi" : phases[state.phase]}
         timer={
           <AnswerCountdown
             key={state.deadline ?? prompt.deadlineAt ?? "none"}
@@ -152,43 +171,62 @@ export function ApiSpeechRoom({
           ) : undefined
         }
         controls={
-          <>
-            {retry && (
-              <Button disabled={!online} onClick={() => { onBusyChange(true); void connect(); }}>
-                {state.answerId
-                  ? "Kiểm tra câu trả lời đã lưu"
-                  : state.phase === "idle"
-                    ? "Kết nối speech"
-                    : "Kết nối lại"}
-              </Button>
-            )}
-            {state.phase === "ready" && (
-              <>
-                <Button
-                  variant="outline"
-                  disabled={!online}
-                  onClick={() => { onBusyChange(true); void speak(); }}
-                >
-                  Đọc câu hỏi
-                </Button>
-                <Button disabled={!online} onClick={() => { onBusyChange(true); void start(); }}>
-                  Bắt đầu trả lời
-                </Button>
-              </>
-            )}
-            {state.phase === "recording" && (
-              <Button onClick={() => void stop()}>Kết thúc câu trả lời</Button>
-            )}
-            {["connecting", "starting", "finalizing", "checking"].includes(
-              state.phase,
-            ) && <Button disabled>{phases[state.phase]}…</Button>}
-            <Link
-              className="button outline"
-              to={studentExamPath(slot.examId, slot.attemptId)}
-            >
-              Về ca thi
-            </Link>
-          </>
+          isProcessing ? (
+            <>
+              <Button disabled>Đang chờ hệ thống…</Button>
+              <Link
+                className="button outline"
+                to={studentExamPath(slot.examId, slot.attemptId)}
+              >
+                Về ca thi
+              </Link>
+            </>
+          ) : (
+            <>
+              {retry && (
+                <>
+                  <Button disabled={!online} onClick={() => { onBusyChange(true); void connect(); }}>
+                    {state.answerId
+                      ? "Kiểm tra câu trả lời đã lưu"
+                      : state.phase === "idle"
+                        ? "Kết nối speech"
+                        : "Kết nối lại"}
+                  </Button>
+                  {state.answerId && (
+                    <Button variant="outline" onClick={clearStaleAnswer}>
+                      Bỏ qua &amp; thu lại
+                    </Button>
+                  )}
+                </>
+              )}
+              {state.phase === "ready" && (
+                <>
+                  <Button
+                    variant="outline"
+                    disabled={!online}
+                    onClick={() => { onBusyChange(true); void speak(); }}
+                  >
+                    Đọc câu hỏi
+                  </Button>
+                  <Button disabled={!online} onClick={() => { onBusyChange(true); void start(); }}>
+                    Bắt đầu trả lời
+                  </Button>
+                </>
+              )}
+              {state.phase === "recording" && (
+                <Button onClick={() => void stop()}>Kết thúc câu trả lời</Button>
+              )}
+              {["connecting", "starting", "finalizing", "checking"].includes(
+                state.phase,
+              ) && <Button disabled>{phases[state.phase]}…</Button>}
+              <Link
+                className="button outline"
+                to={studentExamPath(slot.examId, slot.attemptId)}
+              >
+                Về ca thi
+              </Link>
+            </>
+          )
         }
       />
     </>

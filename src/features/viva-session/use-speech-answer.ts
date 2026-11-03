@@ -40,6 +40,8 @@ export function useSpeechAnswer(
   const endRequest = useRef<string | null>(null);
   const serverFinalizing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const turnIdRef = useRef(turnId);
+  turnIdRef.current = turnId;
   const key = `aives-speech:${userId}:${attemptId}:${turnId}`;
 
   const release = useCallback(() => {
@@ -70,10 +72,18 @@ export function useSpeechAnswer(
       capture.current?.cancel();
       capture.current = null;
       dispatch({ type: "SAVED", answerId, receipt });
-      socket.current?.close();
-      socket.current = null;
+      // Keep socket.current open across questions; ping heartbeat maintains the connection
+      pending.current = null;
+      startRequest.current = null;
+      endRequest.current = null;
+      serverFinalizing.current = false;
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        // Ignore storage errors
+      }
     },
-    [dispatch],
+    [dispatch, key],
   );
   const lookup = useCallback(
     async (answerId: string, signal: AbortSignal) => {
@@ -102,7 +112,7 @@ export function useSpeechAnswer(
         case "answer.started": {
           if (
             event.requestId !== startRequest.current ||
-            data.questionTurnId !== turnId ||
+            data.questionTurnId !== turnIdRef.current ||
             getPhase() !== "starting"
           )
             return;
@@ -224,10 +234,23 @@ export function useSpeechAnswer(
         "finalizing",
         "checking",
         "speaking",
-        "saved",
       ].includes(phase)
     )
       return;
+
+    // If socket is already open and ready, reuse it and only fetch question playback
+    if (socket.current) {
+      dispatch({ type: "CONNECT" });
+      try {
+        const question = await speechApi.playback(attemptId, turnId);
+        dispatch({ type: "READY", question });
+        return;
+      } catch (error) {
+        fail(error instanceof Error ? error.message : "Không thể lấy nội dung câu hỏi.");
+        return;
+      }
+    }
+
     release();
     const id = ++generation.current;
     const abort = new AbortController();
@@ -431,5 +454,48 @@ export function useSpeechAnswer(
     };
   }, [fail, dispose]);
 
-  return { state, connect, speak, start, stop };
+  const previousTurnId = useRef(turnId);
+  useEffect(() => {
+    if (previousTurnId.current === turnId) return;
+    previousTurnId.current = turnId;
+
+    // Reset turn-specific state
+    pending.current = null;
+    startRequest.current = null;
+    endRequest.current = null;
+    serverFinalizing.current = false;
+    clearTimeout(timer.current);
+
+    // If socket is already open and ready, smoothly transition to the new turn
+    if (socket.current && active) {
+      const abort = new AbortController();
+      controller.current = abort;
+      void (async () => {
+        try {
+          const question = await speechApi.playback(attemptId, turnId, abort.signal);
+          if (!abort.signal.aborted) {
+            dispatch({ type: "RESET_TURN", question });
+          }
+        } catch (error) {
+          if (!abort.signal.aborted) {
+            fail(error instanceof Error ? error.message : "Không thể tải câu hỏi tiếp theo.");
+          }
+        }
+      })();
+    } else {
+      dispatch({ type: "RESET_TURN" });
+    }
+  }, [attemptId, turnId, active, dispatch, fail]);
+
+  const clearStaleAnswer = useCallback(() => {
+    pending.current = null;
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // Ignore
+    }
+    dispatch({ type: "CLEAR_STALE_ANSWER" });
+  }, [key, dispatch]);
+
+  return { state, connect, speak, start, stop, clearStaleAnswer };
 }

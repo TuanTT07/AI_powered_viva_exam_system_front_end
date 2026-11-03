@@ -42,6 +42,14 @@ const formatTime = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+// <input type="datetime-local"> expects local time without timezone. Slicing the UTC ISO string
+// shifted the time by the browser offset (7h in Vietnam) and pushed it outside the exam window.
+const toLocalInput = (value: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 export function ExamSchedulingPage() {
   if (runtimeConfig.dataSource === "api") return <ApiExamSchedulingPage />;
   return <MockExamSchedulingPage />;
@@ -384,6 +392,7 @@ function MockExamSchedulingPage() {
 function ApiExamSchedulingPage() {
   const { examId = "" } = useParams();
   const validExamId = isExamUuid(examId) ? examId : undefined;
+  const exam = useExam(validExamId);
   const schedule = useApiExamSchedule(validExamId);
   const assign = useAssignApiCandidates();
   const auto = useAutoScheduleApiExam();
@@ -489,19 +498,83 @@ function ApiExamSchedulingPage() {
           Về danh sách kỳ thi
         </Link>
       </header>
+      <section className="schedule-summary" aria-label="Thông tin kỳ thi">
+        <div>
+          <span>Kỳ thi</span>
+          <strong>{exam.data?.title ?? examId}</strong>
+        </div>
+        <div>
+          <span>Giờ bắt đầu ca đầu tiên</span>
+          <strong>
+            {exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt"}
+          </strong>
+        </div>
+        <div>
+          <span>Sinh viên đã thêm</span>
+          <strong>{slots.length}</strong>
+        </div>
+      </section>
       <Alert tone="info">
-        Bạn có thể thêm sinh viên rồi tạo lịch theo thời lượng và thời gian nghỉ.
+        <strong>Cách xếp lịch gồm 3 bước:</strong>
+        <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
+          <li>
+            <strong>Thêm sinh viên</strong>: dán ID sinh viên rồi bấm “Gán ứng viên”.
+          </li>
+          <li>
+            <strong>Tự động xếp lịch</strong>: hệ thống chia ca nối tiếp, bắt đầu từ giờ
+            bắt đầu của kỳ thi ở trên.
+          </li>
+          <li>
+            <strong>Đổi ca</strong> (nếu cần): chỉnh giờ từng sinh viên ở bảng bên dưới.
+            Giờ mới phải nằm trong khung thời gian của kỳ thi.
+          </li>
+        </ol>
       </Alert>
       <section className="schedule-config">
-        <h2>Thêm sinh viên</h2>
+        <h2>Bước 1 · Thêm sinh viên</h2>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const demoIds = runtimeConfig.demoCandidateIds.length
+                ? runtimeConfig.demoCandidateIds
+                : [
+                    "a1fe2001-0000-4000-8000-000000000001",
+                    "a1fe2001-0000-4000-8000-000000000002",
+                    "a1fe2001-0000-4000-8000-000000000003",
+                  ];
+              setStudentIds(demoIds.join("\n"));
+            }}
+          >
+            Chèn nhanh sinh viên mẫu
+          </Button>
+          {slots.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const existingIds = [...new Set(slots.map((s) => s.studentId))];
+                setStudentIds(existingIds.join("\n"));
+              }}
+            >
+              Lấy lại {slots.length} sinh viên đã có trong ca
+            </Button>
+          )}
+        </div>
         <label>
-          Mã sinh viên (ngăn cách bằng dấu phẩy hoặc dòng mới)
+          ID sinh viên (ngăn cách bằng dấu phẩy hoặc xuống dòng)
           <textarea
             value={studentIds}
             onChange={(event) => setStudentIds(event.target.value)}
             placeholder="11111111-1111-4111-8111-111111111111"
           />
         </label>
+        <p className="form-help">
+          {ids.length
+            ? `Đã nhập ${ids.length} ID sinh viên.`
+            : "Nhập ít nhất 1 ID sinh viên để bật nút “Gán ứng viên”."}
+        </p>
         <Button
           pending={assign.isPending}
           disabled={!ids.length}
@@ -517,14 +590,18 @@ function ApiExamSchedulingPage() {
           </Alert>
         )}
         {assign.data && (
-          <Alert tone="success">Đã gửi yêu cầu gán ứng viên thành công.</Alert>
+          <Alert tone="success">Đã gán sinh viên thành công. Chuyển sang Bước 2.</Alert>
         )}
       </section>
       <section className="schedule-config">
-        <h2>Tự động xếp lịch</h2>
+        <h2>Bước 2 · Tự động xếp lịch</h2>
+        <div style={{ padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px", fontSize: "13px" }}>
+          <div><strong>Mốc thời gian kỳ thi:</strong> {exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt lịch"} {exam.data?.durationMinutes ? `(Thời lượng toàn kỳ thi: ${exam.data.durationMinutes} phút)` : ""}</div>
+          <div style={{ color: "#64748b", marginTop: "4px" }}>Hệ thống backend tự động chia ca nối tiếp bắt đầu từ mốc thời gian trên, mỗi ca {slotDuration || 15} phút + {breakMinutes || 5} phút nghỉ.</div>
+        </div>
         <div className="schedule-config-grid">
           <label>
-            Thời lượng slot (phút)
+            Thời lượng mỗi sinh viên (phút)
             <Input
               min={5}
               type="number"
@@ -533,7 +610,7 @@ function ApiExamSchedulingPage() {
             />
           </label>
           <label>
-            Thời gian nghỉ (phút)
+            Thời gian nghỉ giữa các ca (phút)
             <Input
               min={0}
               type="number"
@@ -542,7 +619,11 @@ function ApiExamSchedulingPage() {
             />
           </label>
         </div>
-        <p>Lịch sẽ được tạo từ các sinh viên đã thêm.</p>
+        <p className="form-help">
+          {assignedIds.length
+            ? `Sẽ xếp lịch cho ${assignedIds.length} sinh viên, mỗi người ${slotDuration || 0} phút, nghỉ ${breakMinutes || 0} phút, bắt đầu từ ${exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "giờ bắt đầu của kỳ thi"}.`
+            : "Chưa có sinh viên nào. Hãy hoàn thành Bước 1 trước thì nút bên dưới mới dùng được."}
+        </p>
         <Button
           pending={auto.isPending}
           disabled={!assignedIds.length}
@@ -562,7 +643,9 @@ function ApiExamSchedulingPage() {
         )}
       </section>
       <section className="schedule-status">
-        <strong>{slots.length} slot</strong>
+        <strong>Bước 3 · Lịch đã xếp:</strong>
+        <span> </span>
+        <strong>{slots.length} ca</strong>
         <span> · </span>
         <strong>
           {
@@ -608,8 +691,8 @@ function ApiExamSchedulingPage() {
                       variant="outline"
                       onClick={() => {
                         setSelected(slot);
-                        setNewStart(slot.scheduledStartTime.slice(0, 16));
-                        setNewEnd(slot.scheduledEndTime.slice(0, 16));
+                        setNewStart(toLocalInput(slot.scheduledStartTime));
+                        setNewEnd(toLocalInput(slot.scheduledEndTime));
                       }}
                     >
                       Đổi ca
@@ -636,6 +719,16 @@ function ApiExamSchedulingPage() {
         <p>
           Thay đổi lịch cho <strong>{selected?.studentName}</strong>.
         </p>
+        <p className="form-help">
+          Giờ mới phải nằm trong khung thời gian của kỳ thi
+          {exam.data?.scheduledAt
+            ? ` (bắt đầu từ ${formatTime(exam.data.scheduledAt)})`
+            : ""}
+          . Nếu hệ thống báo lỗi, hãy chọn giờ gần với giờ hiện tại của ca.
+        </p>
+        {newStart && newEnd && new Date(newEnd) <= new Date(newStart) && (
+          <Alert tone="danger">Giờ kết thúc phải sau giờ bắt đầu.</Alert>
+        )}
         <label>
           Bắt đầu mới
           <Input

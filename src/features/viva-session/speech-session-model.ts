@@ -53,7 +53,9 @@ export type SpeechAction =
       message: string;
       disconnected?: boolean;
       clearAnswer?: boolean;
-    };
+    }
+  | { type: "RESET_TURN"; question?: QuestionPlayback }
+  | { type: "CLEAR_STALE_ANSWER" };
 export function speechReducer(
   state: SpeechState,
   action: SpeechAction,
@@ -148,6 +150,27 @@ export function speechReducer(
               ? { answerId: null, deadline: null, segments: {} }
               : {}),
           };
+    case "RESET_TURN":
+      return {
+        ...state,
+        phase: action.question ? "ready" : "idle",
+        question: action.question ?? state.question,
+        answerId: null,
+        deadline: null,
+        segments: {},
+        receipt: null,
+        error: null,
+      };
+    case "CLEAR_STALE_ANSWER":
+      return {
+        ...state,
+        phase: "idle",
+        answerId: null,
+        deadline: null,
+        segments: {},
+        receipt: null,
+        error: null,
+      };
   }
 }
 export function speechDraft(state: SpeechState): string {
