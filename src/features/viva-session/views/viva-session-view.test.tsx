@@ -83,5 +83,66 @@ describe('VivaSessionView audio waveform and completion behavior', () => {
     expect(screen.queryByText('Sẵn sàng trả lời')).not.toBeInTheDocument()
     expect(screen.getByText(/Phiên thi đã kết thúc và câu trả lời của bạn đã được hệ thống ghi nhận/i)).toBeInTheDocument()
   })
+
+  it('marks question 1 as active and NOT completed when student first enters the room', () => {
+    render(
+      <VivaSessionView
+        name="Nguyễn Văn A"
+        title="Thi vấn đáp"
+        phase="Sẵn sàng trả lời"
+        timer="15:00"
+        progress="1/3 câu"
+        currentStep={1}
+        totalSteps={3}
+        transcript={[]}
+        notice={null}
+        controls={<button type="button">Bắt đầu trả lời</button>}
+        connection="Đã kết nối máy chủ"
+        isRecording={false}
+      />
+    )
+
+    expect(screen.getByText('Câu hỏi (Câu 1/3)')).toBeInTheDocument()
+    expect(screen.getByText('1/3 câu')).toBeInTheDocument()
+
+    // Question 1 should be active ("Đang trả lời"), not completed
+    expect(screen.getByText('Đang trả lời')).toBeInTheDocument()
+    expect(screen.queryByText('Đã hoàn thành')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Chưa diễn ra')).toHaveLength(2)
+  })
+
+  it('dynamically displays more than 3 questions when exam has 5 questions', () => {
+    render(
+      <VivaSessionView
+        name="Nguyễn Văn A"
+        title="Thi vấn đáp nâng cao"
+        phase="Đang trả lời"
+        timer="10:00"
+        progress="4/5 câu"
+        currentStep={4}
+        totalSteps={5}
+        transcript={[]}
+        notice={null}
+        controls={<button type="button">Xác nhận</button>}
+        connection="Đã kết nối máy chủ"
+        isRecording={false}
+      />
+    )
+
+    expect(screen.getByText('Câu hỏi (Câu 4/5)')).toBeInTheDocument()
+    expect(screen.getByText('4/5 câu')).toBeInTheDocument()
+
+    // Questions 1 to 5 should all be rendered
+    expect(screen.getByText('Câu 1')).toBeInTheDocument()
+    expect(screen.getByText('Câu 2')).toBeInTheDocument()
+    expect(screen.getByText('Câu 3')).toBeInTheDocument()
+    expect(screen.getByText('Câu 4')).toBeInTheDocument()
+    expect(screen.getByText('Câu 5')).toBeInTheDocument()
+
+    // 3 completed, 1 active, 1 upcoming
+    expect(screen.getAllByText('Đã hoàn thành')).toHaveLength(3)
+    expect(screen.getAllByText('Đang trả lời').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Chưa diễn ra')).toBeInTheDocument()
+  })
 })
 

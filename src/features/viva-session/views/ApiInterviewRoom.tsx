@@ -220,10 +220,23 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </div>
   ) : undefined
 
-  const totalSteps = slot.examConfig?.maxMainQuestions ?? 3
+  const answeredCount = history.filter((h) => h.role === 'student').length
+  const aiQuestionsCount = Math.max(
+    history.filter((h) => h.role === 'ai').length,
+    activePrompt ? 1 : 0
+  )
+  const configuredMax =
+    slot.examConfig?.maxMainQuestions ??
+    (slot as any).examConfig?.questionCount ??
+    (slot as any).mainQuestionCount ??
+    (slot as any).questionCount ??
+    (slot as any).maxQuestions ??
+    (slot as any).totalQuestions ??
+    3
+  const totalSteps = Math.max(configuredMax, answeredCount, aiQuestionsCount, 1)
   const currentStep = isCompleted
     ? totalSteps
-    : Math.min(totalSteps, Math.max(1, (history.filter((h) => h.role === 'ai').length || 0) + 1))
+    : Math.max(1, answeredCount + 1)
   const startTimeFormatted = slot.scheduledStartTime
     ? new Date(slot.scheduledStartTime).toLocaleString('vi-VN', {
         hour: '2-digit',

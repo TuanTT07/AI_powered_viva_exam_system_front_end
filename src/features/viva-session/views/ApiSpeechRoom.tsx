@@ -108,8 +108,31 @@ export function ApiSpeechRoom({
   }, [state.phase, state.receipt, onAnswerSaved]);
   const retry = ["idle", "disconnected", "error"].includes(state.phase);
 
-  const totalSteps = slot.examConfig?.maxMainQuestions ?? 3;
-  const currentStep = Math.min(totalSteps, Math.max(1, (history.filter((h) => h.role === "ai").length || 0) + 1));
+  const answeredCount =
+    history.filter((h) => h.role === "student").length +
+    (state.receipt &&
+    !history.some(
+      (h) =>
+        h.role === "student" &&
+        (h.id === state.receipt?.transcriptTurnId || h.text === state.receipt?.text)
+    )
+      ? 1
+      : 0);
+  const currentStep = Math.max(1, answeredCount + 1);
+  const aiQuestionsCount = Math.max(
+    history.filter((h) => h.role === "ai").length,
+    transcript.filter((h) => h.role === "ai").length,
+    1
+  );
+  const configuredMax =
+    slot.examConfig?.maxMainQuestions ??
+    (slot as any).examConfig?.questionCount ??
+    (slot as any).mainQuestionCount ??
+    (slot as any).questionCount ??
+    (slot as any).maxQuestions ??
+    (slot as any).totalQuestions ??
+    3;
+  const totalSteps = Math.max(configuredMax, currentStep, aiQuestionsCount);
   const startTimeFormatted = slot.scheduledStartTime
     ? new Date(slot.scheduledStartTime).toLocaleString("vi-VN", {
         hour: "2-digit",
