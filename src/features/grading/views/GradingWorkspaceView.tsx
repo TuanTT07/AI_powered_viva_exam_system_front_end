@@ -1,19 +1,13 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import {
   FileText,
-  Mic,
   ShieldCheck,
   Sparkles,
-  Volume2,
   Bot,
   User,
   Clock,
   HelpCircle,
   AlertTriangle,
-  AlertCircle,
-  Play,
-  Pause,
 } from 'lucide-react'
 import { Button } from '../../../components/ui/primitives'
 import type { CriterionReview, EvidenceLine } from '../grading-types'
@@ -38,7 +32,6 @@ export function GradingWorkspaceView({
   actions,
   demo = false,
   status = 'COMPLETED',
-  audioUrl,
 }: {
   name: string
   code: string
@@ -55,10 +48,7 @@ export function GradingWorkspaceView({
   actions: ReactNode
   demo?: boolean
   status?: string
-  audioUrl?: string | null
 }) {
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
-  const [previewSampleAudio, setPreviewSampleAudio] = useState(false)
   const total = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0)
   const aiTotal = criteria.reduce((sum, c) => sum + c.ai, 0)
 
@@ -226,88 +216,6 @@ export function GradingWorkspaceView({
               </p>
             </section>
 
-            {/* Audio Recording Evidence */}
-            <section className={panel}>
-              <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                <Mic size={16} className="text-emerald-600" /> Bằng chứng ghi âm
-              </h2>
-              {audioUrl ? (
-                <div className="space-y-3">
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-700">Bản ghi âm buổi thi</span>
-                      <Volume2 size={16} className="text-slate-400" />
-                    </div>
-                    <audio controls className="w-full h-8" src={audioUrl}>
-                      Trình duyệt không hỗ trợ phát audio.
-                    </audio>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Bản ghi âm chính thức từ phòng thi được lưu trữ bảo mật.
-                  </p>
-                </div>
-              ) : demo ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsPlayingAudio(!isPlayingAudio)}
-                        aria-label={isPlayingAudio ? 'Tạm dừng audio' : 'Phát audio'}
-                      >
-                        {isPlayingAudio ? <Pause size={14} /> : <Play size={14} />}
-                      </Button>
-                      <div className="text-xs">
-                        <p className="font-semibold text-slate-700">audio_session_rec.wav</p>
-                        <p className="text-[10px] text-slate-500">01:12 / 05:00</p>
-                      </div>
-                    </div>
-                    <Volume2 size={16} className="text-slate-400" />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Ghi âm hai chiều giữa Giám khảo AI và Thí sinh được lưu vết đầy đủ.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 space-y-1.5">
-                    <p className="font-medium flex items-center gap-1.5 text-slate-700">
-                      <AlertCircle size={14} className="text-amber-500 shrink-0" /> Chưa có file âm thanh thực tế từ phòng thi
-                    </p>
-                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                      API Backend trả về <code>audioUrl: null</code> vì ca thi thử nghiệm này chưa có file ghi âm micro tải lên kho lưu trữ máy chủ.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" disabled>
-                      <Mic size={14} /> Bản ghi chính thức (Trống)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setPreviewSampleAudio(!previewSampleAudio)}
-                    >
-                      <Volume2 size={14} /> {previewSampleAudio ? 'Đóng audio mẫu' : 'Nghe thử audio mẫu'}
-                    </Button>
-                  </div>
-                  {previewSampleAudio && (
-                    <div className="bg-blue-50/60 p-3 rounded-lg border border-blue-200 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-blue-900">Audio mẫu kiểm thử (Sample Demo)</span>
-                        <Volume2 size={16} className="text-blue-500" />
-                      </div>
-                      <audio controls className="w-full h-8" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">
-                        Trình duyệt không hỗ trợ phát audio.
-                      </audio>
-                      <p className="text-[10px] text-blue-600">
-                        File âm thanh mẫu dùng để kiểm tra trình phát của giao diện chấm thi.
-                      </p>
-                    </div>
-                  )}
-                </div>
-                </>
-              )}
-            </section>
           </aside>
 
           {/* Column 2: Dialogue Transcript */}

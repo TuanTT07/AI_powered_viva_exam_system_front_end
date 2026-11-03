@@ -155,7 +155,6 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         code={candidate?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
         transcript={transcript}
-        audioUrl={evaluation?.audioUrl}
         criteria={criteria}
         scores={scores}
         notes={notes}
