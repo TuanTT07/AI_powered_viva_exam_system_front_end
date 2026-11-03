@@ -106,6 +106,11 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
             <p className="text-sm font-medium text-slate-700">
               {device.mic === 'passed' ? 'Đã nhận tín hiệu giọng nói' : 'Nói thử một câu bất kỳ để thử mic'}
             </p>
+            {device.mic === 'passed' && (
+              <p className="text-xs text-emerald-700 font-medium">
+                Micro của bạn hoạt động tốt. Hãy tiếp tục kiểm tra Loa/Tai nghe ở cột bên phải.
+              </p>
+            )}
             <div className="w-full max-w-xs">
               <meter
                 className="block h-3 w-full [&::-webkit-meter-bar]:rounded-full [&::-webkit-meter-bar]:border-0 [&::-webkit-meter-bar]:bg-slate-200 [&::-webkit-meter-optimum-value]:bg-blue-600 [&::-moz-meter-bar]:bg-blue-600"
@@ -181,7 +186,7 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
             </div>
             {device.speaker === 'confirm' ? (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-700">Bạn có nghe thấy âm thanh thử nghiệm không?</p>
+                <p className="text-sm font-medium text-slate-700">Bạn có nghe thấy chuông thử nghiệm vừa phát không?</p>
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button onClick={device.confirmSpeaker} className="min-h-10">
                     Nghe rõ
@@ -195,7 +200,7 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
               <p className="text-sm font-medium text-slate-700">
                 {device.speaker === 'passed'
                   ? 'Đã xác nhận nghe rõ âm thanh'
-                  : 'Phát âm thử để kiểm tra loa hoặc tai nghe'}
+                  : 'Bấm "Phát âm thử" bên dưới để kiểm tra loa hoặc tai nghe'}
               </p>
             )}
           </div>
@@ -211,7 +216,7 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
               className="min-h-11"
             >
               <Volume2 size={15} aria-hidden="true" />
-              <span>{device.speaker === 'playing' ? 'Đang phát…' : 'Phát âm thử'}</span>
+              <span>{device.speaker === 'playing' ? 'Đang phát…' : device.speaker === 'confirm' ? 'Phát lại âm thử' : 'Phát âm thử'}</span>
             </Button>
           </div>
         </section>

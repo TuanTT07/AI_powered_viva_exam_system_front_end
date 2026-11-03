@@ -64,9 +64,9 @@ export function useDeviceCheck() {
       if (!alive.current) return
       const oscillator = audio.createOscillator(), gain = audio.createGain()
       oscillator.connect(gain); gain.connect(audio.destination)
-      oscillator.frequency.value = 440; gain.gain.value = 0.08
+      oscillator.frequency.value = 523.25; gain.gain.value = 0.25
       oscillator.onended = () => { if (alive.current) setSpeaker('confirm'); void audio.close().catch(() => {}) }
-      oscillator.start(); oscillator.stop(audio.currentTime + 0.5)
+      oscillator.start(); oscillator.stop(audio.currentTime + 0.8)
     } catch { if (alive.current) setSpeaker('error') }
   }
   return { mic, speaker, volume, error, startMic, testSpeaker, confirmSpeaker: () => setSpeaker('passed'), rejectSpeaker: () => setSpeaker('error'), stop: releaseMic }
