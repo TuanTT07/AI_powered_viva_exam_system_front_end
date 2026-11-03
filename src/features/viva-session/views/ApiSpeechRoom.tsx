@@ -118,18 +118,18 @@ export function ApiSpeechRoom({
         month: "2-digit",
         year: "numeric",
       })
-    : "10:00, 20/01/2025";
+    : "—";
   const durationFormatted =
     slot.scheduledStartTime && slot.scheduledEndTime
       ? `${Math.round((Date.parse(slot.scheduledEndTime) - Date.parse(slot.scheduledStartTime)) / 60000)} phút`
-      : "30 phút";
+      : "—";
   const slotCodeFormatted =
     slot.accessCode ||
     (slot.courseCode
       ? `${slot.courseCode}-${String(slot.slotNumber ?? 1).padStart(3, "0")}`
       : slot.slotNumber
         ? `AIVES-CA-${slot.slotNumber}`
-        : "AIVES-JAVA-001");
+        : "—");
 
   return (
     <>
@@ -137,7 +137,7 @@ export function ApiSpeechRoom({
       <VivaSessionView
         name={name}
         title={slot.examTitle}
-        courseName={slot.courseName || slot.examTitle || "Lập trình Java"}
+        courseName={slot.courseName || slot.examTitle || "—"}
         slotCode={slotCodeFormatted}
         startTime={startTimeFormatted}
         duration={durationFormatted}
@@ -145,6 +145,7 @@ export function ApiSpeechRoom({
         totalSteps={totalSteps}
         isRecording={state.phase === "recording"}
         isAiSpeaking={state.phase === "speaking"}
+        isProcessing={isProcessing}
         question={
           isProcessing ? (
             <div className="py-6 space-y-2 text-center">
