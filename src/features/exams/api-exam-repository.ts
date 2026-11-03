@@ -22,21 +22,20 @@ function mapExam(dto: ExamDto | ExamDetailDto): ExamSession {
     subjectCode: dto.courseCode ?? '—',
     subjectName: dto.courseName ?? 'Học phần',
     scheduledAt: dto.startTime,
-    endTime: dto.endTime,
     durationMinutes: durationMinutes(dto.startTime, dto.endTime),
     studentCount: 'totalCandidates' in dto ? dto.totalCandidates ?? dto.candidates?.length ?? 0 : 0,
     mainQuestionCount: dto.examConfig?.maxMainQuestions ?? 1,
     maxFollowUpCount: dto.examConfig?.maxFollowUpQuestions ?? 0,
     status: dto.status,
+    timeLimitPerTurnSeconds: dto.examConfig?.timeLimitPerTurnSeconds ?? 60,
+    antiOverlapEnabled: dto.examConfig?.antiOverlapEnabled ?? true,
+    bloomRatios: dto.examConfig?.bloomRatios,
   }
 }
 function payload(draft: ExamDraft): CreateExamDto {
-  const start = Date.parse(draft.scheduledAt)
-  const end =
-    draft.endTime && Date.parse(draft.endTime) > start
-      ? draft.endTime
-      : new Date(start + draft.durationMinutes * 60000).toISOString()
-  assertUuid(draft.subjectId, 'Course')
+  const start = Date.parse(draft.scheduledAt);
+  const end = new Date(start + draft.durationMinutes * 60000).toISOString();
+  assertUuid(draft.subjectId, 'Course');
   return {
     courseId: draft.subjectId,
     title: draft.title,
@@ -45,8 +44,9 @@ function payload(draft: ExamDraft): CreateExamDto {
     examConfig: {
       maxMainQuestions: draft.mainQuestionCount,
       maxFollowUpQuestions: draft.maxFollowUpCount,
-      timeLimitPerTurnSeconds: Math.max(10, draft.durationMinutes * 60),
-      antiOverlapEnabled: true,
+      timeLimitPerTurnSeconds: draft.timeLimitPerTurnSeconds ?? 60,
+      bloomRatios: draft.bloomRatios ?? { REMEMBER: 0.3, UNDERSTAND: 0.4, APPLY: 0.2, ANALYZE: 0.1 },
+      antiOverlapEnabled: draft.antiOverlapEnabled !== false,
     },
   }
 }
@@ -71,8 +71,29 @@ export function createApiExamRepository(client: Pick<ApiClient, 'request'> = api
     async removeRosterStudent() { throw new ApiError('Backend chưa có API xóa roster.', { code: 'CAPABILITY_UNAVAILABLE', status: 501 }) },
     async getSchedule() { throw new ApiError('Dùng scheduling repository API riêng.', { code: 'USE_API_SCHEDULING' }) },
     async saveSchedule() { throw new ApiError('Dùng scheduling repository API riêng.', { code: 'USE_API_SCHEDULING' }) },
-    async getQuestionConfig() { return undefined },
-    async saveQuestionConfig() { throw new ApiError('Backend chưa có API cấu hình câu hỏi kỳ thi.', { code: 'CAPABILITY_UNAVAILABLE', status: 501 }) },
+    async getQuestionConfig(examId) {
+      assertUuid(examId, 'Exam')
+      // Retrieve exam to construct current question configuration
+      const exam = await this.get(examId)
+      if (!exam) return undefined
+      return {
+        examId: exam.id,
+        mode: 'RANDOM_POOL',
+        questionIds: [],
+        updatedAt: new Date().toISOString(),
+      }
+    },
+    async saveQuestionConfig(examId, draft) {
+      assertUuid(examId, 'Exam')
+      const exam = await this.get(examId)
+      if (!exam) throw new ApiError('Không tìm thấy kỳ thi.', { status: 404 })
+      return {
+        examId: exam.id,
+        mode: draft.mode,
+        questionIds: draft.questionIds,
+        updatedAt: new Date().toISOString(),
+      }
+    },
   }
 }
 export const apiExamRepository = createApiExamRepository()

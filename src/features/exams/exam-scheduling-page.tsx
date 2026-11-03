@@ -19,8 +19,6 @@ import {
   useAssignApiCandidates,
   useAutoScheduleApiExam,
   useRescheduleApiExam,
-  useUpdateExam,
-  useResetExamAttempt,
 } from "./exam-hooks";
 import { examStatusMeta } from "./exam-types";
 import { examRoutes } from "./exam-routes";
@@ -44,14 +42,6 @@ const formatTime = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
-// <input type="datetime-local"> expects local time without timezone. Slicing the UTC ISO string
-// shifted the time by the browser offset (7h in Vietnam) and pushed it outside the exam window.
-const toLocalInput = (value: string) => {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
 export function ExamSchedulingPage() {
   if (runtimeConfig.dataSource === "api") return <ApiExamSchedulingPage />;
   return <MockExamSchedulingPage />;
@@ -394,14 +384,10 @@ function MockExamSchedulingPage() {
 function ApiExamSchedulingPage() {
   const { examId = "" } = useParams();
   const validExamId = isExamUuid(examId) ? examId : undefined;
-  const exam = useExam(validExamId);
   const schedule = useApiExamSchedule(validExamId);
   const assign = useAssignApiCandidates();
   const auto = useAutoScheduleApiExam();
   const reschedule = useRescheduleApiExam();
-  const updateExam = useUpdateExam();
-  const resetAttempt = useResetExamAttempt();
-  const [resetMessage, setResetMessage] = useState("");
   const [studentIds, setStudentIds] = useState(
     runtimeConfig.demoCandidateIds.join("\n"),
   );
@@ -410,66 +396,6 @@ function ApiExamSchedulingPage() {
   const [selected, setSelected] = useState<CandidateScheduleDto | null>(null);
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
-  const [isEditingExamWindow, setIsEditingExamWindow] = useState(false);
-  const [examStartInput, setExamStartInput] = useState("");
-  const [examEndInput, setExamEndInput] = useState("");
-  const [examWindowError, setExamWindowError] = useState("");
-
-  const openExamWindowEditor = () => {
-    if (exam.data?.scheduledAt) {
-      setExamStartInput(toLocalInput(exam.data.scheduledAt));
-    }
-    if (exam.data?.endTime) {
-      setExamEndInput(toLocalInput(exam.data.endTime));
-    } else if (exam.data?.scheduledAt) {
-      const defaultEnd = new Date(Date.parse(exam.data.scheduledAt) + 4 * 60 * 60 * 1000);
-      setExamEndInput(toLocalInput(defaultEnd.toISOString()));
-    }
-    setExamWindowError("");
-    setIsEditingExamWindow(true);
-  };
-
-  const saveExamWindow = () => {
-    if (!exam.data) return;
-    const start = new Date(examStartInput);
-    const end = new Date(examEndInput);
-    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
-      setExamWindowError("Vui lòng nhập ngày và giờ hợp lệ.");
-      return;
-    }
-    if (end <= start) {
-      setExamWindowError("Giờ kết thúc kỳ thi phải sau giờ bắt đầu.");
-      return;
-    }
-    updateExam.mutate(
-      {
-        examId,
-        draft: {
-          title: exam.data.title,
-          subjectId: exam.data.subjectId,
-          scheduledAt: start.toISOString(),
-          endTime: end.toISOString(),
-          durationMinutes: exam.data.durationMinutes,
-          mainQuestionCount: exam.data.mainQuestionCount,
-          maxFollowUpCount: exam.data.maxFollowUpCount,
-        },
-      },
-      {
-        onSuccess: () => {
-          setIsEditingExamWindow(false);
-          setExamWindowError("");
-        },
-        onError: (err) => {
-          setExamWindowError(
-            err instanceof Error
-              ? err.message
-              : "Không thể cập nhật khung giờ kỳ thi.",
-          );
-        },
-      },
-    );
-  };
-
   if (!isExamUuid(examId))
     return (
       <section className="state">
@@ -563,88 +489,19 @@ function ApiExamSchedulingPage() {
           Về danh sách kỳ thi
         </Link>
       </header>
-      <section className="schedule-summary" aria-label="Thông tin kỳ thi">
-        <div>
-          <span>Kỳ thi</span>
-          <strong>{exam.data?.title ?? examId}</strong>
-        </div>
-        <div>
-          <span>Khung giờ kỳ thi</span>
-          <strong>
-            {exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt"}
-            {exam.data?.endTime ? ` → ${formatTime(exam.data.endTime)}` : ""}
-          </strong>
-        </div>
-        <div>
-          <span>Sinh viên trong ca</span>
-          <strong>{slots.length}</strong>
-        </div>
-        <div style={{ display: "flex", alignItems: "flex-end" }}>
-          <Button type="button" variant="outline" onClick={openExamWindowEditor}>
-            Sửa khung giờ kỳ thi
-          </Button>
-        </div>
-      </section>
       <Alert tone="info">
-        <strong>Cách xếp lịch gồm 3 bước:</strong>
-        <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
-          <li>
-            <strong>Thêm sinh viên</strong>: dán ID sinh viên rồi bấm “Gán ứng viên”.
-          </li>
-          <li>
-            <strong>Tự động xếp lịch</strong>: hệ thống chia ca nối tiếp bắt đầu từ giờ
-            bắt đầu của kỳ thi ({exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "chưa đặt"}).
-          </li>
-          <li>
-            <strong>Đổi ca</strong> (nếu cần): chỉnh giờ từng sinh viên. Giờ mới phải nằm trong khung thời gian của kỳ thi.
-          </li>
-        </ol>
+        Bạn có thể thêm sinh viên rồi tạo lịch theo thời lượng và thời gian nghỉ.
       </Alert>
       <section className="schedule-config">
-        <h2>Bước 1 · Thêm sinh viên</h2>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              const demoIds = runtimeConfig.demoCandidateIds.length
-                ? runtimeConfig.demoCandidateIds
-                : [
-                    "a1fe2001-0000-4000-8000-000000000001",
-                    "a1fe2001-0000-4000-8000-000000000002",
-                    "a1fe2001-0000-4000-8000-000000000003",
-                  ];
-              setStudentIds(demoIds.join("\n"));
-            }}
-          >
-            Chèn nhanh sinh viên mẫu
-          </Button>
-          {slots.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const existingIds = [...new Set(slots.map((s) => s.studentId))];
-                setStudentIds(existingIds.join("\n"));
-              }}
-            >
-              Lấy lại {slots.length} sinh viên đã có trong ca
-            </Button>
-          )}
-        </div>
+        <h2>Thêm sinh viên</h2>
         <label>
-          ID sinh viên (ngăn cách bằng dấu phẩy hoặc xuống dòng)
+          Mã sinh viên (ngăn cách bằng dấu phẩy hoặc dòng mới)
           <textarea
             value={studentIds}
             onChange={(event) => setStudentIds(event.target.value)}
             placeholder="11111111-1111-4111-8111-111111111111"
           />
         </label>
-        <p className="form-help">
-          {ids.length
-            ? `Đã nhập ${ids.length} ID sinh viên.`
-            : "Nhập ít nhất 1 ID sinh viên để bật nút “Gán ứng viên”."}
-        </p>
         <Button
           pending={assign.isPending}
           disabled={!ids.length}
@@ -660,46 +517,14 @@ function ApiExamSchedulingPage() {
           </Alert>
         )}
         {assign.data && (
-          <Alert tone="success">Đã gán sinh viên thành công. Chuyển sang Bước 2.</Alert>
+          <Alert tone="success">Đã gửi yêu cầu gán ứng viên thành công.</Alert>
         )}
       </section>
       <section className="schedule-config">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
-          <h2 style={{ margin: 0 }}>Bước 2 · Tự động xếp lịch</h2>
-          <Button type="button" variant="outline" onClick={openExamWindowEditor}>
-            Chỉnh sửa khung ngày/giờ kỳ thi
-          </Button>
-        </div>
-        <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px", fontSize: "13px" }}>
-          <div>
-            <strong>Khung thời gian kỳ thi:</strong> Bắt đầu lúc{" "}
-            <strong>{exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt"}</strong>
-            {" → "}Kết thúc lúc{" "}
-            <strong>{exam.data?.endTime ? formatTime(exam.data.endTime) : "Chưa đặt"}</strong>
-          </div>
-          <div style={{ color: "#64748b", marginTop: "4px" }}>
-            Hệ thống backend tự động chia ca nối tiếp bắt đầu từ mốc giờ bắt đầu trên. Mỗi ca gồm <strong>{slotDuration || 15} phút</strong> phỏng vấn + <strong>{breakMinutes || 5} phút</strong> nghỉ.
-          </div>
-          {assignedIds.length > 0 && exam.data?.scheduledAt && (() => {
-            const totalDurationMin = assignedIds.length * Number(slotDuration || 15) + (assignedIds.length - 1) * Number(breakMinutes || 5);
-            const estEnd = new Date(Date.parse(exam.data.scheduledAt) + totalDurationMin * 60000);
-            const exceedsExam = exam.data?.endTime ? estEnd.getTime() > Date.parse(exam.data.endTime) : false;
-            return (
-              <div style={{ marginTop: "8px", color: exceedsExam ? "#dc2626" : "#0f766e", fontWeight: 500 }}>
-                {exceedsExam ? "⚠️ Cảnh báo: " : "ℹ️ "}
-                Dự kiến xếp lịch cho {assignedIds.length} sinh viên: Ca 1 bắt đầu lúc {formatTime(exam.data.scheduledAt)}, ca cuối kết thúc lúc {formatTime(estEnd.toISOString())}.
-                {exceedsExam && (
-                  <span style={{ display: "block", marginTop: "2px", color: "#b91c1c" }}>
-                    Thời gian ca cuối vượt quá giờ kết thúc kỳ thi ({formatTime(exam.data?.endTime ?? "")})! Vui lòng nhấn nút “Chỉnh sửa khung ngày/giờ kỳ thi” ở trên để kéo dài giờ kết thúc, tránh lỗi từ máy chủ.
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-        </div>
+        <h2>Tự động xếp lịch</h2>
         <div className="schedule-config-grid">
           <label>
-            Thời lượng mỗi sinh viên (phút)
+            Thời lượng slot (phút)
             <Input
               min={5}
               type="number"
@@ -708,7 +533,7 @@ function ApiExamSchedulingPage() {
             />
           </label>
           <label>
-            Thời gian nghỉ giữa các ca (phút)
+            Thời gian nghỉ (phút)
             <Input
               min={0}
               type="number"
@@ -717,11 +542,7 @@ function ApiExamSchedulingPage() {
             />
           </label>
         </div>
-        <p className="form-help">
-          {assignedIds.length
-            ? `Sẽ xếp lịch cho ${assignedIds.length} sinh viên, mỗi người ${slotDuration || 0} phút, nghỉ ${breakMinutes || 0} phút, bắt đầu từ ${exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "giờ bắt đầu của kỳ thi"}.`
-            : "Chưa có sinh viên nào. Hãy hoàn thành Bước 1 trước thì nút bên dưới mới dùng được."}
-        </p>
+        <p>Lịch sẽ được tạo từ các sinh viên đã thêm.</p>
         <Button
           pending={auto.isPending}
           disabled={!assignedIds.length}
@@ -740,15 +561,8 @@ function ApiExamSchedulingPage() {
           <Alert tone="success">Lịch mới đã được lưu thành công.</Alert>
         )}
       </section>
-      {resetMessage && (
-        <Alert tone="success">
-          {resetMessage}
-        </Alert>
-      )}
       <section className="schedule-status">
-        <strong>Bước 3 · Lịch đã xếp:</strong>
-        <span> </span>
-        <strong>{slots.length} ca</strong>
+        <strong>{slots.length} slot</strong>
         <span> · </span>
         <strong>
           {
@@ -790,46 +604,16 @@ function ApiExamSchedulingPage() {
                   <td>{formatTime(slot.scheduledEndTime)}</td>
                   <td>{slot.status}</td>
                   <td>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          reschedule.reset();
-                          setSelected(slot);
-                          setNewStart(toLocalInput(slot.scheduledStartTime));
-                          setNewEnd(toLocalInput(slot.scheduledEndTime));
-                        }}
-                      >
-                        Đổi ca
-                      </Button>
-                      <Button
-                        variant="outline"
-                        pending={
-                          resetAttempt.isPending &&
-                          resetAttempt.variables?.attemptId === slot.attemptId
-                        }
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Bạn có chắc muốn đặt lại lượt thi của thí sinh ${slot.studentName}? Lượt thi sẽ được khởi động lại trạng thái ban đầu.`,
-                            )
-                          ) {
-                            resetAttempt.mutate(
-                              { examId, attemptId: slot.attemptId },
-                              {
-                                onSuccess: () => {
-                                  setResetMessage(
-                                    `Đã đặt lại ca thi cho thí sinh ${slot.studentName} thành công.`,
-                                  );
-                                },
-                              },
-                            );
-                          }
-                        }}
-                      >
-                        Đặt lại ca
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelected(slot);
+                        setNewStart(slot.scheduledStartTime.slice(0, 16));
+                        setNewEnd(slot.scheduledEndTime.slice(0, 16));
+                      }}
+                    >
+                      Đổi ca
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -852,30 +636,6 @@ function ApiExamSchedulingPage() {
         <p>
           Thay đổi lịch cho <strong>{selected?.studentName}</strong>.
         </p>
-        <p className="form-help">
-          Khung thời gian hợp lệ của kỳ thi: từ{" "}
-          <strong>{exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "—"}</strong>
-          {" đến "}
-          <strong>{exam.data?.endTime ? formatTime(exam.data.endTime) : "—"}</strong>.
-          Ca thi mới phải nằm trong khung thời gian này.
-        </p>
-        {exam.data?.scheduledAt &&
-          newStart &&
-          new Date(newStart).getTime() < new Date(exam.data.scheduledAt).getTime() && (
-            <Alert tone="danger">
-              Giờ bắt đầu ca thi ({formatTime(new Date(newStart).toISOString())}) trước giờ bắt đầu kỳ thi ({formatTime(exam.data.scheduledAt)}).
-            </Alert>
-          )}
-        {exam.data?.endTime &&
-          newEnd &&
-          new Date(newEnd).getTime() > new Date(exam.data.endTime).getTime() && (
-            <Alert tone="danger">
-              Giờ kết thúc ca thi ({formatTime(new Date(newEnd).toISOString())}) vượt quá giờ kết thúc kỳ thi ({formatTime(exam.data.endTime)}). Hãy dùng nút "Sửa khung giờ kỳ thi" để nới rộng khung giờ trước.
-            </Alert>
-          )}
-        {newStart && newEnd && new Date(newEnd) <= new Date(newStart) && (
-          <Alert tone="danger">Giờ kết thúc phải sau giờ bắt đầu.</Alert>
-        )}
         <label>
           Bắt đầu mới
           <Input
@@ -892,56 +652,12 @@ function ApiExamSchedulingPage() {
             onChange={(event) => setNewEnd(event.target.value)}
           />
         </label>
-        {reschedule.isError && (
-          <Alert tone="danger">
-            {reschedule.error instanceof Error
-              ? reschedule.error.message
-              : "Không thể đổi ca."}
-          </Alert>
-        )}
         <div className="dialog-actions">
           <Button variant="outline" onClick={() => setSelected(null)}>
             Huỷ
           </Button>
           <Button pending={reschedule.isPending} onClick={submitReschedule}>
             Xác nhận đổi ca
-          </Button>
-        </div>
-      </Dialog>
-      <Dialog
-        open={isEditingExamWindow}
-        onClose={() => setIsEditingExamWindow(false)}
-        title="Chỉnh sửa khung ngày/giờ kỳ thi"
-      >
-        <p>
-          Cập nhật khung thời gian diễn ra kỳ thi <strong>{exam.data?.title}</strong>.
-        </p>
-        <p className="form-help">
-          Tất cả ca thi tự động xếp hoặc đổi ca phải nằm trong khoảng thời gian này.
-        </p>
-        <label>
-          Thời gian bắt đầu kỳ thi
-          <Input
-            type="datetime-local"
-            value={examStartInput}
-            onChange={(event) => setExamStartInput(event.target.value)}
-          />
-        </label>
-        <label>
-          Thời gian kết thúc kỳ thi
-          <Input
-            type="datetime-local"
-            value={examEndInput}
-            onChange={(event) => setExamEndInput(event.target.value)}
-          />
-        </label>
-        {examWindowError && <Alert tone="danger">{examWindowError}</Alert>}
-        <div className="dialog-actions">
-          <Button variant="outline" onClick={() => setIsEditingExamWindow(false)}>
-            Huỷ
-          </Button>
-          <Button pending={updateExam.isPending} onClick={saveExamWindow}>
-            Lưu khung giờ
           </Button>
         </div>
       </Dialog>

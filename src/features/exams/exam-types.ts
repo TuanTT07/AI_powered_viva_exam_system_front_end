@@ -1,6 +1,14 @@
 export const examStatuses = ['DRAFT', 'PUBLISHED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
 export type ExamStatus = (typeof examStatuses)[number]
 
+export type ExamConfig = {
+  maxMainQuestions: number
+  maxFollowUpQuestions: number
+  timeLimitPerTurnSeconds: number
+  bloomRatios?: Record<string, number>
+  antiOverlapEnabled: boolean
+}
+
 export type ExamSession = {
   id: string
   title: string
@@ -8,18 +16,22 @@ export type ExamSession = {
   subjectCode: string
   subjectName: string
   scheduledAt: string
-  endTime?: string
   durationMinutes: number
   studentCount: number
   mainQuestionCount: number
   maxFollowUpCount: number
   status: ExamStatus
+  timeLimitPerTurnSeconds?: number
+  antiOverlapEnabled?: boolean
+  bloomRatios?: Record<string, number>
 }
 
 export type ExamListRequest = { q: string; subject: string; status: ExamStatus | ''; page: number; pageSize: number }
 export type ExamListResponse = { items: ExamSession[]; total: number; page: number; pageSize: number; totalPages: number }
 export type ExamDraft = Pick<ExamSession, 'title' | 'subjectId' | 'scheduledAt' | 'durationMinutes' | 'mainQuestionCount' | 'maxFollowUpCount'> & {
-  endTime?: string
+  timeLimitPerTurnSeconds?: number
+  antiOverlapEnabled?: boolean
+  bloomRatios?: Record<string, number>
 }
 
 export const examStatusMeta: Record<ExamStatus, { label: string; tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger' }> = {

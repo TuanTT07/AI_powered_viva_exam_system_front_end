@@ -5,11 +5,15 @@ export type ExamFormValues = {
   subjectId: string
   startDate: string
   startTime: string
-  endDate: string
-  endTime: string
   durationMinutes: string
   mainQuestionCount: string
   maxFollowUpCount: string
+  timeLimitPerTurnSeconds?: string
+  antiOverlapEnabled?: boolean
+  bloomRememberRatio?: string
+  bloomUnderstandRatio?: string
+  bloomApplyRatio?: string
+  bloomAnalyzeRatio?: string
 }
 export type ExamField = keyof ExamFormValues
 export type ExamFieldErrors = Partial<Record<ExamField, string>>
@@ -20,67 +24,55 @@ export const examDefaults: ExamFormValues = {
   subjectId: '',
   startDate: '',
   startTime: '',
-  endDate: '',
-  endTime: '',
   durationMinutes: '15',
   mainQuestionCount: '3',
   maxFollowUpCount: '2',
+  timeLimitPerTurnSeconds: '60',
+  antiOverlapEnabled: true,
+  bloomRememberRatio: '30',
+  bloomUnderstandRatio: '40',
+  bloomApplyRatio: '20',
+  bloomAnalyzeRatio: '10',
 }
 
 export function examToForm(exam: ExamSession): ExamFormValues {
   const date = new Date(exam.scheduledAt)
   const pad = (value: number) => String(value).padStart(2, '0')
-  const startDate = Number.isFinite(date.getTime())
-    ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-    : ''
-  const startTime = Number.isFinite(date.getTime())
-    ? `${pad(date.getHours())}:${pad(date.getMinutes())}`
-    : ''
-  let endDate = startDate
-  let endTime = ''
-  if (exam.endTime) {
-    const end = new Date(exam.endTime)
-    if (Number.isFinite(end.getTime())) {
-      endDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
-      endTime = `${pad(end.getHours())}:${pad(end.getMinutes())}`
-    }
-  }
+  const bloom = exam.bloomRatios ?? {}
   return {
     title: exam.title,
     subjectId: exam.subjectId,
-    startDate,
-    startTime,
-    endDate,
-    endTime,
+    startDate: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    startTime: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     durationMinutes: String(exam.durationMinutes),
     mainQuestionCount: String(exam.mainQuestionCount),
     maxFollowUpCount: String(exam.maxFollowUpCount),
+    timeLimitPerTurnSeconds: String(exam.timeLimitPerTurnSeconds ?? 60),
+    antiOverlapEnabled: exam.antiOverlapEnabled !== false,
+    bloomRememberRatio: String(Math.round((bloom.REMEMBER ?? 0.3) * 100)),
+    bloomUnderstandRatio: String(Math.round((bloom.UNDERSTAND ?? 0.4) * 100)),
+    bloomApplyRatio: String(Math.round((bloom.APPLY ?? 0.2) * 100)),
+    bloomAnalyzeRatio: String(Math.round((bloom.ANALYZE ?? 0.1) * 100)),
   }
 }
 
 export function toExamDraft(values: ExamFormValues): ExamDraft {
   const scheduledAt = new Date(`${values.startDate}T${values.startTime}`).toISOString()
-  let endTime: string | undefined
-  if (values.endDate && values.endTime) {
-    const parsedEnd = new Date(`${values.endDate}T${values.endTime}`)
-    if (Number.isFinite(parsedEnd.getTime())) {
-      endTime = parsedEnd.toISOString()
-    }
-  } else {
-    const startMs = new Date(scheduledAt).getTime()
-    if (Number.isFinite(startMs)) {
-      const windowMs = Math.max(Number(values.durationMinutes || 15) * 60000, 4 * 60 * 60 * 1000)
-      endTime = new Date(startMs + windowMs).toISOString()
-    }
-  }
   return {
     title: values.title.trim(),
     subjectId: values.subjectId,
     scheduledAt,
-    endTime,
     durationMinutes: Number(values.durationMinutes),
     mainQuestionCount: Number(values.mainQuestionCount),
     maxFollowUpCount: Number(values.maxFollowUpCount),
+    timeLimitPerTurnSeconds: Number(values.timeLimitPerTurnSeconds) || 60,
+    antiOverlapEnabled: values.antiOverlapEnabled !== false,
+    bloomRatios: {
+      REMEMBER: (Number(values.bloomRememberRatio) || 30) / 100,
+      UNDERSTAND: (Number(values.bloomUnderstandRatio) || 40) / 100,
+      APPLY: (Number(values.bloomApplyRatio) || 20) / 100,
+      ANALYZE: (Number(values.bloomAnalyzeRatio) || 10) / 100,
+    },
   }
 }
 
@@ -97,20 +89,12 @@ export function validateExamForm(values: ExamFormValues, subjects: ExamSubject[]
   else if (options.mode === 'create' || !options.initialScheduledAt || new Date(options.initialScheduledAt).getTime() !== parsedDate.getTime()) {
     if (parsedDate.getTime() < (options.now ?? new Date()).getTime()) errors.startDate = 'Thời gian bắt đầu không được ở quá khứ.'
   }
-  if (values.endDate && values.endTime) {
-    const endDateTime = `${values.endDate}T${values.endTime}`
-    const parsedEnd = new Date(endDateTime)
-    if (!isValidLocalDateTime(values.endDate, values.endTime, parsedEnd)) {
-      errors.endDate = 'Nhập ngày và giờ kết thúc hợp lệ.'
-    } else if (Number.isFinite(parsedDate.getTime()) && parsedEnd.getTime() <= parsedDate.getTime()) {
-      errors.endDate = 'Thời gian kết thúc kỳ thi phải sau thời gian bắt đầu.'
-    }
-  } else if ((values.endDate && !values.endTime) || (!values.endDate && values.endTime)) {
-    errors.endDate = 'Vui lòng nhập cả ngày và giờ kết thúc kỳ thi.'
-  }
   validateInteger(values.durationMinutes, 5, 120, 'Thời lượng', 'durationMinutes', errors)
   validateInteger(values.mainQuestionCount, 1, 20, 'Số câu hỏi chính', 'mainQuestionCount', errors)
   validateInteger(values.maxFollowUpCount, 0, 10, 'Số câu hỏi đào sâu', 'maxFollowUpCount', errors)
+  if (values.timeLimitPerTurnSeconds) {
+    validateInteger(values.timeLimitPerTurnSeconds, 10, 300, 'Thời gian mỗi lượt', 'timeLimitPerTurnSeconds', errors)
+  }
   return errors
 }
 
