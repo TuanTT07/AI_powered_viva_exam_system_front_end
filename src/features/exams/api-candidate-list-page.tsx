@@ -32,19 +32,34 @@ export function ApiCandidateListPage() {
     <Dialog open={open} title="Thêm sinh viên" onClose={() => { if (!assign.isPending) setOpen(false) }}><form onSubmit={submit} className="grid gap-4">{roster.isPending && <p>Đang tải sinh viên của môn…</p>}
       {roster.isError && <Alert tone="danger">Không thể tải danh sách sinh viên của môn. <Button type="button" onClick={() => roster.refetch()}>Thử lại</Button></Alert>}
       {roster.isSuccess && !available.length && <p>Không có sinh viên ghi danh nào để thêm vào kỳ thi.</p>}
-      {!!available.length && <>
-        <Button type="button" variant="outline" disabled={assign.isPending} onClick={() => setIds(studentIds.length === available.length ? [] : available.map(student => student.id))}>
-          {studentIds.length === available.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-        </Button>
-        <div className="max-h-72 overflow-auto">
-          <table className="w-full text-left">
-            <thead><tr><th scope="col">Chọn</th><th scope="col">Mã sinh viên</th><th scope="col">Họ tên</th><th scope="col">Email</th></tr></thead>
-            <tbody>{available.map(student => <tr key={student.id}>
-              <td><input type="checkbox" aria-label={`Chọn ${student.fullName}`} checked={ids.includes(student.id)} disabled={assign.isPending}
-                onChange={event => { setError(''); setIds(previous => event.target.checked ? [...previous, student.id] : previous.filter(id => id !== student.id)) }} /></td>
-              <td>{student.userCode}</td><td>{student.fullName}</td><td>{student.email}</td>
-            </tr>)}</tbody>
-          </table>
+      {!!available.length && <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Sinh viên của môn</p>
+            <p aria-live="polite" className="text-xs text-slate-600">Đã chọn {studentIds.length} / {available.length}</p>
+          </div>
+          <Button type="button" variant="outline" className="button--sm" disabled={assign.isPending} onClick={() => setIds(studentIds.length === available.length ? [] : available.map(student => student.id))}>
+            {studentIds.length === available.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+          </Button>
         </div>
-      </>}{error && <Alert tone="danger">{error}</Alert>}{assign.isError && <Alert tone="danger">{assign.error.message}</Alert>}<div className="dialog-actions"><Button type="button" variant="outline" disabled={assign.isPending} onClick={() => setOpen(false)}>Hủy</Button><Button type="submit" disabled={!studentIds.length || !schedule.isSuccess || !roster.isSuccess} pending={assign.isPending}>Thêm sinh viên</Button></div></form></Dialog></>
+        <ul className="m-0 max-h-72 list-none divide-y divide-slate-100 overflow-y-auto p-0">
+          {available.map(student => {
+            const checked = ids.includes(student.id)
+            return <li key={student.id}>
+              <label className={`flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${checked ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                <input type="checkbox" aria-label={`Chọn ${student.fullName}`} checked={checked} disabled={assign.isPending}
+                  className="mt-1 h-4 w-4 shrink-0 accent-blue-600"
+                  onChange={event => { setError(''); setIds(previous => event.target.checked ? [...previous, student.id] : previous.filter(id => id !== student.id)) }} />
+                <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-slate-900">{student.fullName}</p>
+                    <p className="break-all text-xs text-slate-600">{student.email}</p>
+                  </div>
+                  <span className="max-w-full break-all rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">{student.userCode}</span>
+                </div>
+              </label>
+            </li>
+          })}
+        </ul>
+      </div>}{error && <Alert tone="danger">{error}</Alert>}{assign.isError && <Alert tone="danger">{assign.error.message}</Alert>}<div className="dialog-actions"><Button type="button" variant="outline" disabled={assign.isPending} onClick={() => setOpen(false)}>Hủy</Button><Button type="submit" disabled={!studentIds.length || !schedule.isSuccess || !roster.isSuccess} pending={assign.isPending}>{studentIds.length ? `Thêm ${studentIds.length} sinh viên` : 'Thêm sinh viên'}</Button></div></form></Dialog></>
 }

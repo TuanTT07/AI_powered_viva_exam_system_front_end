@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, Bot, Sparkles, FileText, Calendar, RefreshCw, LogOut, Play } from 'lucide-react'
@@ -41,6 +41,15 @@ function saveStoredTranscript(attemptId: string, examId: string | undefined, ite
   }
 }
 
+function readViolations(key: string) {
+  try {
+    const count = Number(localStorage.getItem(key) ?? 0)
+    return Number.isInteger(count) && count >= 0 ? count : 0
+  } catch {
+    return 0
+  }
+}
+
 export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot; userId: string; name: string }) {
   const client = useQueryClient()
   const navigate = useNavigate()
@@ -49,6 +58,18 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId, slot.examId))
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
+  const violationKey = `aives.interview.violations.${userId}.${slot.attemptId}`
+  const [violations, setViolations] = useState(() => readViolations(violationKey))
+  const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement)
+  const [fullscreenFailed, setFullscreenFailed] = useState(false)
+  const lastViolation = useRef(-Infinity)
+  const locked = violations >= 4
+  const enterFullscreen = () => {
+    if (!document.fullscreenEnabled || document.fullscreenElement) return
+    void document.documentElement.requestFullscreen()
+      .then(() => setFullscreenFailed(false))
+      .catch(() => setFullscreenFailed(true))
+  }
   const key = ['student-interview', userId, slot.attemptId] as const
 
   const appendHistory = useCallback(
@@ -78,13 +99,60 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const current = useQuery({
     queryKey: key,
     queryFn: ({ signal }) => interviewApi.current(slot.attemptId, signal),
-    enabled: !busy && online && !start.isPending,
+    enabled: !locked && !busy && online && !start.isPending,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnMount: 'always',
     refetchInterval: query => busy || start.isPending || query.state.status === 'error' || query.state.data?.status === 'COMPLETED' ? false : 2000,
   })
   const snapshot = current.data
+  const monitoring = !locked && (snapshot?.status === 'AWAITING_ANSWER' || snapshot?.status === 'PROCESSING')
+
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === violationKey) setViolations(count => Math.max(count, readViolations(violationKey)))
+    }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [violationKey])
+
+  useEffect(() => {
+    if (!monitoring) return
+    let wasFullscreen = !!document.fullscreenElement
+    const record = () => {
+      const now = performance.now()
+      if (now - lastViolation.current < 750) return
+      lastViolation.current = now
+      const next = Math.max(violations, readViolations(violationKey)) + 1
+      try {
+        localStorage.setItem(violationKey, String(next))
+      } catch {
+        // Keep enforcing the counter in this page if storage is unavailable.
+      }
+      setViolations(next)
+    }
+    const onVisibility = () => {
+      if (document.hidden) record()
+    }
+    const onFullscreen = () => {
+      const active = !!document.fullscreenElement
+      setFullscreen(active)
+      if (wasFullscreen && !active) record()
+      wasFullscreen = active
+    }
+    setFullscreen(wasFullscreen)
+    document.addEventListener('visibilitychange', onVisibility)
+    document.addEventListener('fullscreenchange', onFullscreen)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      document.removeEventListener('fullscreenchange', onFullscreen)
+    }
+  }, [monitoring, violationKey, violations])
+
+  useEffect(() => {
+    if ((locked || snapshot?.status === 'COMPLETED') && document.fullscreenElement)
+      void document.exitFullscreen().catch(() => {})
+  }, [locked, snapshot?.status])
 
   useEffect(() => {
     if (snapshot?.status === 'AWAITING_ANSWER' && snapshot.prompt) {
@@ -132,6 +200,11 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </Button>
   )
 
+  if (locked) return <section className="state mx-auto max-w-xl p-6">
+    <ErrorState description="Lượt thi đã bị khóa trên trình duyệt vì vượt quá 3 lần rời tab hoặc thoát toàn màn hình." />
+    <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Quay lại chi tiết ca thi</Link>
+  </section>
+
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
   if (current.isError && !busy) return (
     <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
@@ -164,6 +237,12 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   )
   if (snapshot.status !== 'READY' && snapshot.status !== 'COMPLETED' && (snapshot.prompt ?? activePrompt)) {
     return (
+      <>
+      {(violations > 0 || !fullscreen) && <aside role="status" className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Hãy bật toàn màn hình trong khi thi.'}
+          {fullscreenFailed && ' Trình duyệt chưa cho phép mở toàn màn hình.'}</span>
+        {!fullscreen && document.fullscreenEnabled && <Button variant="outline" onClick={enterFullscreen}>Bật toàn màn hình</Button>}
+      </aside>}
       <ApiSpeechRoom
         key={`${userId}:${slot.attemptId}`}
         slot={slot}
@@ -175,6 +254,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         onBusyChange={busyChanged}
         onAnswerSaved={answerSaved}
       />
+      </>
     )
   }
 
@@ -289,7 +369,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
             {isReady && (
               <Button
                 disabled={!online || start.isPending || current.isFetching}
-                onClick={() => start.mutate()}
+                onClick={() => { enterFullscreen(); start.mutate() }}
                 className="inline-flex items-center gap-1.5"
               >
                 <Play size={15} fill="currentColor" />
