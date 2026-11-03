@@ -15,9 +15,41 @@ export const isExamManagementUuid = (value: string) => uuidPattern.test(value)
 function assertUuid(value: string, label: string) { if (!isExamManagementUuid(value)) throw new ApiError(`${label} phải là UUID của backend.`, { code: 'INVALID_UUID' }) }
 function durationMinutes(start: string, end: string) { const minutes = Math.round((Date.parse(end) - Date.parse(start)) / 60000); return Number.isFinite(minutes) && minutes > 0 ? minutes : 15 }
 function mapExam(dto: ExamDto | ExamDetailDto): ExamSession {
-  return { id: dto.id, title: dto.title, subjectId: dto.courseId, subjectCode: dto.courseCode ?? '—', subjectName: dto.courseName ?? 'Học phần', scheduledAt: dto.startTime, durationMinutes: durationMinutes(dto.startTime, dto.endTime), studentCount: 'totalCandidates' in dto ? dto.totalCandidates ?? dto.candidates?.length ?? 0 : 0, mainQuestionCount: dto.examConfig?.maxMainQuestions ?? 1, maxFollowUpCount: dto.examConfig?.maxFollowUpQuestions ?? 0, status: dto.status }
+  return {
+    id: dto.id,
+    title: dto.title,
+    subjectId: dto.courseId,
+    subjectCode: dto.courseCode ?? '—',
+    subjectName: dto.courseName ?? 'Học phần',
+    scheduledAt: dto.startTime,
+    endTime: dto.endTime,
+    durationMinutes: durationMinutes(dto.startTime, dto.endTime),
+    studentCount: 'totalCandidates' in dto ? dto.totalCandidates ?? dto.candidates?.length ?? 0 : 0,
+    mainQuestionCount: dto.examConfig?.maxMainQuestions ?? 1,
+    maxFollowUpCount: dto.examConfig?.maxFollowUpQuestions ?? 0,
+    status: dto.status,
+  }
 }
-function payload(draft: ExamDraft): CreateExamDto { const start = Date.parse(draft.scheduledAt); const end = new Date(start + draft.durationMinutes * 60000).toISOString(); assertUuid(draft.subjectId, 'Course'); return { courseId: draft.subjectId, title: draft.title, startTime: draft.scheduledAt, endTime: end, examConfig: { maxMainQuestions: draft.mainQuestionCount, maxFollowUpQuestions: draft.maxFollowUpCount, timeLimitPerTurnSeconds: Math.max(10, draft.durationMinutes * 60), antiOverlapEnabled: true } } }
+function payload(draft: ExamDraft): CreateExamDto {
+  const start = Date.parse(draft.scheduledAt)
+  const end =
+    draft.endTime && Date.parse(draft.endTime) > start
+      ? draft.endTime
+      : new Date(start + draft.durationMinutes * 60000).toISOString()
+  assertUuid(draft.subjectId, 'Course')
+  return {
+    courseId: draft.subjectId,
+    title: draft.title,
+    startTime: draft.scheduledAt,
+    endTime: end,
+    examConfig: {
+      maxMainQuestions: draft.mainQuestionCount,
+      maxFollowUpQuestions: draft.maxFollowUpCount,
+      timeLimitPerTurnSeconds: Math.max(10, draft.durationMinutes * 60),
+      antiOverlapEnabled: true,
+    },
+  }
+}
 
 export function createApiExamRepository(client: Pick<ApiClient, 'request'> = apiClient): ExamRepository {
   return {

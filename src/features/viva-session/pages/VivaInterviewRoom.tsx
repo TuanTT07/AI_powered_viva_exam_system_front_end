@@ -22,7 +22,21 @@ function ApiRoom({ examId }: { examId: string }) {
   const [search] = useSearchParams()
   const slot = useStudentMySlot(examId, session.user?.id)
   if (slot.isPending) return <LoadingPage label="Đang xác minh ca thi" />
-  if (slot.isError) return <><ErrorState description={slot.error.message} /><Button onClick={() => void slot.refetch()}>Thử lại</Button></>
+  if (slot.isError)
+    return (
+      <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
+        <ErrorState description={slot.error.message} />
+        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '12px' }}>
+          Không thể tải thông tin ca thi. Nếu ca thi bị gián đoạn hoặc gặp sự cố kỹ thuật, bạn có thể thử tải lại hoặc liên hệ giảng viên để được đặt lại (Reset) ca thi.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <Button onClick={() => void slot.refetch()}>Thử lại</Button>
+          <Link className="button outline" to="/student/exams">
+            Về danh sách lịch thi
+          </Link>
+        </div>
+      </section>
+    )
   if (!slot.data) return <ErrorState description="Không tìm thấy ca thi được cấp quyền." />
   if (!session.user) return <ErrorState description="Bạn cần đăng nhập để sử dụng phòng thi." />
   if (!matchesRequestedAttempt(search.get('attemptId'), slot.data.attemptId)) return <><ErrorState description="Ca thi đã thay đổi hoặc không khớp. Vui lòng mở lại từ danh sách lịch thi của bạn." /><Link className="button outline" to="/student/exams">Xem lịch thi</Link></>

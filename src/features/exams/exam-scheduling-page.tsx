@@ -19,6 +19,8 @@ import {
   useAssignApiCandidates,
   useAutoScheduleApiExam,
   useRescheduleApiExam,
+  useUpdateExam,
+  useResetExamAttempt,
 } from "./exam-hooks";
 import { examStatusMeta } from "./exam-types";
 import { examRoutes } from "./exam-routes";
@@ -397,6 +399,9 @@ function ApiExamSchedulingPage() {
   const assign = useAssignApiCandidates();
   const auto = useAutoScheduleApiExam();
   const reschedule = useRescheduleApiExam();
+  const updateExam = useUpdateExam();
+  const resetAttempt = useResetExamAttempt();
+  const [resetMessage, setResetMessage] = useState("");
   const [studentIds, setStudentIds] = useState(
     runtimeConfig.demoCandidateIds.join("\n"),
   );
@@ -405,6 +410,66 @@ function ApiExamSchedulingPage() {
   const [selected, setSelected] = useState<CandidateScheduleDto | null>(null);
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
+  const [isEditingExamWindow, setIsEditingExamWindow] = useState(false);
+  const [examStartInput, setExamStartInput] = useState("");
+  const [examEndInput, setExamEndInput] = useState("");
+  const [examWindowError, setExamWindowError] = useState("");
+
+  const openExamWindowEditor = () => {
+    if (exam.data?.scheduledAt) {
+      setExamStartInput(toLocalInput(exam.data.scheduledAt));
+    }
+    if (exam.data?.endTime) {
+      setExamEndInput(toLocalInput(exam.data.endTime));
+    } else if (exam.data?.scheduledAt) {
+      const defaultEnd = new Date(Date.parse(exam.data.scheduledAt) + 4 * 60 * 60 * 1000);
+      setExamEndInput(toLocalInput(defaultEnd.toISOString()));
+    }
+    setExamWindowError("");
+    setIsEditingExamWindow(true);
+  };
+
+  const saveExamWindow = () => {
+    if (!exam.data) return;
+    const start = new Date(examStartInput);
+    const end = new Date(examEndInput);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      setExamWindowError("Vui lòng nhập ngày và giờ hợp lệ.");
+      return;
+    }
+    if (end <= start) {
+      setExamWindowError("Giờ kết thúc kỳ thi phải sau giờ bắt đầu.");
+      return;
+    }
+    updateExam.mutate(
+      {
+        examId,
+        draft: {
+          title: exam.data.title,
+          subjectId: exam.data.subjectId,
+          scheduledAt: start.toISOString(),
+          endTime: end.toISOString(),
+          durationMinutes: exam.data.durationMinutes,
+          mainQuestionCount: exam.data.mainQuestionCount,
+          maxFollowUpCount: exam.data.maxFollowUpCount,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditingExamWindow(false);
+          setExamWindowError("");
+        },
+        onError: (err) => {
+          setExamWindowError(
+            err instanceof Error
+              ? err.message
+              : "Không thể cập nhật khung giờ kỳ thi.",
+          );
+        },
+      },
+    );
+  };
+
   if (!isExamUuid(examId))
     return (
       <section className="state">
@@ -504,14 +569,20 @@ function ApiExamSchedulingPage() {
           <strong>{exam.data?.title ?? examId}</strong>
         </div>
         <div>
-          <span>Giờ bắt đầu ca đầu tiên</span>
+          <span>Khung giờ kỳ thi</span>
           <strong>
             {exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt"}
+            {exam.data?.endTime ? ` → ${formatTime(exam.data.endTime)}` : ""}
           </strong>
         </div>
         <div>
-          <span>Sinh viên đã thêm</span>
+          <span>Sinh viên trong ca</span>
           <strong>{slots.length}</strong>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <Button type="button" variant="outline" onClick={openExamWindowEditor}>
+            Sửa khung giờ kỳ thi
+          </Button>
         </div>
       </section>
       <Alert tone="info">
@@ -521,12 +592,11 @@ function ApiExamSchedulingPage() {
             <strong>Thêm sinh viên</strong>: dán ID sinh viên rồi bấm “Gán ứng viên”.
           </li>
           <li>
-            <strong>Tự động xếp lịch</strong>: hệ thống chia ca nối tiếp, bắt đầu từ giờ
-            bắt đầu của kỳ thi ở trên.
+            <strong>Tự động xếp lịch</strong>: hệ thống chia ca nối tiếp bắt đầu từ giờ
+            bắt đầu của kỳ thi ({exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "chưa đặt"}).
           </li>
           <li>
-            <strong>Đổi ca</strong> (nếu cần): chỉnh giờ từng sinh viên ở bảng bên dưới.
-            Giờ mới phải nằm trong khung thời gian của kỳ thi.
+            <strong>Đổi ca</strong> (nếu cần): chỉnh giờ từng sinh viên. Giờ mới phải nằm trong khung thời gian của kỳ thi.
           </li>
         </ol>
       </Alert>
@@ -594,10 +664,38 @@ function ApiExamSchedulingPage() {
         )}
       </section>
       <section className="schedule-config">
-        <h2>Bước 2 · Tự động xếp lịch</h2>
-        <div style={{ padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px", fontSize: "13px" }}>
-          <div><strong>Mốc thời gian kỳ thi:</strong> {exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt lịch"} {exam.data?.durationMinutes ? `(Thời lượng toàn kỳ thi: ${exam.data.durationMinutes} phút)` : ""}</div>
-          <div style={{ color: "#64748b", marginTop: "4px" }}>Hệ thống backend tự động chia ca nối tiếp bắt đầu từ mốc thời gian trên, mỗi ca {slotDuration || 15} phút + {breakMinutes || 5} phút nghỉ.</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
+          <h2 style={{ margin: 0 }}>Bước 2 · Tự động xếp lịch</h2>
+          <Button type="button" variant="outline" onClick={openExamWindowEditor}>
+            Chỉnh sửa khung ngày/giờ kỳ thi
+          </Button>
+        </div>
+        <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px", fontSize: "13px" }}>
+          <div>
+            <strong>Khung thời gian kỳ thi:</strong> Bắt đầu lúc{" "}
+            <strong>{exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "Chưa đặt"}</strong>
+            {" → "}Kết thúc lúc{" "}
+            <strong>{exam.data?.endTime ? formatTime(exam.data.endTime) : "Chưa đặt"}</strong>
+          </div>
+          <div style={{ color: "#64748b", marginTop: "4px" }}>
+            Hệ thống backend tự động chia ca nối tiếp bắt đầu từ mốc giờ bắt đầu trên. Mỗi ca gồm <strong>{slotDuration || 15} phút</strong> phỏng vấn + <strong>{breakMinutes || 5} phút</strong> nghỉ.
+          </div>
+          {assignedIds.length > 0 && exam.data?.scheduledAt && (() => {
+            const totalDurationMin = assignedIds.length * Number(slotDuration || 15) + (assignedIds.length - 1) * Number(breakMinutes || 5);
+            const estEnd = new Date(Date.parse(exam.data.scheduledAt) + totalDurationMin * 60000);
+            const exceedsExam = exam.data?.endTime ? estEnd.getTime() > Date.parse(exam.data.endTime) : false;
+            return (
+              <div style={{ marginTop: "8px", color: exceedsExam ? "#dc2626" : "#0f766e", fontWeight: 500 }}>
+                {exceedsExam ? "⚠️ Cảnh báo: " : "ℹ️ "}
+                Dự kiến xếp lịch cho {assignedIds.length} sinh viên: Ca 1 bắt đầu lúc {formatTime(exam.data.scheduledAt)}, ca cuối kết thúc lúc {formatTime(estEnd.toISOString())}.
+                {exceedsExam && (
+                  <span style={{ display: "block", marginTop: "2px", color: "#b91c1c" }}>
+                    Thời gian ca cuối vượt quá giờ kết thúc kỳ thi ({formatTime(exam.data?.endTime ?? "")})! Vui lòng nhấn nút “Chỉnh sửa khung ngày/giờ kỳ thi” ở trên để kéo dài giờ kết thúc, tránh lỗi từ máy chủ.
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div className="schedule-config-grid">
           <label>
@@ -642,6 +740,11 @@ function ApiExamSchedulingPage() {
           <Alert tone="success">Lịch mới đã được lưu thành công.</Alert>
         )}
       </section>
+      {resetMessage && (
+        <Alert tone="success">
+          {resetMessage}
+        </Alert>
+      )}
       <section className="schedule-status">
         <strong>Bước 3 · Lịch đã xếp:</strong>
         <span> </span>
@@ -687,17 +790,46 @@ function ApiExamSchedulingPage() {
                   <td>{formatTime(slot.scheduledEndTime)}</td>
                   <td>{slot.status}</td>
                   <td>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        reschedule.reset();
-                        setSelected(slot);
-                        setNewStart(toLocalInput(slot.scheduledStartTime));
-                        setNewEnd(toLocalInput(slot.scheduledEndTime));
-                      }}
-                    >
-                      Đổi ca
-                    </Button>
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          reschedule.reset();
+                          setSelected(slot);
+                          setNewStart(toLocalInput(slot.scheduledStartTime));
+                          setNewEnd(toLocalInput(slot.scheduledEndTime));
+                        }}
+                      >
+                        Đổi ca
+                      </Button>
+                      <Button
+                        variant="outline"
+                        pending={
+                          resetAttempt.isPending &&
+                          resetAttempt.variables?.attemptId === slot.attemptId
+                        }
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Bạn có chắc muốn đặt lại lượt thi của thí sinh ${slot.studentName}? Lượt thi sẽ được khởi động lại trạng thái ban đầu.`,
+                            )
+                          ) {
+                            resetAttempt.mutate(
+                              { examId, attemptId: slot.attemptId },
+                              {
+                                onSuccess: () => {
+                                  setResetMessage(
+                                    `Đã đặt lại ca thi cho thí sinh ${slot.studentName} thành công.`,
+                                  );
+                                },
+                              },
+                            );
+                          }
+                        }}
+                      >
+                        Đặt lại ca
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -721,12 +853,26 @@ function ApiExamSchedulingPage() {
           Thay đổi lịch cho <strong>{selected?.studentName}</strong>.
         </p>
         <p className="form-help">
-          Giờ mới phải nằm trong khung thời gian của kỳ thi
-          {exam.data?.scheduledAt
-            ? ` (bắt đầu từ ${formatTime(exam.data.scheduledAt)})`
-            : ""}
-          . Nếu hệ thống báo lỗi, hãy chọn giờ gần với giờ hiện tại của ca.
+          Khung thời gian hợp lệ của kỳ thi: từ{" "}
+          <strong>{exam.data?.scheduledAt ? formatTime(exam.data.scheduledAt) : "—"}</strong>
+          {" đến "}
+          <strong>{exam.data?.endTime ? formatTime(exam.data.endTime) : "—"}</strong>.
+          Ca thi mới phải nằm trong khung thời gian này.
         </p>
+        {exam.data?.scheduledAt &&
+          newStart &&
+          new Date(newStart).getTime() < new Date(exam.data.scheduledAt).getTime() && (
+            <Alert tone="danger">
+              Giờ bắt đầu ca thi ({formatTime(new Date(newStart).toISOString())}) trước giờ bắt đầu kỳ thi ({formatTime(exam.data.scheduledAt)}).
+            </Alert>
+          )}
+        {exam.data?.endTime &&
+          newEnd &&
+          new Date(newEnd).getTime() > new Date(exam.data.endTime).getTime() && (
+            <Alert tone="danger">
+              Giờ kết thúc ca thi ({formatTime(new Date(newEnd).toISOString())}) vượt quá giờ kết thúc kỳ thi ({formatTime(exam.data.endTime)}). Hãy dùng nút "Sửa khung giờ kỳ thi" để nới rộng khung giờ trước.
+            </Alert>
+          )}
         {newStart && newEnd && new Date(newEnd) <= new Date(newStart) && (
           <Alert tone="danger">Giờ kết thúc phải sau giờ bắt đầu.</Alert>
         )}
@@ -759,6 +905,43 @@ function ApiExamSchedulingPage() {
           </Button>
           <Button pending={reschedule.isPending} onClick={submitReschedule}>
             Xác nhận đổi ca
+          </Button>
+        </div>
+      </Dialog>
+      <Dialog
+        open={isEditingExamWindow}
+        onClose={() => setIsEditingExamWindow(false)}
+        title="Chỉnh sửa khung ngày/giờ kỳ thi"
+      >
+        <p>
+          Cập nhật khung thời gian diễn ra kỳ thi <strong>{exam.data?.title}</strong>.
+        </p>
+        <p className="form-help">
+          Tất cả ca thi tự động xếp hoặc đổi ca phải nằm trong khoảng thời gian này.
+        </p>
+        <label>
+          Thời gian bắt đầu kỳ thi
+          <Input
+            type="datetime-local"
+            value={examStartInput}
+            onChange={(event) => setExamStartInput(event.target.value)}
+          />
+        </label>
+        <label>
+          Thời gian kết thúc kỳ thi
+          <Input
+            type="datetime-local"
+            value={examEndInput}
+            onChange={(event) => setExamEndInput(event.target.value)}
+          />
+        </label>
+        {examWindowError && <Alert tone="danger">{examWindowError}</Alert>}
+        <div className="dialog-actions">
+          <Button variant="outline" onClick={() => setIsEditingExamWindow(false)}>
+            Huỷ
+          </Button>
+          <Button pending={updateExam.isPending} onClick={saveExamWindow}>
+            Lưu khung giờ
           </Button>
         </div>
       </Dialog>
