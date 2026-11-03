@@ -690,6 +690,7 @@ function ApiExamSchedulingPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
+                        reschedule.reset();
                         setSelected(slot);
                         setNewStart(toLocalInput(slot.scheduledStartTime));
                         setNewEnd(toLocalInput(slot.scheduledEndTime));
@@ -745,6 +746,13 @@ function ApiExamSchedulingPage() {
             onChange={(event) => setNewEnd(event.target.value)}
           />
         </label>
+        {reschedule.isError && (
+          <Alert tone="danger">
+            {reschedule.error instanceof Error
+              ? reschedule.error.message
+              : "Không thể đổi ca."}
+          </Alert>
+        )}
         <div className="dialog-actions">
           <Button variant="outline" onClick={() => setSelected(null)}>
             Huỷ
