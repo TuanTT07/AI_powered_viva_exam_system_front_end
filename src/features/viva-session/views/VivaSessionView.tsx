@@ -115,61 +115,96 @@ function WaveformBars({ active = false, count = 10 }: { active?: boolean; count?
 
 function StudentWaveformBars({
   active = false,
+  level = 0,
   side = 'left',
 }: {
   active?: boolean
+  level?: number
   side?: 'left' | 'right'
 }) {
-  const barHeights = [20, 35, 55, 75, 90, 70]
+  const barHeights = [20, 35, 55, 75, 95, 75]
   const dotsCount = 5
+  const safeLevel = Math.max(0, Math.min(1, level))
+  const isVocalizing = active && safeLevel > 0.04
 
   if (side === 'left') {
     return (
       <div className="flex items-center gap-1.5 h-10 overflow-hidden">
-        {Array.from({ length: dotsCount }).map((_, i) => (
-          <span
-            key={`dot-${i}`}
-            className={`w-1 h-1 rounded-full ${active ? 'bg-blue-400 animate-pulse' : 'bg-blue-300'}`}
-            style={{ animationDelay: `${(i * 0.1).toFixed(2)}s` }}
-          />
-        ))}
-        {barHeights.map((h, i) => (
-          <span
-            key={`bar-${i}`}
-            className={`w-1 rounded-full transition-all duration-150 ${
-              active ? 'bg-blue-500 animate-pulse' : 'bg-blue-300'
-            }`}
-            style={{
-              height: active ? `${Math.max(16, h * (0.7 + ((i % 3) * 0.15)))}%` : `${h * 0.4}%`,
-              animationDelay: `${((i + dotsCount) * 0.08).toFixed(2)}s`,
-            }}
-          />
-        ))}
+        {Array.from({ length: dotsCount }).map((_, i) => {
+          const dotNearBars = i >= 3
+          const dotActive = isVocalizing && dotNearBars && safeLevel > 0.25
+          return (
+            <span
+              key={`dot-${i}`}
+              className={`w-1 h-1 rounded-full transition-all duration-150 ${
+                dotActive
+                  ? 'bg-blue-500 scale-125'
+                  : active
+                    ? 'bg-blue-400'
+                    : 'bg-blue-300'
+              }`}
+            />
+          )
+        })}
+        {barHeights.map((h, i) => {
+          const multiplier = 0.85 + ((i % 3) * 0.12)
+          const barHeightPercent = active
+            ? Math.min(100, Math.max(12, Math.round(h * (0.2 + safeLevel * 0.85 * multiplier))))
+            : Math.max(10, Math.round(h * 0.35))
+
+          return (
+            <span
+              key={`bar-${i}`}
+              className={`w-1 rounded-full transition-all duration-75 ease-out ${
+                isVocalizing ? 'bg-blue-600 shadow-2xs' : active ? 'bg-blue-400/90' : 'bg-blue-300'
+              }`}
+              style={{
+                height: `${barHeightPercent}%`,
+              }}
+            />
+          )
+        })}
       </div>
     )
   }
 
   return (
     <div className="flex items-center gap-1.5 h-10 overflow-hidden">
-      {[...barHeights].reverse().map((h, i) => (
-        <span
-          key={`bar-${i}`}
-          className={`w-1 rounded-full transition-all duration-150 ${
-            active ? 'bg-blue-500 animate-pulse' : 'bg-blue-300'
-          }`}
-          style={{
-            height: active ? `${Math.max(16, h * (0.7 + ((i % 3) * 0.15)))}%` : `${h * 0.4}%`,
-            animationDelay: `${(i * 0.08).toFixed(2)}s`,
-          }}
-        />
-      ))}
-      {Array.from({ length: dotsCount }).map((_, i) => (
-        <span
-          key={`dot-${i}`}
-          className={`w-1 h-1 rounded-full ${active ? 'bg-blue-400 animate-pulse' : 'bg-blue-300'}`}
-          style={{ animationDelay: `${((i + barHeights.length) * 0.1).toFixed(2)}s` }}
-        />
-      ))}
+      {[...barHeights].reverse().map((h, i) => {
+        const revIndex = barHeights.length - 1 - i
+        const multiplier = 0.85 + ((revIndex % 3) * 0.12)
+        const barHeightPercent = active
+          ? Math.min(100, Math.max(12, Math.round(h * (0.2 + safeLevel * 0.85 * multiplier))))
+          : Math.max(10, Math.round(h * 0.35))
+
+        return (
+          <span
+            key={`bar-${i}`}
+            className={`w-1 rounded-full transition-all duration-75 ease-out ${
+              isVocalizing ? 'bg-blue-600 shadow-2xs' : active ? 'bg-blue-400/90' : 'bg-blue-300'
+            }`}
+            style={{
+              height: `${barHeightPercent}%`,
+            }}
+          />
+        )
+      })}
+      {Array.from({ length: dotsCount }).map((_, i) => {
+        const dotNearBars = i <= 1
+        const dotActive = isVocalizing && dotNearBars && safeLevel > 0.25
+        return (
+          <span
+            key={`dot-${i}`}
+            className={`w-1 h-1 rounded-full transition-all duration-150 ${
+              dotActive
+                ? 'bg-blue-500 scale-125'
+                : active
+                  ? 'bg-blue-400'
+                  : 'bg-blue-300'
+            }`}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -207,6 +242,7 @@ export function VivaSessionView({
   isAiSpeaking = false,
   isCompleted: isCompletedProp,
   isProcessing = false,
+  audioLevel = 0,
 }: {
   name: string
   title: string
@@ -230,6 +266,7 @@ export function VivaSessionView({
   isAiSpeaking?: boolean
   isCompleted?: boolean
   isProcessing?: boolean
+  audioLevel?: number
 }) {
   const completed =
     isCompletedProp ??
@@ -442,27 +479,45 @@ export function VivaSessionView({
             {/* Student Microphone Visualizer & Controls */}
             <div className="py-2 flex flex-col items-center justify-center space-y-3">
               <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-md px-2">
-                <StudentWaveformBars active={isRecording} side="left" />
+                <StudentWaveformBars active={isRecording} level={audioLevel} side="left" />
 
                 <div className="relative shrink-0">
                   <div
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all shadow-md ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-75 shadow-md ${
                       isRecording
-                        ? 'bg-blue-600 text-white shadow-blue-500/30 scale-105 ring-4 ring-blue-100 animate-pulse'
+                        ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-100'
                         : 'bg-blue-50 text-blue-600 border border-blue-200'
                     }`}
+                    style={{
+                      transform:
+                        isRecording && audioLevel > 0.04
+                          ? `scale(${Math.min(1.15, 1.05 + audioLevel * 0.12)})`
+                          : isRecording
+                            ? 'scale(1.05)'
+                            : 'scale(1)',
+                      boxShadow:
+                        isRecording && audioLevel > 0.06
+                          ? `0 0 ${Math.round(10 + audioLevel * 22)}px rgba(37, 99, 235, 0.45)`
+                          : undefined,
+                    }}
                   >
                     <Mic size={24} />
                   </div>
                 </div>
 
-                <StudentWaveformBars active={isRecording} side="right" />
+                <StudentWaveformBars active={isRecording} level={audioLevel} side="right" />
               </div>
 
               <div className="text-center">
                 <div className="inline-flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-700">
-                    {completed ? 'Đã hoàn thành ca thi' : isRecording ? 'Đang trả lời...' : 'Sẵn sàng trả lời'}
+                    {completed
+                      ? 'Đã hoàn thành ca thi'
+                      : isRecording
+                        ? audioLevel > 0.05
+                          ? 'Đang nhận diện giọng nói...'
+                          : 'Đang lắng nghe câu trả lời...'
+                        : 'Sẵn sàng trả lời'}
                   </span>
                   {isRecording && !completed && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
