@@ -24,6 +24,16 @@ export type CriterionScoreDto = {
   comment: string | null
 }
 
+export type TranscriptTurnDto = {
+  id: string
+  turnOrder: number
+  speaker: 'AI' | 'STUDENT'
+  textContent: string
+  audioUrl: string | null
+  turnType: 'MAIN_QUESTION' | 'ANSWER' | 'FOLLOW_UP'
+  createdAt: string
+}
+
 export type EvaluationResponseDto = {
   id: string
   questionAttemptId: string
@@ -37,6 +47,8 @@ export type EvaluationResponseDto = {
   overallFeedback: string | null
   criteria: CriterionScoreDto[]
   status: 'PENDING_REVIEW' | 'GRADED'
+  transcript?: TranscriptTurnDto[]
+  audioUrl?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -96,8 +108,24 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
       )
       return res.data
     },
+
+    async findByExam(
+      examId: string,
+      params?: { status?: string; page?: number; size?: number }
+    ): Promise<PageResponse<EvaluationResponseDto>> {
+      const res = await client.request<ApiResponse<PageResponse<EvaluationResponseDto>>>(
+        `/api/exams/${encodeURIComponent(examId)}/evaluations`,
+        {
+          query: {
+            status: params?.status,
+            page: params?.page ?? 0,
+            size: params?.size ?? 20,
+          },
+        }
+      )
+      return res.data
+    },
   }
 }
 
 export const apiEvaluationService = createApiEvaluationService()
-

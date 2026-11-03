@@ -8,9 +8,11 @@ export type CriterionReview = {
 }
 
 export type EvidenceLine = {
+  id?: string
   role: 'ai' | 'student' | string
   text: string
-  time: string
+  time?: string
+  audioUrl?: string
 }
 
 export type CandidateAttemptDetail = {
@@ -40,4 +42,3 @@ export type FinalizeGradeDraft = {
   notes: string
   confirmed: boolean
 }
-

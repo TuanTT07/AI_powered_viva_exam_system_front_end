@@ -1,18 +1,13 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import {
   FileText,
-  Mic,
   ShieldCheck,
   Sparkles,
-  Volume2,
   Bot,
   User,
   Clock,
   HelpCircle,
   AlertTriangle,
-  Play,
-  Pause,
 } from 'lucide-react'
 import { Button } from '../../../components/ui/primitives'
 import type { CriterionReview, EvidenceLine } from '../grading-types'
@@ -54,7 +49,6 @@ export function GradingWorkspaceView({
   demo?: boolean
   status?: string
 }) {
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const total = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0)
   const aiTotal = criteria.reduce((sum, c) => sum + c.ai, 0)
 
@@ -222,42 +216,6 @@ export function GradingWorkspaceView({
               </p>
             </section>
 
-            {/* Audio Recording Evidence */}
-            <section className={panel}>
-              <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                <Mic size={16} className="text-emerald-600" /> Bằng chứng ghi âm
-              </h2>
-              {demo ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsPlayingAudio(!isPlayingAudio)}
-                        aria-label={isPlayingAudio ? 'Tạm dừng audio' : 'Phát audio'}
-                      >
-                        {isPlayingAudio ? <Pause size={14} /> : <Play size={14} />}
-                      </Button>
-                      <div className="text-xs">
-                        <p className="font-semibold text-slate-700">audio_session_rec.wav</p>
-                        <p className="text-[10px] text-slate-500">01:12 / 05:00</p>
-                      </div>
-                    </div>
-                    <Volume2 size={16} className="text-slate-400" />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Ghi âm hai chiều giữa Giám khảo AI và Thí sinh được lưu vết đầy đủ.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-slate-500">Chưa có bản ghi được phép phát lại.</p>
-                  <Button variant="outline" disabled>
-                    <Mic size={15} /> Nghe bản ghi
-                  </Button>
-                </>
-              )}
-            </section>
           </aside>
 
           {/* Column 2: Dialogue Transcript */}

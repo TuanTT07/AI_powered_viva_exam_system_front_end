@@ -22,13 +22,24 @@ export function ExamAttemptListPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
 
-  // Dev3 API: Query course evaluations if in API mode and course exists
+  // Dev3 API: Query exam-specific evaluations first, fallback to course
+  const examEvals = useQuery({
+    queryKey: ['dev3-exam-evaluations', examId],
+    queryFn: () => apiEvaluationService.findByExam(examId),
+    enabled: runtimeConfig.dataSource === 'api' && Boolean(examId),
+    retry: false,
+  })
+
   const courseEvals = useQuery({
     queryKey: ['dev3-course-evaluations', exam.data?.subjectId],
     queryFn: () => apiEvaluationService.findByCourse(exam.data?.subjectId ?? ''),
-    enabled: runtimeConfig.dataSource === 'api' && Boolean(exam.data?.subjectId),
+    enabled: runtimeConfig.dataSource === 'api' && Boolean(exam.data?.subjectId) && (!examEvals.data || examEvals.data.content.length === 0),
     retry: false,
   })
+
+  const evaluationsList = (examEvals.data?.content && examEvals.data.content.length > 0)
+    ? examEvals.data.content
+    : (courseEvals.data?.content ?? [])
 
   if (exam.isPending || query.isPending) return <LoadingPage label="Đang tải danh sách lượt thi" />
   if (exam.isError || query.isError) return <><ErrorState description={exam.error?.message || query.error?.message || 'Không thể tải lượt thi.'} /><Button onClick={() => { void exam.refetch(); void query.refetch() }}>Thử lại</Button></>
@@ -78,17 +89,17 @@ export function ExamAttemptListPage() {
       <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {rows.length} hồ sơ</p>
 
       {/* DEV3 API: Bảng kết quả chấm điểm học phần từ Backend */}
-      {runtimeConfig.dataSource === 'api' && courseEvals.data && courseEvals.data.content.length > 0 && (
+      {runtimeConfig.dataSource === 'api' && evaluationsList.length > 0 && (
         <div className="mt-8 rounded-xl border border-blue-200 bg-white p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="text-blue-600" size={18} />
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                Bài thi đã chấm điểm AI theo học phần (API Backend Dev3)
+                {examEvals.data?.content && examEvals.data.content.length > 0 ? 'Bài thi đã chấm điểm AI của kỳ thi này (API: /api/exams/{examId}/evaluations)' : 'Bài thi đã chấm điểm AI theo học phần (API: /api/courses/{courseId}/evaluations)'}
               </h3>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">
-              {courseEvals.data.totalElements} bài đánh giá
+              {evaluationsList.length} bài đánh giá
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -103,7 +114,7 @@ export function ExamAttemptListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {courseEvals.data.content.map(item => (
+                {evaluationsList.map(item => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 max-w-md">
                       <strong className="block text-slate-900 text-xs line-clamp-1">{item.questionContent}</strong>
