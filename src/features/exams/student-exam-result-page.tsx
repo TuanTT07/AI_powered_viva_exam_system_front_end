@@ -52,7 +52,7 @@ export function StudentExamResultPage() {
         <div className="student-hero-content">
           <div className="student-hero-badge">
             <Award size={14} />
-            <span>AIVES · BIÊN BẢN ĐÁNH GIÁ CHÍNH THỨC</span>
+            <span>{result ? 'AIVES · BIÊN BẢN ĐÁNH GIÁ CHÍNH THỨC' : 'AIVES · TÌNH TRẠNG ĐÁNH GIÁ'}</span>
           </div>
           <h1 className="student-hero-title">{result?.title ?? 'Biên bản kết quả'}</h1>
           <p className="student-hero-desc">
@@ -122,9 +122,11 @@ export function StudentExamResultPage() {
             </div>
           </div>
           <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
-            Đã duyệt
+            {result ? 'Đã duyệt' : 'Chờ duyệt'}
           </strong>
-          <span className="metric-hint">Giảng viên xác nhận</span>
+          <span className="metric-hint">
+            {result ? 'Giảng viên xác nhận' : 'Đang xử lý đánh giá'}
+          </span>
         </div>
 
         <div className="metric-card metric-card--amber">
@@ -135,9 +137,11 @@ export function StudentExamResultPage() {
             </div>
           </div>
           <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
-            {visibleAppeal ? 'Đã gửi đơn' : 'Được phép'}
+            {result ? (visibleAppeal ? 'Đã gửi đơn' : 'Được phép') : 'Chưa mở'}
           </strong>
-          <span className="metric-hint">Theo quy chế khảo thí</span>
+          <span className="metric-hint">
+            {result ? 'Theo quy chế khảo thí' : 'Chờ công bố điểm'}
+          </span>
         </div>
       </section>
 
@@ -260,7 +264,15 @@ export function StudentExamResultPage() {
           <div className="student-security-card">
             <ShieldCheck size={20} className="shrink-0 text-blue-600 mt-0.5" />
             <p>
-              <strong>Bảo mật kết quả:</strong> Điểm số đã được giảng viên thẩm định và xác nhận. Quyết định phúc khảo tuân thủ quy chế khảo thí hiện hành.
+              {result ? (
+                <>
+                  <strong>Bảo mật kết quả:</strong> Điểm số đã được giảng viên thẩm định và xác nhận. Quyết định phúc khảo tuân thủ quy chế khảo thí hiện hành.
+                </>
+              ) : (
+                <>
+                  <strong>Quy chế điểm số:</strong> Điểm AI chỉ mang tính tham khảo nội bộ. Điểm số và nhận xét chỉ có giá trị pháp lý khi giảng viên phụ trách thẩm định, xác nhận và công bố chính thức.
+                </>
+              )}
             </p>
           </div>
         </aside>

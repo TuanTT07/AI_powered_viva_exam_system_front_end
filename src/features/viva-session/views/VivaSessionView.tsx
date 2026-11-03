@@ -19,6 +19,59 @@ import {
   Wifi,
 } from 'lucide-react'
 import { TranscriptMessage, type TranscriptMessageProps } from '../components/TranscriptMessage'
+import { useOnline } from '../../../hooks/use-online'
+
+function DeviceTile({
+  icon,
+  label,
+  status,
+  ok,
+  onClick,
+  title,
+}: {
+  icon: ReactNode
+  label: string
+  status: string
+  ok: boolean
+  onClick?: () => void
+  title?: string
+}) {
+  const content = (
+    <>
+      <div className="flex items-center gap-2">
+        <div
+          className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+            ok ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+          }`}
+        >
+          {icon}
+        </div>
+        <div className="text-left">
+          <p className="text-xs font-bold text-slate-800 leading-tight">{label}</p>
+          <p className="text-[10px] text-slate-500">{status}</p>
+        </div>
+      </div>
+      {ok ? (
+        <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
+      ) : (
+        <Circle size={13} className="text-slate-300 shrink-0" />
+      )}
+    </>
+  )
+  const base = 'p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between w-full'
+  return onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`${base} cursor-pointer hover:bg-slate-100/80 transition-colors`}
+    >
+      {content}
+    </button>
+  ) : (
+    <div className={base}>{content}</div>
+  )
+}
 
 function BotFaceIcon({ className = 'w-14 h-14' }: { className?: string }) {
   return (
@@ -148,7 +201,7 @@ export function VivaSessionView({
   slotCode,
   startTime,
   duration,
-  currentStep = 2,
+  currentStep = 1,
   totalSteps = 3,
   isRecording = false,
   isAiSpeaking = false,
@@ -187,7 +240,8 @@ export function VivaSessionView({
   const [cameraActive, setCameraActive] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
-  const [recordingSeconds, setRecordingSeconds] = useState(14)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const online = useOnline()
 
   useEffect(() => {
     if (!isRecording) return
@@ -238,10 +292,10 @@ export function VivaSessionView({
     }
   }, [])
 
-  const displayCourse = courseName || title || 'Lập trình Java'
-  const displaySlotCode = slotCode || 'AIVES-JAVA-001'
-  const displayStartTime = startTime || '10:00, 20/01/2025'
-  const displayDuration = duration || '30 phút'
+  const displayCourse = courseName || title || '—'
+  const displaySlotCode = slotCode || '—'
+  const displayStartTime = startTime || '—'
+  const displayDuration = duration || '—'
 
   return (
     <section className="source-screen max-w-7xl mx-auto viva-room p-3 md:p-6 space-y-4">
@@ -257,7 +311,15 @@ export function VivaSessionView({
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Đang thi vấn đáp <span className="text-blue-600">AI</span>
+                  {completed ? (
+                    <>
+                      Phiên thi vấn đáp <span className="text-blue-600">AI</span> đã kết thúc
+                    </>
+                  ) : (
+                    <>
+                      Đang thi vấn đáp <span className="text-blue-600">AI</span>
+                    </>
+                  )}
                 </h1>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
                   <span className={`w-2 h-2 rounded-full bg-emerald-500 ${completed ? '' : 'animate-pulse'}`} />
@@ -265,7 +327,9 @@ export function VivaSessionView({
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                Phiên thi đang diễn ra. Hãy lắng nghe câu hỏi từ Giám khảo AI và trả lời rõ ràng, mạch lạc.
+                {completed
+                  ? 'Cảm ơn bạn đã hoàn thành ca thi. Bạn có thể xem lại tình trạng kết quả bên dưới.'
+                  : 'Phiên thi đang diễn ra. Hãy lắng nghe câu hỏi từ Giám khảo AI và trả lời rõ ràng, mạch lạc.'}
               </p>
             </div>
           </header>
@@ -347,7 +411,22 @@ export function VivaSessionView({
             </div>
           </section>
 
+          {/* Sau khi hoàn tất: không còn mic/hướng dẫn trả lời, chỉ thông báo và các hành động tiếp theo */}
+          {completed && (
+            <section className="rounded-2xl border border-emerald-200/70 bg-white p-5 md:p-6 space-y-4 shadow-sm">
+              <div className="flex items-start gap-3 rounded-xl bg-emerald-50/60 border border-emerald-100 px-4 py-3 text-xs text-emerald-800">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Phiên thi đã kết thúc và câu trả lời của bạn đã được hệ thống ghi nhận. Điểm AI chỉ mang tính gợi ý;
+                  kết quả chính thức chỉ hiển thị sau khi giảng viên xác nhận và công bố.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3">{controls}</div>
+            </section>
+          )}
+
           {/* Card 3: Câu trả lời của bạn Card */}
+          {!completed && (
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 md:p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -387,7 +466,7 @@ export function VivaSessionView({
                   </span>
                   {isRecording && !completed && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                      {formatSeconds(recordingSeconds || 14)}
+                      {formatSeconds(recordingSeconds)}
                     </span>
                   )}
                 </div>
@@ -403,32 +482,23 @@ export function VivaSessionView({
             </div>
 
             {/* Listening bar footer inside answer card */}
-            <div
-              className={`rounded-xl px-4 py-2.5 flex items-center justify-between text-xs border ${
-                completed
-                  ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
-                  : 'bg-blue-50/60 border-blue-100 text-blue-700'
-              }`}
-            >
+            <div className="rounded-xl px-4 py-2.5 flex items-center justify-between text-xs border bg-blue-50/60 border-blue-100 text-blue-700">
               <div className="flex items-center gap-2">
-                {completed ? <CheckCircle2 size={15} className="text-emerald-600" /> : <Headphones size={15} />}
+                <Headphones size={15} />
                 <span>
-                  {completed
-                    ? 'Phiên thi đã kết thúc. Toàn bộ câu trả lời của bạn đã được ghi nhận và lưu trữ an toàn.'
-                    : isRecording
-                      ? 'AI đang lắng nghe câu trả lời của bạn...'
-                      : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
+                  {isRecording
+                    ? 'AI đang lắng nghe câu trả lời của bạn...'
+                    : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
                 </span>
               </div>
-              {!completed && (
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+              </div>
             </div>
           </section>
+          )}
 
           {/* Collapsible Transcript History Section */}
           <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
@@ -637,74 +707,53 @@ export function VivaSessionView({
 
             <div className="grid grid-cols-2 gap-2 pt-1">
               {/* Mic */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Mic size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Mic</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Mic size={14} />}
+                label="Mic"
+                status={
+                  isRecording
+                    ? 'Đang thu'
+                    : connection.includes('Đã kết nối')
+                      ? 'Sẵn sàng'
+                      : completed
+                        ? 'Đã đóng'
+                        : 'Chưa mở'
+                }
+                ok={isRecording || connection.includes('Đã kết nối')}
+              />
 
               {/* Loa */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Volume2 size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Loa</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Volume2 size={14} />}
+                label="Loa"
+                status={isAiSpeaking ? 'Đang phát' : completed ? 'Đã đóng' : 'Sẵn sàng'}
+                ok={isAiSpeaking || (!completed && online)}
+              />
 
               {/* Camera */}
-              <div
-                onClick={() => {
-                  if (!completed) {
-                    if (cameraActive) stopCamera()
-                    else void startCamera()
-                  }
-                }}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition-colors"
-                title="Bấm để bật/tắt camera"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Video size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Camera</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Video size={14} />}
+                label="Camera"
+                status={cameraActive ? 'Đang mở' : 'Đang tắt'}
+                ok={cameraActive}
+                onClick={
+                  !completed
+                    ? () => {
+                        if (cameraActive) stopCamera()
+                        else void startCamera()
+                      }
+                    : undefined
+                }
+                title={!completed ? (cameraActive ? 'Bấm để tắt camera' : 'Bấm để bật camera') : undefined}
+              />
 
               {/* Mạng */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Wifi size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Mạng</p>
-                    <p className="text-[10px] text-slate-500">
-                      {connection.includes('Mất') ? 'Mất mạng' : 'Kết nối ổn định'}
-                    </p>
-                  </div>
-                </div>
-                <CheckCircle2
-                  size={13}
-                  className={connection.includes('Mất') ? 'text-red-500 shrink-0' : 'text-emerald-500 fill-emerald-100 shrink-0'}
-                />
-              </div>
+              <DeviceTile
+                icon={<Wifi size={14} />}
+                label="Mạng"
+                status={online && !connection.toLowerCase().includes('mất') ? 'Kết nối ổn định' : 'Mất mạng'}
+                ok={online && !connection.toLowerCase().includes('mất')}
+              />
             </div>
           </section>
         </aside>
