@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { FileText, Mic, ShieldCheck, Video, VideoOff, Wifi, CheckCircle2 } from 'lucide-react'
+import { FileText, Mic, ShieldCheck, Video, VideoOff, Wifi, CheckCircle2, User } from 'lucide-react'
 import { TranscriptMessage, type TranscriptMessageProps } from '../components/TranscriptMessage'
 
 export function VivaSessionView({
@@ -32,7 +32,6 @@ export function VivaSessionView({
   const isCompleted = phase.includes('hoàn tất') || phase.includes('kết thúc')
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
-  const [cameraError, setCameraError] = useState<string | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
   const stopCamera = () => {
@@ -44,10 +43,8 @@ export function VivaSessionView({
   }
 
   const startCamera = async () => {
-    setCameraError(null)
     try {
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-        setCameraError('Trình duyệt chưa hỗ trợ camera hoặc chưa cấp quyền.')
         return
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -59,22 +56,15 @@ export function VivaSessionView({
       }
       setCameraActive(true)
     } catch {
-      setCameraError('Chưa cấp quyền truy cập camera hoặc không tìm thấy webcam.')
       setCameraActive(false)
     }
   }
 
   useEffect(() => {
-    if (isCompleted) {
-      stopCamera()
-      return
-    }
-    void startCamera()
-
     return () => {
       stopCamera()
     }
-  }, [isCompleted])
+  }, [])
 
   return (
     <section className="source-screen max-w-7xl mx-auto viva-room p-4 md:p-6 space-y-4">
@@ -110,7 +100,7 @@ export function VivaSessionView({
           <section className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
             <div className="p-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Video size={16} className="text-blue-600" />
+                <User size={16} className="text-blue-600" />
                 <span>Không gian thí sinh</span>
               </div>
               {!isCompleted && (
@@ -120,7 +110,7 @@ export function VivaSessionView({
                     if (cameraActive) stopCamera()
                     else void startCamera()
                   }}
-                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
                 >
                   {cameraActive ? (
                     <>
@@ -130,7 +120,7 @@ export function VivaSessionView({
                   ) : (
                     <>
                       <Video size={13} />
-                      <span>Bật cam</span>
+                      <span>Mở cam (tùy chọn)</span>
                     </>
                   )}
                 </button>
@@ -144,7 +134,7 @@ export function VivaSessionView({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">Phiên thi đã hoàn tất</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Camera và micro đã đóng an toàn</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Micro đã đóng an toàn</p>
                 </div>
               </div>
             ) : cameraActive ? (
@@ -167,26 +157,14 @@ export function VivaSessionView({
                 </div>
               </div>
             ) : (
-              <div className="aspect-video bg-slate-900 flex flex-col gap-2.5 items-center justify-center text-slate-300 p-4 text-center">
-                <div className="w-11 h-11 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">
-                  <VideoOff size={22} />
+              <div className="py-6 px-4 bg-gradient-to-br from-slate-50 to-blue-50/40 flex flex-col items-center justify-center text-center gap-2.5">
+                <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shadow-2xs">
+                  <User size={28} />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-200">
-                    {cameraError ? 'Chưa kết nối camera' : 'Camera đang tắt'}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 max-w-[220px]">
-                    {cameraError || 'Nhấn nút bật camera để mở hình ảnh giám sát của bạn'}
-                  </p>
+                  <h3 className="text-sm font-bold text-slate-900">{name}</h3>
+                  <p className="text-xs text-slate-500 font-medium">{progress}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void startCamera()}
-                  className="mt-1 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <Video size={13} />
-                  <span>Bật camera</span>
-                </button>
               </div>
             )}
 
