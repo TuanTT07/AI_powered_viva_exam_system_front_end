@@ -61,7 +61,7 @@ export function createExamRepository(initialRecords: ExamSession[] = seed, initi
       let sequence = records.length + 1
       let id = `EXAM-MOCK-${String(sequence).padStart(3, '0')}`
       while (records.some((exam) => exam.id === id)) { sequence += 1; id = `EXAM-MOCK-${String(sequence).padStart(3, '0')}` }
-      const exam: ExamSession = { id, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, studentCount: 0, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount, status: 'DRAFT' }
+      const exam: ExamSession = { id, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, studentCount: 0, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount, status: 'DRAFT', timeLimitPerTurnSeconds: draft.timeLimitPerTurnSeconds ?? 60, antiOverlapEnabled: draft.antiOverlapEnabled !== false, bloomRatios: draft.bloomRatios }
       records.push(exam)
       rosters.set(exam.id, [])
       return exam
@@ -74,7 +74,7 @@ export function createExamRepository(initialRecords: ExamSession[] = seed, initi
       if (current.status !== 'DRAFT' && current.status !== 'SCHEDULED') throw new Error('Exam is not editable')
       const subject = records.find((exam) => exam.subjectId === draft.subjectId)
       if (!subject) throw new Error('Subject is not available to this lecturer')
-      const updated: ExamSession = { ...current, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount }
+      const updated: ExamSession = { ...current, title: draft.title, subjectId: subject.subjectId, subjectCode: subject.subjectCode, subjectName: subject.subjectName, scheduledAt: draft.scheduledAt, durationMinutes: draft.durationMinutes, mainQuestionCount: draft.mainQuestionCount, maxFollowUpCount: draft.maxFollowUpCount, timeLimitPerTurnSeconds: draft.timeLimitPerTurnSeconds ?? current.timeLimitPerTurnSeconds ?? 60, antiOverlapEnabled: draft.antiOverlapEnabled ?? current.antiOverlapEnabled ?? true, bloomRatios: draft.bloomRatios ?? current.bloomRatios }
       records[index] = updated
       return updated
     },

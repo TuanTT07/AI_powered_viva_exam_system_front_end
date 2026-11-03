@@ -1,21 +1,79 @@
 import type { ExamDraft, ExamSession } from './exam-types'
 
-export type ExamFormValues = { title: string; subjectId: string; startDate: string; startTime: string; durationMinutes: string; mainQuestionCount: string; maxFollowUpCount: string }
+export type ExamFormValues = {
+  title: string
+  subjectId: string
+  startDate: string
+  startTime: string
+  durationMinutes: string
+  mainQuestionCount: string
+  maxFollowUpCount: string
+  timeLimitPerTurnSeconds?: string
+  antiOverlapEnabled?: boolean
+  bloomRememberRatio?: string
+  bloomUnderstandRatio?: string
+  bloomApplyRatio?: string
+  bloomAnalyzeRatio?: string
+}
 export type ExamField = keyof ExamFormValues
 export type ExamFieldErrors = Partial<Record<ExamField, string>>
 export type ExamSubject = { id: string; code: string; name: string }
 
-export const examDefaults: ExamFormValues = { title: '', subjectId: '', startDate: '', startTime: '', durationMinutes: '15', mainQuestionCount: '3', maxFollowUpCount: '2' }
+export const examDefaults: ExamFormValues = {
+  title: '',
+  subjectId: '',
+  startDate: '',
+  startTime: '',
+  durationMinutes: '15',
+  mainQuestionCount: '3',
+  maxFollowUpCount: '2',
+  timeLimitPerTurnSeconds: '60',
+  antiOverlapEnabled: true,
+  bloomRememberRatio: '30',
+  bloomUnderstandRatio: '40',
+  bloomApplyRatio: '20',
+  bloomAnalyzeRatio: '10',
+}
 
 export function examToForm(exam: ExamSession): ExamFormValues {
   const date = new Date(exam.scheduledAt)
   const pad = (value: number) => String(value).padStart(2, '0')
-  return { title: exam.title, subjectId: exam.subjectId, startDate: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`, startTime: `${pad(date.getHours())}:${pad(date.getMinutes())}`, durationMinutes: String(exam.durationMinutes), mainQuestionCount: String(exam.mainQuestionCount), maxFollowUpCount: String(exam.maxFollowUpCount) }
+  const bloom = exam.bloomRatios ?? {}
+  return {
+    title: exam.title,
+    subjectId: exam.subjectId,
+    startDate: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    startTime: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    durationMinutes: String(exam.durationMinutes),
+    mainQuestionCount: String(exam.mainQuestionCount),
+    maxFollowUpCount: String(exam.maxFollowUpCount),
+    timeLimitPerTurnSeconds: String(exam.timeLimitPerTurnSeconds ?? 60),
+    antiOverlapEnabled: exam.antiOverlapEnabled !== false,
+    bloomRememberRatio: String(Math.round((bloom.REMEMBER ?? 0.3) * 100)),
+    bloomUnderstandRatio: String(Math.round((bloom.UNDERSTAND ?? 0.4) * 100)),
+    bloomApplyRatio: String(Math.round((bloom.APPLY ?? 0.2) * 100)),
+    bloomAnalyzeRatio: String(Math.round((bloom.ANALYZE ?? 0.1) * 100)),
+  }
 }
 
 export function toExamDraft(values: ExamFormValues): ExamDraft {
   const scheduledAt = new Date(`${values.startDate}T${values.startTime}`).toISOString()
-  return { title: values.title.trim(), subjectId: values.subjectId, scheduledAt, durationMinutes: Number(values.durationMinutes), mainQuestionCount: Number(values.mainQuestionCount), maxFollowUpCount: Number(values.maxFollowUpCount) }
+  return {
+    title: values.title.trim(),
+    subjectId: values.subjectId,
+    scheduledAt,
+    durationMinutes: Number(values.durationMinutes),
+    mainQuestionCount: Number(values.mainQuestionCount),
+    maxFollowUpCount: Number(values.maxFollowUpCount),
+    timeLimitPerTurnSeconds: Number(values.timeLimitPerTurnSeconds) || 60,
+    antiOverlapEnabled: values.antiOverlapEnabled !== false,
+    bloomRatios: {
+      REMEMBER: (Number(values.bloomRememberRatio) || 30) / 100,
+      UNDERSTAND: (Number(values.bloomUnderstandRatio) || 40) / 100,
+      APPLY: (Number(values.bloomApplyRatio) || 20) / 100,
+      ANALYZE: (Number(values.bloomAnalyzeRatio) || 10) / 100,
+    },
+  }
 }
 
 export function validateExamForm(values: ExamFormValues, subjects: ExamSubject[], options: { mode: 'create' | 'edit'; initialScheduledAt?: string; now?: Date } = { mode: 'create' }): ExamFieldErrors {
@@ -34,6 +92,9 @@ export function validateExamForm(values: ExamFormValues, subjects: ExamSubject[]
   validateInteger(values.durationMinutes, 5, 120, 'Thời lượng', 'durationMinutes', errors)
   validateInteger(values.mainQuestionCount, 1, 20, 'Số câu hỏi chính', 'mainQuestionCount', errors)
   validateInteger(values.maxFollowUpCount, 0, 10, 'Số câu hỏi đào sâu', 'maxFollowUpCount', errors)
+  if (values.timeLimitPerTurnSeconds) {
+    validateInteger(values.timeLimitPerTurnSeconds, 10, 300, 'Thời gian mỗi lượt', 'timeLimitPerTurnSeconds', errors)
+  }
   return errors
 }
 

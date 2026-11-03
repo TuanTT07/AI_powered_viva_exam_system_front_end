@@ -9,12 +9,27 @@ import { apiExamMonitoringRepository } from '../exams/api-exam-monitoring-reposi
 
 const original = runtimeConfig.dataSource
 const url = '/lecturer/exams/11111111-1111-4111-8111-111111111111/attempts/attempt-1'
+
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const router = createMemoryRouter([{ path: '/lecturer/exams/:examId/attempts/:attemptId', element: <GradingWorkspacePage /> }], { initialEntries: [url] })
-  render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>)
+  const router = createMemoryRouter(
+    [{ path: '/lecturer/exams/:examId/attempts/:attemptId', element: <GradingWorkspacePage /> }],
+    { initialEntries: [url] }
+  )
+  render(
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
 }
-afterEach(() => { cleanup(); runtimeConfig.dataSource = original; vi.restoreAllMocks() })
+
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+  runtimeConfig.dataSource = original
+  vi.restoreAllMocks()
+})
+
 describe('grading authority', () => {
   it('validates criterion bounds, confirms demo only and keeps official score unavailable', async () => {
     runtimeConfig.dataSource = 'mock'
@@ -24,13 +39,15 @@ describe('grading authority', () => {
     await user.clear(inputs[0])
     await user.click(screen.getByRole('button', { name: 'Xác nhận điểm demo' }))
     expect(screen.getByText(/Nhập đầy đủ điểm/)).toBeInTheDocument()
-    await user.clear(inputs[1]); await user.clear(inputs[2])
+    await user.clear(inputs[1])
+    await user.clear(inputs[2])
     await user.type(inputs[0], '4')
     await user.type(inputs[1], '3')
     await user.type(inputs[2], '4')
     await user.click(screen.getByRole('button', { name: 'Xác nhận điểm demo' }))
     expect(screen.queryByRole('dialog', { name: 'Xác nhận điểm demo?' })).not.toBeInTheDocument()
-    await user.clear(inputs[0]); await user.type(inputs[0], '3')
+    await user.clear(inputs[0])
+    await user.type(inputs[0], '3')
     await user.click(screen.getByRole('button', { name: 'Xác nhận điểm demo' }))
     const dialog = screen.getByRole('dialog', { name: 'Xác nhận điểm demo?' })
     await user.click(within(dialog).getByRole('button', { name: 'Xác nhận demo' }))
@@ -40,14 +57,60 @@ describe('grading authority', () => {
     expect(screen.queryByText('ĐIỂM CHÍNH THỨC')).not.toBeInTheDocument()
     expect(screen.getByText('Chỉ sử dụng trong phiên mô phỏng')).toBeInTheDocument()
   })
+
   it('never exposes demo transcript or scoring controls in API mode', async () => {
     runtimeConfig.dataSource = 'api'
-    vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({ examId: 'exam', examTitle: 'Exam', totalCandidates: 1, completedCount: 1, readyCount: 0, inProgressCount: 0, scheduledCount: 0, absentCount: 0, cancelledCount: 0, candidateStatuses: [{ attemptId: 'attempt-1', examId: 'exam', studentId: 'student', studentName: 'Authorized candidate', studentCode: 'S01', studentEmail: 's@example.com', slotNumber: 1, scheduledStartTime: '', scheduledEndTime: '', actualStartTime: null, actualEndTime: null, status: 'COMPLETED', accessCode: null }] })
+    vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({
+      examId: 'exam',
+      examTitle: 'Exam',
+      totalCandidates: 1,
+      completedCount: 1,
+      readyCount: 0,
+      inProgressCount: 0,
+      scheduledCount: 0,
+      absentCount: 0,
+      cancelledCount: 0,
+      candidateStatuses: [
+        {
+          attemptId: 'attempt-1',
+          examId: 'exam',
+          studentId: 'student',
+          studentName: 'Authorized candidate',
+          studentCode: 'S01',
+          studentEmail: 's@example.com',
+          slotNumber: 1,
+          scheduledStartTime: '',
+          scheduledEndTime: '',
+          actualStartTime: null,
+          actualEndTime: null,
+          status: 'COMPLETED',
+          accessCode: null,
+        },
+      ],
+    })
     mount()
     expect(await screen.findByText('Authorized candidate')).toBeInTheDocument()
     expect(screen.getByText('Chưa có transcript được cấp quyền xem.')).toBeInTheDocument()
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryByText(/Phân biệt mảng động/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Chốt điểm' })).toBeDisabled()
+  })
+
+  it('supports draft saving and notes entry in demo mode', async () => {
+    runtimeConfig.dataSource = 'mock'
+    mount()
+    const user = userEvent.setup()
+
+    expect(screen.getByText(/Biên bản hội thoại/)).toBeInTheDocument()
+    expect(screen.getByText('Câu hỏi đang rà soát')).toBeInTheDocument()
+
+    const notesInput = screen.getByPlaceholderText(/Nhận xét chi tiết và lý do điều chỉnh điểm/)
+    await user.type(notesInput, 'Sinh viên nắm vững kiến thức.')
+
+    const saveDraftBtn = screen.getByRole('button', { name: 'Lưu nháp demo' })
+    expect(saveDraftBtn).not.toBeDisabled()
+    await user.click(saveDraftBtn)
+
+    expect(screen.getByText('Đã lưu nháp trong phiên demo.')).toBeInTheDocument()
   })
 })
