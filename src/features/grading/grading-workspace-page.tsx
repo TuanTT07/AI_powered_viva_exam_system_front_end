@@ -50,7 +50,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   })
 
   const evaluation = evalQuery.data
-  const candidate = query.data?.candidateStatuses.find(c => c.attemptId === attemptId)
+  const candidate = query.data?.candidateStatuses.find(c => c.attemptId === attemptId) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
   const stored = getStoredGrading(examId, attemptId)
 
   const defaultScores = evaluation
