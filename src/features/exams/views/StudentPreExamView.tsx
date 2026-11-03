@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query'
+import { apiEvaluationService } from '../../grading/api-evaluation-service'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Calendar, Clock3, Headphones, Mic, Sparkles } from 'lucide-react'
 import { Button } from '../../../components/ui/primitives'
@@ -23,6 +25,12 @@ const time = (value: string | null) =>
 
 export function StudentPreExamView({ slot }: { slot: StudentExamSlot }) {
   const [search] = useSearchParams()
+  const results = useQuery({
+    queryKey: ['student-published-results', slot.attemptId],
+    queryFn: () => apiEvaluationService.studentResults(slot.attemptId),
+    enabled: slot.status === 'COMPLETED',
+    retry: false,
+  })
   const canJoin = slot.status === 'READY' || slot.status === 'IN_PROGRESS'
   const unavailableMessage =
     slot.status === 'SCHEDULED'
@@ -58,6 +66,18 @@ export function StudentPreExamView({ slot }: { slot: StudentExamSlot }) {
           </Link>
         </div>
       </header>
+      {slot.status === 'COMPLETED' && <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-base font-semibold">Kết quả đã công bố</h2>
+        {results.isPending && <p role="status">Đang tải kết quả…</p>}
+        {results.isError && <div role="alert">Không thể tải kết quả. <Button variant="outline" onClick={() => results.refetch()}>Thử lại</Button></div>}
+        {results.isSuccess && !results.data.length && <p>Giảng viên chưa công bố điểm.</p>}
+        {results.isSuccess && !!results.data.length && <ul className="space-y-2">
+          {results.data.map(result => <li key={result.questionOrder} className="rounded-xl bg-slate-50 p-3">
+            <strong>Câu {result.questionOrder} · {result.finalScore} điểm</strong>
+            {result.feedback && <p className="mt-1 text-sm text-slate-600">{result.feedback}</p>}
+          </li>)}
+        </ul>}
+      </section>}
 
       {/* 4 Quick Metric Cards for Pre-Exam */}
       <section className="student-metric-grid" aria-label="Thông tin nhanh ca thi">

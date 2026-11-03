@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useParams, useSearchParams, useBlocker } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { DemoLabel } from '../../components/common/inline-notice'
 import { Alert, Button, Dialog } from '../../components/ui/primitives'
 import { ErrorState, LoadingPage } from '../../components/common/states'
@@ -78,6 +78,10 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     retry: false,
   })
 
+  const publication = useMutation({
+    mutationFn: () => apiEvaluationService.publish(resolvedQuestionAttemptId),
+    onSuccess: () => evalQuery.refetch(),
+  })
   const evaluation = evalQuery.data
   const targetQuestionAttemptId = evaluation?.questionAttemptId ?? resolvedQuestionAttemptId
 
@@ -228,6 +232,15 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         name={candidate?.studentName ?? evaluation?.studentName ?? 'Thí sinh'}
         code={candidate?.studentCode ?? evaluation?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
+        publication={<div className="space-y-2">
+          {evaluation?.publishedAt
+            ? <p role="status" className="text-sm font-semibold text-emerald-700">Đã công bố điểm câu này</p>
+            : <Button disabled={evaluation?.status !== 'GRADED' || isEditing || isFinalizing} pending={publication.isPending}
+                onClick={() => { if (window.confirm('Công bố điểm đã chốt của câu này cho sinh viên?')) publication.mutate() }}>
+                Công bố điểm câu này
+              </Button>}
+          {publication.isError && <Alert tone="danger">{publication.error.message}</Alert>}
+        </div>}
         transcript={transcript}
         criteria={criteria}
         scores={scores}
@@ -274,7 +287,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
                     : 'Gọi AI chấm điểm'}
               </Button>
             )}
-            {confirmed ? (
+            {evaluation?.publishedAt ? null : confirmed ? (
               <Button variant="outline" onClick={() => setIsEditing(true)}>
                 Sửa điểm / Chấm lại
               </Button>

@@ -51,6 +51,7 @@ export type EvaluationResponseDto = {
   audioUrl?: string | null
   createdAt: string
   updatedAt: string
+  publishedAt?: string | null
   examAttemptId?: string | null
   studentId?: string | null
   studentName?: string | null
@@ -93,6 +94,23 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
         `/api/question-attempts/${encodeURIComponent(questionAttemptId)}/evaluation/final`,
         { method: 'PUT', body: request }
       )
+      return res.data
+    },
+
+    async publish(questionAttemptId: string): Promise<void> {
+      await client.request(
+        `/api/question-attempts/${encodeURIComponent(questionAttemptId)}/evaluation/publish`,
+        { method: 'PUT' },
+      )
+    },
+
+    async studentResults(attemptId: string) {
+      const res = await client.request<ApiResponse<{
+        questionOrder: number
+        finalScore: number
+        feedback: string | null
+        publishedAt: string
+      }[]>>(`/api/v1/student/exams/${encodeURIComponent(attemptId)}/results`)
       return res.data
     },
 

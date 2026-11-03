@@ -9,7 +9,6 @@ import {
   HelpCircle,
   AlertTriangle,
 } from 'lucide-react'
-import { Button } from '../../../components/ui/primitives'
 import type { CriterionReview, EvidenceLine } from '../grading-types'
 
 export type { CriterionReview, EvidenceLine }
@@ -30,6 +29,7 @@ export function GradingWorkspaceView({
   confirmed,
   notice,
   actions,
+  publication,
   demo = false,
   status = 'COMPLETED',
 }: {
@@ -46,6 +46,7 @@ export function GradingWorkspaceView({
   confirmed: boolean
   notice: ReactNode
   actions: ReactNode
+  publication?: ReactNode
   demo?: boolean
   status?: string
 }) {
@@ -188,13 +189,12 @@ export function GradingWorkspaceView({
           </section>
 
           {/* Publication status */}
-          <section className={panel}>
-            <h2 className="text-sm font-semibold text-slate-800">Xác nhận và công bố kết quả</h2>
+          {publication && <section className={panel}><h2 className="text-sm font-semibold text-slate-800">Công bố điểm cho sinh viên</h2>
             <p className="text-sm text-slate-500">
               Điểm chỉ được công bố khi hệ thống xác nhận giảng viên đã chốt điểm và cho phép sinh viên xem kết quả.
             </p>
-            <Button disabled>Chưa hỗ trợ ký số / công bố</Button>
-          </section>
+            {publication}
+          </section>}
         </>
       ) : (
         /* Workspace 3-column Layout */

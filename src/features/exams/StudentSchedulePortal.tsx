@@ -185,7 +185,7 @@ export function StudentSchedulePortal({ list = false }: { list?: boolean }) {
                           className="inline-flex min-h-10 items-center justify-center rounded-md px-2 text-xs font-semibold text-slate-600 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                           to={studentExamPath(slot.examId, slot.attemptId)}
                         >
-                          Chi tiết ca thi
+                          {slot.status === 'COMPLETED' ? 'Xem kết quả' : 'Chi tiết ca thi'}
                         </Link>
                         {canJoin ? (
                           <Link
