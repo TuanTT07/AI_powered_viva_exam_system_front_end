@@ -47,7 +47,10 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   const resolvedQuestionAttemptId = useMemo(() => {
     if (!examEvals.data?.content || examEvals.data.content.length === 0) return attemptId
     const match = examEvals.data.content.find(
-      e => e.questionAttemptId === attemptId || e.id === attemptId
+      e =>
+        e.questionAttemptId === attemptId ||
+        e.examAttemptId === attemptId ||
+        e.id === attemptId
     )
     if (match) return match.questionAttemptId
     if (examEvals.data.content.length === 1) {
@@ -64,7 +67,9 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         return await apiEvaluationService.getByQuestionAttempt(resolvedQuestionAttemptId)
       } catch {
         const fallback = examEvals.data?.content.find(
-          e => e.questionAttemptId === resolvedQuestionAttemptId
+          e =>
+            e.questionAttemptId === resolvedQuestionAttemptId ||
+            e.examAttemptId === resolvedQuestionAttemptId
         )
         return fallback ?? null
       }
@@ -74,10 +79,20 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   })
 
   const evaluation = evalQuery.data
+  const targetQuestionAttemptId = evaluation?.questionAttemptId ?? resolvedQuestionAttemptId
+
   const candidate = query.data?.candidateStatuses.find(
-    c => c.attemptId === attemptId || c.attemptId === resolvedQuestionAttemptId
+    c =>
+      c.attemptId === attemptId ||
+      c.attemptId === resolvedQuestionAttemptId ||
+      (evaluation && (
+        (evaluation.studentId && c.studentId === evaluation.studentId) ||
+        (evaluation.studentCode && c.studentCode === evaluation.studentCode) ||
+        (evaluation.examAttemptId && c.attemptId === evaluation.examAttemptId)
+      ))
   ) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
-  const stored = getStoredGrading(examId, resolvedQuestionAttemptId)
+
+  const stored = getStoredGrading(examId, targetQuestionAttemptId)
 
   const defaultScores = useMemo(() => {
     if (!evaluation) return {}
@@ -122,7 +137,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     setTriggering(true)
     setActionMessage(null)
     try {
-      await apiEvaluationService.gradeWithAi(resolvedQuestionAttemptId)
+      await apiEvaluationService.gradeWithAi(targetQuestionAttemptId)
       await evalQuery.refetch()
       await examEvals.refetch()
       setActionMessage('Đã kích hoạt AI chấm điểm thành công!')
@@ -156,14 +171,14 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         finalScore: Number(scores[c.id]) || 0,
         comment: c.evidence,
       }))
-      const res = await apiEvaluationService.finalizeEvaluation(resolvedQuestionAttemptId, {
+      const res = await apiEvaluationService.finalizeEvaluation(targetQuestionAttemptId, {
         criteria: criteriaPayload,
         overallFeedback: notes,
       })
       setIsEditing(false)
       setConfirmOpen(false)
       const finalScore = res.finalScore ?? Object.values(scores).reduce((sum, v) => sum + (Number(v) || 0), 0)
-      saveStoredGrading(examId, resolvedQuestionAttemptId, {
+      saveStoredGrading(examId, targetQuestionAttemptId, {
         scores,
         notes,
         confirmed: true,
@@ -210,8 +225,8 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
       <GradingWorkspaceView
-        name={candidate?.studentName ?? 'Thí sinh'}
-        code={candidate?.studentCode ?? attemptId}
+        name={candidate?.studentName ?? evaluation?.studentName ?? 'Thí sinh'}
+        code={candidate?.studentCode ?? evaluation?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
         transcript={transcript}
         criteria={criteria}
@@ -226,7 +241,13 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
           <div className="space-y-2">
             {evaluation ? (
               <Alert tone="info">
-                <strong>Gợi ý từ AI:</strong> Điểm đề xuất: <strong>{evaluation.aiSuggestedScore ?? '—'} / {evaluation.maxScore}</strong>. Trạng thái: <strong>{evaluation.status}</strong>.
+                <strong>{evaluation.aiSuggestedScore !== null && evaluation.aiSuggestedScore !== undefined ? 'Gợi ý từ AI:' : 'Trạng thái chấm điểm:'}</strong>{' '}
+                {evaluation.aiSuggestedScore !== null && evaluation.aiSuggestedScore !== undefined ? (
+                  <>Điểm đề xuất: <strong>{evaluation.aiSuggestedScore} / {evaluation.maxScore}</strong>. </>
+                ) : (
+                  <>Chưa có điểm gợi ý từ AI. Giảng viên có thể tự chấm hoặc bấm &quot;Gọi AI chấm điểm&quot;. </>
+                )}
+                Trạng thái: <strong>{evaluation.status === 'GRADED' ? 'Đã chốt điểm' : 'Chờ duyệt'}</strong>.
               </Alert>
             ) : (
               <Alert>
@@ -244,9 +265,13 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
             <Button variant="outline" onClick={tab.toggle}>
               {tab.summary ? 'Không gian chấm điểm' : 'Tổng kết hồ sơ'}
             </Button>
-            {!evaluation && (
+            {!confirmed && (
               <Button variant="outline" disabled={triggering} onClick={handleTriggerAi}>
-                {triggering ? 'Đang gọi AI...' : 'Gọi AI chấm điểm'}
+                {triggering
+                  ? 'Đang gọi AI...'
+                  : evaluation?.aiSuggestedScore !== null && evaluation?.aiSuggestedScore !== undefined
+                    ? 'Chấm lại bằng AI'
+                    : 'Gọi AI chấm điểm'}
               </Button>
             )}
             {confirmed ? (
@@ -255,7 +280,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
               </Button>
             ) : (
               <>
-                {evaluation && (
+                {evaluation && evaluation.aiSuggestedScore !== null && evaluation.aiSuggestedScore !== undefined && (
                   <Button variant="outline" onClick={handleResetToAi}>
                     Đặt lại điểm AI
                   </Button>

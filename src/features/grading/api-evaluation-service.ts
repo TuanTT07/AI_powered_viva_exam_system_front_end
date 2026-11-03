@@ -51,6 +51,10 @@ export type EvaluationResponseDto = {
   audioUrl?: string | null
   createdAt: string
   updatedAt: string
+  examAttemptId?: string | null
+  studentId?: string | null
+  studentName?: string | null
+  studentCode?: string | null
 }
 
 export type CriterionFinalScoreRequest = {
