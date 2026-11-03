@@ -3,7 +3,7 @@ import type { ExamDraft, ExamListRequest, ExamSession, ExamStatus } from './exam
 import type { ExamRepository } from './exam-repository'
 
 type ExamConfigDto = { maxMainQuestions?: number; maxFollowUpQuestions?: number; timeLimitPerTurnSeconds?: number; bloomRatios?: Record<string, number>; antiOverlapEnabled?: boolean }
-type ExamDto = { id: string; courseId: string; courseCode?: string; courseName?: string; title: string; startTime: string; endTime: string; status: ExamStatus; examConfig?: ExamConfigDto; createdAt?: string }
+type ExamDto = { id: string; courseId: string; courseCode?: string; courseName?: string; title: string; startTime: string; endTime: string; status: ExamStatus; examConfig?: ExamConfigDto; totalCandidates?: number; createdAt?: string }
 type ExamDetailDto = ExamDto & { totalCandidates?: number; candidates?: Array<{ studentId: string }> }
 type PageExamDto = { content: ExamDto[]; number: number; size: number; totalElements: number; totalPages: number }
 type CreateExamDto = { courseId: string; title: string; startTime: string; endTime: string; examConfig: ExamConfigDto }
@@ -23,7 +23,7 @@ function mapExam(dto: ExamDto | ExamDetailDto): ExamSession {
     subjectName: dto.courseName ?? 'Học phần',
     scheduledAt: dto.startTime,
     durationMinutes: durationMinutes(dto.startTime, dto.endTime),
-    studentCount: 'totalCandidates' in dto ? dto.totalCandidates ?? dto.candidates?.length ?? 0 : 0,
+    studentCount: typeof dto.totalCandidates === 'number' ? dto.totalCandidates : ('candidates' in dto && Array.isArray(dto.candidates) ? dto.candidates.length : 0),
     mainQuestionCount: dto.examConfig?.maxMainQuestions ?? 1,
     maxFollowUpCount: dto.examConfig?.maxFollowUpQuestions ?? 0,
     status: dto.status,
@@ -73,24 +73,42 @@ export function createApiExamRepository(client: Pick<ApiClient, 'request'> = api
     async saveSchedule() { throw new ApiError('Dùng scheduling repository API riêng.', { code: 'USE_API_SCHEDULING' }) },
     async getQuestionConfig(examId) {
       assertUuid(examId, 'Exam')
-      // Retrieve exam to construct current question configuration
-      const exam = await this.get(examId)
-      if (!exam) return undefined
-      return {
-        examId: exam.id,
-        mode: 'RANDOM_POOL',
-        questionIds: [],
-        updatedAt: new Date().toISOString(),
+      try {
+        const res = await client.request<{
+          questionIds: string[]
+          timeLimitPerTurnSeconds: number
+          maxFollowUpQuestions: number
+        }>(`/api/v1/exams/${encodeURIComponent(examId)}/question-config`)
+        return {
+          examId,
+          mode: res.questionIds && res.questionIds.length > 0 ? 'MANUAL' : 'RANDOM_POOL',
+          questionIds: res.questionIds ?? [],
+          updatedAt: new Date().toISOString(),
+        }
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return undefined
+        throw error
       }
     },
     async saveQuestionConfig(examId, draft) {
       assertUuid(examId, 'Exam')
       const exam = await this.get(examId)
-      if (!exam) throw new ApiError('Không tìm thấy kỳ thi.', { status: 404 })
+      const res = await client.request<{
+        questionIds: string[]
+        timeLimitPerTurnSeconds: number
+        maxFollowUpQuestions: number
+      }>(`/api/v1/exams/${encodeURIComponent(examId)}/question-config`, {
+        method: 'PUT',
+        body: {
+          questionIds: draft.questionIds,
+          timeLimitPerTurnSeconds: exam?.timeLimitPerTurnSeconds ?? 60,
+          maxFollowUpQuestions: exam?.maxFollowUpCount ?? 2,
+        },
+      })
       return {
-        examId: exam.id,
+        examId,
         mode: draft.mode,
-        questionIds: draft.questionIds,
+        questionIds: res.questionIds ?? draft.questionIds,
         updatedAt: new Date().toISOString(),
       }
     },

@@ -10,7 +10,7 @@ import { GradingWorkspaceView } from './views/GradingWorkspaceView'
 import { gradingDemo } from './mocks/grading-demo'
 import { getStoredGrading, saveStoredGrading } from './grading-repository'
 import { apiEvaluationService } from './api-evaluation-service'
-import type { CriterionReview } from './grading-types'
+import type { CriterionReview, EvidenceLine } from './grading-types'
 
 export function GradingWorkspacePage() {
   const { examId = '', attemptId = '' } = useParams()
@@ -135,13 +135,27 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     return <ErrorState description="Không tìm thấy lượt thi trong kỳ thi được cấp quyền xem." />
   }
 
+  const transcript: EvidenceLine[] = (evaluation?.transcript ?? []).map(t => ({
+    id: t.id,
+    role: t.speaker.toLowerCase() === 'ai' ? 'ai' : 'student',
+    text: t.textContent,
+    time: t.createdAt
+      ? new Date(t.createdAt).toLocaleTimeString('vi-VN', {
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      : undefined,
+    audioUrl: t.audioUrl ?? undefined,
+  }))
+
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
       <GradingWorkspaceView
         name={candidate?.studentName ?? 'Thí sinh (Đánh giá Dev3)'}
         code={candidate?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
-        transcript={[]}
+        transcript={transcript}
+        audioUrl={evaluation?.audioUrl}
         criteria={criteria}
         scores={scores}
         notes={notes}

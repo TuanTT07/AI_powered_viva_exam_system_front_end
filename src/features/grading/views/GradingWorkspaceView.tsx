@@ -37,6 +37,7 @@ export function GradingWorkspaceView({
   actions,
   demo = false,
   status = 'COMPLETED',
+  audioUrl,
 }: {
   name: string
   code: string
@@ -53,6 +54,7 @@ export function GradingWorkspaceView({
   actions: ReactNode
   demo?: boolean
   status?: string
+  audioUrl?: string | null
 }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const total = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0)
@@ -227,7 +229,22 @@ export function GradingWorkspaceView({
               <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
                 <Mic size={16} className="text-emerald-600" /> Bằng chứng ghi âm
               </h2>
-              {demo ? (
+              {audioUrl ? (
+                <div className="space-y-3">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-700">Bản ghi âm buổi thi</span>
+                      <Volume2 size={16} className="text-slate-400" />
+                    </div>
+                    <audio controls className="w-full h-8" src={audioUrl}>
+                      Trình duyệt không hỗ trợ phát audio.
+                    </audio>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Bản ghi âm chính thức từ phòng thi được lưu trữ bảo mật.
+                  </p>
+                </div>
+              ) : demo ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div className="flex items-center gap-2">
