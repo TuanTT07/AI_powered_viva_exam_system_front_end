@@ -5,6 +5,7 @@ import { Alert, Button, Dialog } from '../../../components/ui/primitives'
 import { LoadingPage } from '../../../components/common/states'
 import { useAssignLecturer, useCourse, useCourseLecturers, useDeleteCourse, useRemoveLecturer } from '../course-hooks'
 import { useUsers } from '../user-hooks'
+import { CourseEnrollmentPanel } from './CourseEnrollmentPanel'
 import '../admin.css'
 
 export function AdminCourseDetailPage() {
@@ -67,6 +68,8 @@ export function AdminCourseDetailPage() {
       </header>
 
       {feedback && <Alert tone="success">{feedback}</Alert>}
+
+      <CourseEnrollmentPanel key={courseId} courseId={courseId} />
 
       <div className="dashboard-grid">
         {/* Left: Assigned Lecturers */}

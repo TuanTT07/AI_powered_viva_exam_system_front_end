@@ -19,6 +19,59 @@ import {
   Wifi,
 } from 'lucide-react'
 import { TranscriptMessage, type TranscriptMessageProps } from '../components/TranscriptMessage'
+import { useOnline } from '../../../hooks/use-online'
+
+function DeviceTile({
+  icon,
+  label,
+  status,
+  ok,
+  onClick,
+  title,
+}: {
+  icon: ReactNode
+  label: string
+  status: string
+  ok: boolean
+  onClick?: () => void
+  title?: string
+}) {
+  const content = (
+    <>
+      <div className="flex items-center gap-2">
+        <div
+          className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+            ok ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+          }`}
+        >
+          {icon}
+        </div>
+        <div className="text-left">
+          <p className="text-xs font-bold text-slate-800 leading-tight">{label}</p>
+          <p className="text-[10px] text-slate-500">{status}</p>
+        </div>
+      </div>
+      {ok ? (
+        <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
+      ) : (
+        <Circle size={13} className="text-slate-300 shrink-0" />
+      )}
+    </>
+  )
+  const base = 'p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between w-full'
+  return onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`${base} cursor-pointer hover:bg-slate-100/80 transition-colors`}
+    >
+      {content}
+    </button>
+  ) : (
+    <div className={base}>{content}</div>
+  )
+}
 
 function BotFaceIcon({ className = 'w-14 h-14' }: { className?: string }) {
   return (
@@ -62,61 +115,96 @@ function WaveformBars({ active = false, count = 10 }: { active?: boolean; count?
 
 function StudentWaveformBars({
   active = false,
+  level = 0,
   side = 'left',
 }: {
   active?: boolean
+  level?: number
   side?: 'left' | 'right'
 }) {
-  const barHeights = [20, 35, 55, 75, 90, 70]
+  const barHeights = [20, 35, 55, 75, 95, 75]
   const dotsCount = 5
+  const safeLevel = Math.max(0, Math.min(1, level))
+  const isVocalizing = active && safeLevel > 0.04
 
   if (side === 'left') {
     return (
       <div className="flex items-center gap-1.5 h-10 overflow-hidden">
-        {Array.from({ length: dotsCount }).map((_, i) => (
-          <span
-            key={`dot-${i}`}
-            className={`w-1 h-1 rounded-full ${active ? 'bg-blue-400 animate-pulse' : 'bg-blue-300'}`}
-            style={{ animationDelay: `${(i * 0.1).toFixed(2)}s` }}
-          />
-        ))}
-        {barHeights.map((h, i) => (
-          <span
-            key={`bar-${i}`}
-            className={`w-1 rounded-full transition-all duration-150 ${
-              active ? 'bg-blue-500 animate-pulse' : 'bg-blue-300'
-            }`}
-            style={{
-              height: active ? `${Math.max(16, h * (0.7 + ((i % 3) * 0.15)))}%` : `${h * 0.4}%`,
-              animationDelay: `${((i + dotsCount) * 0.08).toFixed(2)}s`,
-            }}
-          />
-        ))}
+        {Array.from({ length: dotsCount }).map((_, i) => {
+          const dotNearBars = i >= 3
+          const dotActive = isVocalizing && dotNearBars && safeLevel > 0.25
+          return (
+            <span
+              key={`dot-${i}`}
+              className={`w-1 h-1 rounded-full transition-all duration-150 ${
+                dotActive
+                  ? 'bg-blue-500 scale-125'
+                  : active
+                    ? 'bg-blue-400'
+                    : 'bg-blue-300'
+              }`}
+            />
+          )
+        })}
+        {barHeights.map((h, i) => {
+          const multiplier = 0.85 + ((i % 3) * 0.12)
+          const barHeightPercent = active
+            ? Math.min(100, Math.max(12, Math.round(h * (0.2 + safeLevel * 0.85 * multiplier))))
+            : Math.max(10, Math.round(h * 0.35))
+
+          return (
+            <span
+              key={`bar-${i}`}
+              className={`w-1 rounded-full transition-all duration-75 ease-out ${
+                isVocalizing ? 'bg-blue-600 shadow-2xs' : active ? 'bg-blue-400/90' : 'bg-blue-300'
+              }`}
+              style={{
+                height: `${barHeightPercent}%`,
+              }}
+            />
+          )
+        })}
       </div>
     )
   }
 
   return (
     <div className="flex items-center gap-1.5 h-10 overflow-hidden">
-      {[...barHeights].reverse().map((h, i) => (
-        <span
-          key={`bar-${i}`}
-          className={`w-1 rounded-full transition-all duration-150 ${
-            active ? 'bg-blue-500 animate-pulse' : 'bg-blue-300'
-          }`}
-          style={{
-            height: active ? `${Math.max(16, h * (0.7 + ((i % 3) * 0.15)))}%` : `${h * 0.4}%`,
-            animationDelay: `${(i * 0.08).toFixed(2)}s`,
-          }}
-        />
-      ))}
-      {Array.from({ length: dotsCount }).map((_, i) => (
-        <span
-          key={`dot-${i}`}
-          className={`w-1 h-1 rounded-full ${active ? 'bg-blue-400 animate-pulse' : 'bg-blue-300'}`}
-          style={{ animationDelay: `${((i + barHeights.length) * 0.1).toFixed(2)}s` }}
-        />
-      ))}
+      {[...barHeights].reverse().map((h, i) => {
+        const revIndex = barHeights.length - 1 - i
+        const multiplier = 0.85 + ((revIndex % 3) * 0.12)
+        const barHeightPercent = active
+          ? Math.min(100, Math.max(12, Math.round(h * (0.2 + safeLevel * 0.85 * multiplier))))
+          : Math.max(10, Math.round(h * 0.35))
+
+        return (
+          <span
+            key={`bar-${i}`}
+            className={`w-1 rounded-full transition-all duration-75 ease-out ${
+              isVocalizing ? 'bg-blue-600 shadow-2xs' : active ? 'bg-blue-400/90' : 'bg-blue-300'
+            }`}
+            style={{
+              height: `${barHeightPercent}%`,
+            }}
+          />
+        )
+      })}
+      {Array.from({ length: dotsCount }).map((_, i) => {
+        const dotNearBars = i <= 1
+        const dotActive = isVocalizing && dotNearBars && safeLevel > 0.25
+        return (
+          <span
+            key={`dot-${i}`}
+            className={`w-1 h-1 rounded-full transition-all duration-150 ${
+              dotActive
+                ? 'bg-blue-500 scale-125'
+                : active
+                  ? 'bg-blue-400'
+                  : 'bg-blue-300'
+            }`}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -148,12 +236,13 @@ export function VivaSessionView({
   slotCode,
   startTime,
   duration,
-  currentStep = 2,
+  currentStep = 1,
   totalSteps = 3,
   isRecording = false,
   isAiSpeaking = false,
   isCompleted: isCompletedProp,
   isProcessing = false,
+  audioLevel = 0,
 }: {
   name: string
   title: string
@@ -177,6 +266,7 @@ export function VivaSessionView({
   isAiSpeaking?: boolean
   isCompleted?: boolean
   isProcessing?: boolean
+  audioLevel?: number
 }) {
   const completed =
     isCompletedProp ??
@@ -187,7 +277,8 @@ export function VivaSessionView({
   const [cameraActive, setCameraActive] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
-  const [recordingSeconds, setRecordingSeconds] = useState(14)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const online = useOnline()
 
   useEffect(() => {
     if (!isRecording) return
@@ -238,10 +329,10 @@ export function VivaSessionView({
     }
   }, [])
 
-  const displayCourse = courseName || title || 'Lập trình Java'
-  const displaySlotCode = slotCode || 'AIVES-JAVA-001'
-  const displayStartTime = startTime || '10:00, 20/01/2025'
-  const displayDuration = duration || '30 phút'
+  const displayCourse = courseName || title || '—'
+  const displaySlotCode = slotCode || '—'
+  const displayStartTime = startTime || '—'
+  const displayDuration = duration || '—'
 
   return (
     <section className="source-screen max-w-7xl mx-auto viva-room p-3 md:p-6 space-y-4">
@@ -257,7 +348,15 @@ export function VivaSessionView({
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Đang thi vấn đáp <span className="text-blue-600">AI</span>
+                  {completed ? (
+                    <>
+                      Phiên thi vấn đáp <span className="text-blue-600">AI</span> đã kết thúc
+                    </>
+                  ) : (
+                    <>
+                      Đang thi vấn đáp <span className="text-blue-600">AI</span>
+                    </>
+                  )}
                 </h1>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
                   <span className={`w-2 h-2 rounded-full bg-emerald-500 ${completed ? '' : 'animate-pulse'}`} />
@@ -265,14 +364,17 @@ export function VivaSessionView({
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                Phiên thi đang diễn ra. Hãy lắng nghe câu hỏi từ Giám khảo AI và trả lời rõ ràng, mạch lạc.
+                {completed
+                  ? 'Cảm ơn bạn đã hoàn thành ca thi. Bạn có thể xem lại tình trạng kết quả bên dưới.'
+                  : 'Phiên thi đang diễn ra. Hãy lắng nghe câu hỏi từ Giám khảo AI và trả lời rõ ràng, mạch lạc.'}
               </p>
             </div>
           </header>
 
           {notice}
 
-          {/* Card 1: Giám khảo AI Card */}
+          {/* Card 1: Giám khảo AI Card (ẩn sau khi phiên thi hoàn tất) */}
+          {!completed && (
           <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white via-white to-blue-50/20 p-5 md:p-6 shadow-sm space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3">
@@ -304,23 +406,18 @@ export function VivaSessionView({
 
               {/* Status pill below avatar */}
               <div className="mt-3.5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs font-semibold shadow-2xs">
-                {completed ? (
-                  <CheckCircle2 size={14} className="text-emerald-600" />
-                ) : (
-                  <SoundWaveIcon className="text-blue-600" />
-                )}
+                <SoundWaveIcon className="text-blue-600" />
                 <span>
-                  {completed
-                    ? 'Phiên thi đã hoàn tất'
-                    : isAiSpeaking
-                      ? 'AI đang đặt câu hỏi'
-                      : isRecording
-                        ? 'AI đang lắng nghe câu trả lời của bạn'
-                        : phase || 'AI đang đặt câu hỏi'}
+                  {isAiSpeaking
+                    ? 'AI đang đặt câu hỏi'
+                    : isRecording
+                      ? 'AI đang lắng nghe câu trả lời của bạn'
+                      : phase || 'AI đang đặt câu hỏi'}
                 </span>
               </div>
             </div>
           </section>
+          )}
 
           {/* Card 2: Câu hỏi Card / Hoàn thành */}
           <section
@@ -351,7 +448,22 @@ export function VivaSessionView({
             </div>
           </section>
 
+          {/* Sau khi hoàn tất: không còn mic/hướng dẫn trả lời, chỉ thông báo và các hành động tiếp theo */}
+          {completed && (
+            <section className="rounded-2xl border border-emerald-200/70 bg-white p-5 md:p-6 space-y-4 shadow-sm">
+              <div className="flex items-start gap-3 rounded-xl bg-emerald-50/60 border border-emerald-100 px-4 py-3 text-xs text-emerald-800">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Phiên thi đã kết thúc và câu trả lời của bạn đã được hệ thống ghi nhận. Điểm AI chỉ mang tính gợi ý;
+                  kết quả chính thức chỉ hiển thị sau khi giảng viên xác nhận và công bố.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3">{controls}</div>
+            </section>
+          )}
+
           {/* Card 3: Câu trả lời của bạn Card */}
+          {!completed && (
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 md:p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -367,31 +479,49 @@ export function VivaSessionView({
             {/* Student Microphone Visualizer & Controls */}
             <div className="py-2 flex flex-col items-center justify-center space-y-3">
               <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-md px-2">
-                <StudentWaveformBars active={isRecording} side="left" />
+                <StudentWaveformBars active={isRecording} level={audioLevel} side="left" />
 
                 <div className="relative shrink-0">
                   <div
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all shadow-md ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-75 shadow-md ${
                       isRecording
-                        ? 'bg-blue-600 text-white shadow-blue-500/30 scale-105 ring-4 ring-blue-100 animate-pulse'
+                        ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-100'
                         : 'bg-blue-50 text-blue-600 border border-blue-200'
                     }`}
+                    style={{
+                      transform:
+                        isRecording && audioLevel > 0.04
+                          ? `scale(${Math.min(1.15, 1.05 + audioLevel * 0.12)})`
+                          : isRecording
+                            ? 'scale(1.05)'
+                            : 'scale(1)',
+                      boxShadow:
+                        isRecording && audioLevel > 0.06
+                          ? `0 0 ${Math.round(10 + audioLevel * 22)}px rgba(37, 99, 235, 0.45)`
+                          : undefined,
+                    }}
                   >
                     <Mic size={24} />
                   </div>
                 </div>
 
-                <StudentWaveformBars active={isRecording} side="right" />
+                <StudentWaveformBars active={isRecording} level={audioLevel} side="right" />
               </div>
 
               <div className="text-center">
                 <div className="inline-flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-700">
-                    {completed ? 'Đã hoàn thành ca thi' : isRecording ? 'Đang trả lời...' : 'Sẵn sàng trả lời'}
+                    {completed
+                      ? 'Đã hoàn thành ca thi'
+                      : isRecording
+                        ? audioLevel > 0.05
+                          ? 'Đang nhận diện giọng nói...'
+                          : 'Đang lắng nghe câu trả lời...'
+                        : 'Sẵn sàng trả lời'}
                   </span>
                   {isRecording && !completed && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                      {formatSeconds(recordingSeconds || 14)}
+                      {formatSeconds(recordingSeconds)}
                     </span>
                   )}
                 </div>
@@ -407,32 +537,23 @@ export function VivaSessionView({
             </div>
 
             {/* Listening bar footer inside answer card */}
-            <div
-              className={`rounded-xl px-4 py-2.5 flex items-center justify-between text-xs border ${
-                completed
-                  ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
-                  : 'bg-blue-50/60 border-blue-100 text-blue-700'
-              }`}
-            >
+            <div className="rounded-xl px-4 py-2.5 flex items-center justify-between text-xs border bg-blue-50/60 border-blue-100 text-blue-700">
               <div className="flex items-center gap-2">
-                {completed ? <CheckCircle2 size={15} className="text-emerald-600" /> : <Headphones size={15} />}
+                <Headphones size={15} />
                 <span>
-                  {completed
-                    ? 'Phiên thi đã kết thúc. Toàn bộ câu trả lời của bạn đã được ghi nhận và lưu trữ an toàn.'
-                    : isRecording
-                      ? 'AI đang lắng nghe câu trả lời của bạn...'
-                      : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
+                  {isRecording
+                    ? 'AI đang lắng nghe câu trả lời của bạn...'
+                    : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
                 </span>
               </div>
-              {!completed && (
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+              </div>
             </div>
           </section>
+          )}
 
           {/* Collapsible Transcript History Section */}
           <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
@@ -641,74 +762,53 @@ export function VivaSessionView({
 
             <div className="grid grid-cols-2 gap-2 pt-1">
               {/* Mic */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Mic size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Mic</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Mic size={14} />}
+                label="Mic"
+                status={
+                  isRecording
+                    ? 'Đang thu'
+                    : connection.includes('Đã kết nối')
+                      ? 'Sẵn sàng'
+                      : completed
+                        ? 'Đã đóng'
+                        : 'Chưa mở'
+                }
+                ok={isRecording || connection.includes('Đã kết nối')}
+              />
 
               {/* Loa */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Volume2 size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Loa</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Volume2 size={14} />}
+                label="Loa"
+                status={isAiSpeaking ? 'Đang phát' : completed ? 'Đã đóng' : 'Sẵn sàng'}
+                ok={isAiSpeaking || (!completed && online)}
+              />
 
               {/* Camera */}
-              <div
-                onClick={() => {
-                  if (!completed) {
-                    if (cameraActive) stopCamera()
-                    else void startCamera()
-                  }
-                }}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition-colors"
-                title="Bấm để bật/tắt camera"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Video size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Camera</p>
-                    <p className="text-[10px] text-slate-500">Hoạt động</p>
-                  </div>
-                </div>
-                <CheckCircle2 size={13} className="text-emerald-500 fill-emerald-100 shrink-0" />
-              </div>
+              <DeviceTile
+                icon={<Video size={14} />}
+                label="Camera"
+                status={cameraActive ? 'Đang mở' : 'Đang tắt'}
+                ok={cameraActive}
+                onClick={
+                  !completed
+                    ? () => {
+                        if (cameraActive) stopCamera()
+                        else void startCamera()
+                      }
+                    : undefined
+                }
+                title={!completed ? (cameraActive ? 'Bấm để tắt camera' : 'Bấm để bật camera') : undefined}
+              />
 
               {/* Mạng */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <Wifi size={14} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight">Mạng</p>
-                    <p className="text-[10px] text-slate-500">
-                      {connection.includes('Mất') ? 'Mất mạng' : 'Kết nối ổn định'}
-                    </p>
-                  </div>
-                </div>
-                <CheckCircle2
-                  size={13}
-                  className={connection.includes('Mất') ? 'text-red-500 shrink-0' : 'text-emerald-500 fill-emerald-100 shrink-0'}
-                />
-              </div>
+              <DeviceTile
+                icon={<Wifi size={14} />}
+                label="Mạng"
+                status={online && !connection.toLowerCase().includes('mất') ? 'Kết nối ổn định' : 'Mất mạng'}
+                ok={online && !connection.toLowerCase().includes('mất')}
+              />
             </div>
           </section>
         </aside>

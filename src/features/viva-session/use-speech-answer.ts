@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { ApiError } from "../../services/api/client";
 import {
   connectSpeech,
@@ -24,6 +24,7 @@ export function useSpeechAnswer(
   active: boolean,
 ) {
   const [state, reactDispatch] = useReducer(speechReducer, initialSpeechState);
+  const [audioLevel, setAudioLevel] = useState(0);
   const current = useRef(initialSpeechState);
   const getPhase = useCallback(() => current.current.phase, []);
   const dispatch = useCallback((action: SpeechAction) => {
@@ -49,6 +50,7 @@ export function useSpeechAnswer(
   const release = useCallback(() => {
     clearTimeout(timer.current);
     tts.current?.abort();
+    setAudioLevel(0);
     capture.current?.cancel();
     capture.current = null;
     socket.current?.close();
@@ -71,6 +73,7 @@ export function useSpeechAnswer(
     (answerId: string, receipt: AnswerReceipt) => {
       if (pending.current !== answerId) return;
       clearTimeout(timer.current);
+      setAudioLevel(0);
       capture.current?.cancel();
       capture.current = null;
       dispatch({ type: "SAVED", answerId, receipt });
@@ -276,29 +279,59 @@ export function useSpeechAnswer(
         turnId,
         abort.signal,
       );
-      const ticket = await speechApi.ticket(attemptId, abort.signal);
-      if (id !== generation.current || abort.signal.aborted) return;
-      const connection = await connectSpeech(
-        ticket.ticket,
-        (event) => {
-          if (id !== generation.current) return;
+      const onEvent = (event: SpeechEvent) => {
+        if (id !== generation.current) return;
+        try {
+          handleEvent(event);
+        } catch {
+          fail(
+            "Phản hồi speech hoặc lưu mã khôi phục không hợp lệ. Đã dừng thu âm.",
+          );
+        }
+      };
+      // Between answers nothing is in flight, so a dropped socket is safe to replace silently.
+      // Once an answer exists the audio cannot be replayed, so that case still fails explicitly.
+      const reopen = async () => {
+        socket.current = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+          if (id !== generation.current || abort.signal.aborted) return;
           try {
-            handleEvent(event);
+            const next = await open();
+            if (id !== generation.current || abort.signal.aborted) {
+              next.close();
+              return;
+            }
+            socket.current = next;
+            return;
           } catch {
-            fail(
-              "Phản hồi speech hoặc lưu mã khôi phục không hợp lệ. Đã dừng thu âm.",
-            );
+            // Retry with backoff.
           }
-        },
-        () => {
-          if (id === generation.current)
-            fail(
-              "Mất kết nối speech. Audio chưa xác nhận không được tự gửi lại; hãy kết nối và tra cứu trạng thái.",
-              true,
-            );
-        },
-        abort.signal,
-      );
+        }
+        if (id === generation.current)
+          fail(
+            "Mất kết nối speech và chưa thể nối lại. Hãy bấm kết nối lại âm thanh.",
+            true,
+          );
+      };
+      const onLost = () => {
+        if (id !== generation.current) return;
+        if (!pending.current && ["ready", "speaking"].includes(getPhase())) {
+          void reopen();
+          return;
+        }
+        fail(
+          "Mất kết nối speech. Audio chưa xác nhận không được tự gửi lại; hãy kết nối và tra cứu trạng thái.",
+          true,
+        );
+      };
+      const open = async (): Promise<SpeechConnection> => {
+        const ticket = await speechApi.ticket(attemptId, abort.signal);
+        if (id !== generation.current || abort.signal.aborted)
+          throw new Error("Kết nối đã hủy.");
+        return connectSpeech(ticket.ticket, onEvent, onLost, abort.signal);
+      };
+      const connection = await open();
       if (id !== generation.current || abort.signal.aborted) {
         connection.close();
         return;
@@ -346,8 +379,10 @@ export function useSpeechAnswer(
     }
   };
   const start = async () => {
+    if (!active || getPhase() !== "ready" || pending.current) return;
+    // The idle socket may be mid-reconnect; rebuild it first instead of ignoring the click.
+    if (!socket.current) await connect();
     if (
-      !active ||
       getPhase() !== "ready" ||
       pending.current ||
       !socket.current ||
@@ -361,6 +396,7 @@ export function useSpeechAnswer(
         (value) => socket.current!.audio(value),
         fail,
         controller.current.signal,
+        (lvl) => setAudioLevel(lvl),
       );
       if (id !== generation.current || getPhase() !== "starting") {
         mic.cancel();
@@ -398,6 +434,7 @@ export function useSpeechAnswer(
   };
   const stop = useCallback(async () => {
     if (getPhase() !== "recording" || !pending.current) return;
+    setAudioLevel(0);
     dispatch({ type: "FINALIZING" });
     const id = generation.current;
     try {
@@ -524,5 +561,5 @@ export function useSpeechAnswer(
     await connect();
   }, [active, connect, dispatch, key]);
 
-  return { state, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
+  return { state, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

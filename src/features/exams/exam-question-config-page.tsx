@@ -91,7 +91,7 @@ export function ExamQuestionConfigPage() {
       {!editable && <InlineNotice><strong>Chế độ chỉ đọc.</strong> Kỳ thi này đã bắt đầu hoặc kết thúc, không thể thay đổi cấu hình câu hỏi.</InlineNotice>}
       {runtimeConfig.dataSource === 'api' && (
         <InlineNotice>
-          <strong>Hệ thống API kết nối:</strong> Bộ câu hỏi được chọn sẽ được bốc ngẫu nhiên và phân bổ thích ứng theo từng ca thi của sinh viên.
+          <strong>Lưu ý cấu hình:</strong> Bộ câu hỏi được chọn sẽ được bốc ngẫu nhiên và phân bổ thích ứng theo từng ca thi của sinh viên.
         </InlineNotice>
       )}
 
