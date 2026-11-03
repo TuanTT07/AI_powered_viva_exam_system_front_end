@@ -205,6 +205,16 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Quay lại chi tiết ca thi</Link>
   </section>
 
+  if (monitoring && document.fullscreenEnabled && !fullscreen) return (
+    <section className="state mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-6">
+      <h2 className="text-lg font-semibold">Quay lại toàn màn hình để tiếp tục</h2>
+      {violations > 0 && <p role="status">Cảnh báo {violations}/3. Lần thứ tư sẽ khóa phòng thi.</p>}
+      <p>Thời gian trả lời vẫn tiếp tục chạy.</p>
+      {fullscreenFailed && <p role="alert">Trình duyệt chưa cho phép mở toàn màn hình. Hãy thử lại.</p>}
+      <Button onClick={enterFullscreen}>Quay lại toàn màn hình</Button>
+    </section>
+  )
+
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
   if (current.isError && !busy) return (
     <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
@@ -239,7 +249,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     return (
       <>
       {(violations > 0 || !fullscreen) && <aside role="status" className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Hãy bật toàn màn hình trong khi thi.'}
+        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Bạn có thể tiếp tục thi ở chế độ cửa sổ.'}
           {fullscreenFailed && ' Trình duyệt chưa cho phép mở toàn màn hình.'}</span>
         {!fullscreen && document.fullscreenEnabled && <Button variant="outline" onClick={enterFullscreen}>Bật toàn màn hình</Button>}
       </aside>}
