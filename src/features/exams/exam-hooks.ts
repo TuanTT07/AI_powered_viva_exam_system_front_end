@@ -6,7 +6,7 @@ import type { ScheduleDraft } from './schedule-types'
 import type { QuestionConfigDraft } from './question-config-types'
 import { apiExamSchedulingRepository, type AutoScheduleRequestDto, type RescheduleCandidateRequestDto } from './api-exam-scheduling-repository'
 import { apiExamMonitoringRepository } from './api-exam-monitoring-repository'
-import { apiStudentExamRepository } from './api-student-exam-repository'
+import { apiStudentExamRepository, type StudentExamListRequest } from './api-student-exam-repository'
 import { useSession } from '../../app/providers/use-session'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { subjectRepository } from '../subjects/subject-repository'
@@ -44,5 +44,17 @@ export function useExamMonitoring(examId: string | undefined) { return useQuery(
 function invalidateMonitoring(client: ReturnType<typeof useQueryClient>, examId: string) { client.invalidateQueries({ queryKey: monitoringKeys.detail(examId) }); client.invalidateQueries({ queryKey: apiExamKeys.schedule(examId) }); client.invalidateQueries({ queryKey: examKeys.detail(examId) }) }
 export function useResetExamAttempt() { const client = useQueryClient(); return useMutation({ mutationFn: ({ examId, attemptId }: { examId: string; attemptId: string }) => apiExamMonitoringRepository.reset(examId, attemptId), onSuccess: (_, variables) => invalidateMonitoring(client, variables.examId) }) }
 export function useMarkExamAttemptAbsent() { const client = useQueryClient(); return useMutation({ mutationFn: ({ examId, attemptId }: { examId: string; attemptId: string }) => apiExamMonitoringRepository.absent(examId, attemptId), onSuccess: (_, variables) => invalidateMonitoring(client, variables.examId) }) }
-export const studentExamKeys = { all: ['student-exams'] as const, slot: (examId: string, studentId: string) => [...studentExamKeys.all, examId, studentId] as const }
-export function useStudentMySlot(examId: string | undefined, studentId: string | undefined) { return useQuery({ queryKey: studentExamKeys.slot(examId ?? '', studentId ?? ''), queryFn: () => apiStudentExamRepository.getMySlot(examId ?? '', studentId ?? ''), enabled: Boolean(examId && studentId) }) }
+export const studentExamKeys = {
+  all: ['student-exams'] as const,
+  list: (accountId: string, request: StudentExamListRequest) => [...studentExamKeys.all, 'list', accountId, request] as const,
+  slot: (examId: string, accountId: string) => [...studentExamKeys.all, 'slot', accountId, examId] as const,
+}
+export function useStudentExams(request: StudentExamListRequest) {
+  const { session } = useSession()
+  const user = session.user
+  return useQuery({ queryKey: studentExamKeys.list(user?.id ?? '', request), queryFn: ({ signal }) => apiStudentExamRepository.list(request, signal), enabled: runtimeConfig.dataSource === 'api' && Boolean(user?.roles.includes('student')) })
+}
+// Account identity scopes the client cache only. The backend derives ownership from JWT.
+export function useStudentMySlot(examId: string | undefined, accountId: string | undefined) {
+  return useQuery({ queryKey: studentExamKeys.slot(examId ?? '', accountId ?? ''), queryFn: ({ signal }) => apiStudentExamRepository.getMySlot(examId ?? '', signal), enabled: Boolean(examId && accountId) })
+}

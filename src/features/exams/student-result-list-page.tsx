@@ -1,156 +1,248 @@
 import { DemoLabel } from '../../components/common/inline-notice'
 import { Link } from 'react-router-dom'
-import { FileCheck2, GraduationCap, Award, Calendar, ArrowRight, Sparkles } from 'lucide-react'
-import { Alert } from '../../components/ui/primitives'
+import {
+  ArrowRight,
+  FileText,
+  Calendar,
+  Award,
+  Sparkles,
+  ShieldCheck,
+  Clock,
+  Headphones,
+  GraduationCap,
+} from 'lucide-react'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { studentResultsDemo } from './mocks/student-results-demo'
+import '../students/student.css'
 
 export function StudentResultListPage() {
   const demo = runtimeConfig.dataSource === 'mock'
   const results = demo ? studentResultsDemo : []
-  const avgScore = results.length
-    ? (results.reduce((acc, r) => acc + r.score, 0) / results.length).toFixed(1)
+  const average = results.length
+    ? (results.reduce((sum, result) => sum + result.score, 0) / results.length).toFixed(1)
+    : '—'
+  const maxScore = results.length
+    ? Math.max(...results.map((r) => r.score)).toFixed(1)
     : '—'
 
   return (
-    <section className="source-screen max-w-6xl mx-auto space-y-6 pb-16">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 text-white shadow-sm border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-blue-200">
-              <Sparkles size={13} className="text-amber-400" />
-              <span>Cổng thí sinh · Khảo thí</span>
+    <section className="student-page">
+      {/* Modern Hero Greeting / Header Banner matching Lecturer style */}
+      <header className="student-hero">
+        <div className="student-hero-content">
+          <div className="student-hero-badge">
+            <GraduationCap size={14} />
+            <span>AIVES · KHẢO THÍ SINH VIÊN · KẾT QUẢ &amp; BIÊN BẢN</span>
+          </div>
+          <h1 className="student-hero-title">Kết quả &amp; biên bản</h1>
+          <p className="student-hero-desc">
+            Tra cứu điểm số chính thức, nhận xét chi tiết của giảng viên và lịch sử các đợt thi vấn đáp.
+          </p>
+        </div>
+
+        <div className="student-actions">
+          <Link className="button outline" to="/student/exams">
+            <Calendar size={16} />
+            <span>Kỳ thi của tôi</span>
+          </Link>
+          <Link className="button outline" to="/device-check">
+            <Headphones size={16} />
+            <span>Kiểm tra thiết bị</span>
+          </Link>
+        </div>
+      </header>
+
+      {demo && <DemoLabel detail="Điểm và nhận xét minh họa, không phải kết quả thi thực." />}
+
+      {/* 4 Modern KPI Metric Cards */}
+      <section className="student-metric-grid" aria-label="Tổng quan kết quả thi">
+        {demo ? (
+          <>
+            <div className="metric-card metric-card--blue">
+              <div className="metric-header">
+                <span className="metric-label">Kết quả mẫu</span>
+                <div className="metric-icon-wrap metric-icon-wrap--blue">
+                  <FileText size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">{results.length}</strong>
+              <span className="metric-hint">Bài thi đã hoàn tất</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Kết quả và biên bản
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Xem kết quả được công bố và nhận xét của giảng viên sau các phiên thi vấn đáp.
-            </p>
+
+            <div className="metric-card metric-card--emerald">
+              <div className="metric-header">
+                <span className="metric-label">Điểm trung bình mẫu</span>
+                <div className="metric-icon-wrap metric-icon-wrap--emerald">
+                  <Award size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">
+                {average}
+                <span className="text-base font-normal text-slate-400"> / 10</span>
+              </strong>
+              <span className="metric-hint">Thang điểm 10</span>
+            </div>
+
+            <div className="metric-card metric-card--indigo">
+              <div className="metric-header">
+                <span className="metric-label">Điểm cao nhất</span>
+                <div className="metric-icon-wrap metric-icon-wrap--indigo">
+                  <Sparkles size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">{maxScore}</strong>
+              <span className="metric-hint">Thành tích tốt nhất</span>
+            </div>
+
+            <div className="metric-card metric-card--amber">
+              <div className="metric-header">
+                <span className="metric-label">Phúc khảo điểm</span>
+                <div className="metric-icon-wrap metric-icon-wrap--amber">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Hỗ trợ
+              </strong>
+              <span className="metric-hint">Theo quy chế khảo thí</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="metric-card metric-card--blue">
+              <div className="metric-header">
+                <span className="metric-label">Trạng thái công bố</span>
+                <div className="metric-icon-wrap metric-icon-wrap--blue">
+                  <Clock size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Chờ duyệt
+              </strong>
+              <span className="metric-hint">Chính sách nhà trường</span>
+            </div>
+
+            <div className="metric-card metric-card--indigo">
+              <div className="metric-header">
+                <span className="metric-label">Biên bản hội thoại</span>
+                <div className="metric-icon-wrap metric-icon-wrap--indigo">
+                  <FileText size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Bảo mật
+              </strong>
+              <span className="metric-hint">Theo quyền tài khoản</span>
+            </div>
+
+            <div className="metric-card metric-card--emerald">
+              <div className="metric-header">
+                <span className="metric-label">Điểm chính thức</span>
+                <div className="metric-icon-wrap metric-icon-wrap--emerald">
+                  <Award size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">—</strong>
+              <span className="metric-hint">Giảng viên xác nhận</span>
+            </div>
+
+            <div className="metric-card metric-card--amber">
+              <div className="metric-header">
+                <span className="metric-label">Quy chế phúc khảo</span>
+                <div className="metric-icon-wrap metric-icon-wrap--amber">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Áp dụng
+              </strong>
+              <span className="metric-hint">Hạn xử lý theo thông báo</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Unified Results Surface */}
+      <section className="student-results-surface" aria-labelledby="student-results-heading">
+        <header className="student-results-surface-header">
+          <div className="flex items-center gap-2.5 text-blue-900">
+            <FileText size={18} aria-hidden="true" className="text-blue-600" />
+            <h2 id="student-results-heading" className="text-base font-bold text-slate-900">
+              Bảng điểm{demo ? ' mẫu' : ''}
+            </h2>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              className="button outline"
-              to="/student/exams"
-            >
-              Kỳ thi của tôi
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {demo ? (
-        <DemoLabel detail="Dữ liệu demo · Điểm và nhận xét minh họa, không phải kết quả thi thực." />
-      ) : (
-        <Alert>Chưa có chức năng tra cứu kết quả được công bố từ hệ thống.</Alert>
-      )}
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Biên bản đã công bố</span>
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <FileCheck2 size={18} />
+          {demo && (
+            <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
+              {results.length} bài thi
             </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-slate-900 font-mono">{results.length}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Kỳ thi hoàn tất</p>
-          </div>
-        </div>
+          )}
+        </header>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Điểm trung bình</span>
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <Award size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-emerald-600 font-mono">{avgScore}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Thang điểm 10</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Đánh giá &amp; Minh chứng</span>
-            <span className="p-2 rounded-xl bg-violet-50 text-violet-600">
-              <GraduationCap size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-bold text-slate-900">Giảng viên phê duyệt</div>
-            <p className="text-xs text-slate-500 mt-0.5">Bảo lưu transcript &amp; rubric</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Results List */}
-      <div className="space-y-4">
-        {results.map(result => (
-          <article
-            key={result.id}
-            className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-5 sm:p-6 shadow-xs transition-all hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-5 group"
+        {results.length ? (
+          <div
+            className="relative overflow-x-auto focus-visible:outline-2 focus-visible:outline-blue-600"
+            role="region"
+            aria-label="Bảng điểm có thể cuộn ngang"
+            tabIndex={0}
           >
-            <div className="flex gap-4 items-start">
-              <span className="rounded-2xl bg-blue-50 text-blue-600 p-3.5 shrink-0 group-hover:scale-105 transition-transform">
-                <FileCheck2 size={24} />
-              </span>
-              <div className="space-y-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  Kết quả công bố mẫu
-                </span>
-                <h2 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {result.title}
-                </h2>
-                <p className="text-xs text-slate-500 flex items-center gap-2">
-                  <span>{result.subject}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar size={12} className="text-slate-400" />
-                    {new Date(result.date).toLocaleDateString('vi-VN')}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-              <div className="text-center sm:text-right">
-                <p className="text-[11px] text-slate-400 uppercase font-semibold">Điểm demo</p>
-                <strong className="text-2xl font-mono text-emerald-700 font-bold">
-                  {result.score.toFixed(1)}
-                  <small className="text-xs text-slate-400 font-normal"> / 10</small>
-                </strong>
-              </div>
-              <Link
-                className="button outline"
-                to={`/student/exams/${result.id}/result`}
-              >
-                Xem biên bản
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </article>
-        ))}
-
-        {!results.length && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-3 shadow-xs">
-            <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-              <GraduationCap size={32} />
-            </div>
-            <h2 className="text-base font-semibold text-slate-900">Chưa có kết quả để hiển thị</h2>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Kết quả chỉ xuất hiện khi hệ thống cho phép công bố.
+            <table className="student-table">
+              <caption className="sr-only">Kết quả minh họa theo kỳ thi, thang điểm 10</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Kỳ thi / học phần</th>
+                  <th scope="col">Ngày thi</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>
+                    Điểm mẫu
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Xem biên bản</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((result) => (
+                  <tr key={result.id}>
+                    <th scope="row" style={{ fontWeight: 'normal' }}>
+                      <span className="block font-bold text-slate-900 text-sm">{result.title}</span>
+                      <span className="mt-0.5 block text-xs text-slate-500">{result.subject}</span>
+                    </th>
+                    <td className="whitespace-nowrap text-xs tabular-nums text-slate-600">
+                      {new Date(result.date).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <span className="student-score-pill">{result.score.toFixed(1)}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <Link
+                        aria-label={`Xem biên bản ${result.title}`}
+                        className="button outline button--sm"
+                        to={`/student/exams/${result.id}/result`}
+                      >
+                        <span>Biên bản</span>
+                        <ArrowRight size={14} aria-hidden="true" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+              <FileText size={26} strokeWidth={1.5} aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-bold text-slate-900">
+              {demo ? 'Chưa có kết quả để hiển thị' : 'Chưa thể tra cứu kết quả'}
+            </h3>
+            <p className="max-w-md text-sm text-slate-500">
+              {demo
+                ? 'Chưa có kết quả mẫu.'
+                : 'Chức năng tra cứu điểm chưa được kết nối với backend.'}
             </p>
           </div>
         )}
-      </div>
+      </section>
     </section>
   )
 }
-

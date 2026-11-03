@@ -198,3 +198,10 @@ Avoid unrelated booleans such as:
 `isRecording + isSpeaking + isThinking + isTranscribing`
 
 without a canonical phase.
+
+## Current API subset
+
+Full flow above remains the conceptual interview target. Current API room uses `speech-session-model.ts`: idle → connecting → ready → speaking/starting → recording → finalizing → saved, with checking/error/disconnected recovery. `saved` is terminal for this answer only, never interpreted as attempt COMPLETED or AI analysis finished. Official interview start/next/finish are not synthesized by this reducer.
+
+### API interview orchestration — 2026-11-03
+ApiInterviewRoom maps server READY → AWAITING_ANSWER → PROCESSING → AWAITING_ANSWER/COMPLETED using start/current. Explicit start mutation is separate from read-only reload. ApiSpeechRoom is keyed by the current server questionTurnId; it reports unsafe work to pause polling/snapshot replacement. A confirmed answer receipt triggers current synchronization, not local completion. The worker remains authoritative for question selection, deadlines, follow-ups and completion. Earlier statements that start/current are absent are superseded by this integration.

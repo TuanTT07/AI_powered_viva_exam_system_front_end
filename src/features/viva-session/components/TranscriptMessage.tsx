@@ -1,7 +1,8 @@
 import React from 'react';
 import { Bot, User, Sparkles } from 'lucide-react';
 
-interface TranscriptMessageProps {
+export interface TranscriptMessageProps {
+  id?: string;
   role: 'ai' | 'student';
   text: string;
   timestamp: string;

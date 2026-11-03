@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   Award,
+  BookOpen,
   CheckCircle2,
   FileEdit,
   FileText,
@@ -20,6 +21,9 @@ export function RubricListView({
   search,
   onSearch,
   subjectId,
+  subjects,
+  selectedSubjectId,
+  onSubjectChange,
   onDelete,
   pending,
   feedback,
@@ -28,6 +32,9 @@ export function RubricListView({
   search: string
   onSearch: (value: string) => void
   subjectId?: string
+  subjects?: Array<{ id: string; code?: string; name: string }>
+  selectedSubjectId?: string
+  onSubjectChange?: (value: string) => void
   onDelete: (rubric: Rubric) => void
   pending: boolean
   feedback?: ReactNode
@@ -55,7 +62,7 @@ export function RubricListView({
             {subjectId ? 'Bộ tiêu chí chấm điểm' : 'Quản lý Rubric'}
           </h1>
           <p className="rubric-hero-desc">
-            Thiết lập ma trận tiêu chí đánh giá năng lực và thang điểm chuẩn hóa cho các câu hỏi vấn đáp.
+            Thiết lập ma trận tiêu chí đánh giá năng lực và thang điểm chuẩn hóa theo từng môn học cho các câu hỏi vấn đáp.
           </p>
         </div>
         <div className="rubric-hero-actions">
@@ -115,34 +122,63 @@ export function RubricListView({
 
       {feedback}
 
-      {/* Search Toolbar */}
+      {/* Search & Subject Filter Toolbar */}
       <div className="rubric-toolbar">
-        <div className="rubric-search-wrap">
-          <Search size={16} className="rubric-search-icon" />
-          <label className="sr-only" htmlFor="rubric-search">
-            Tìm theo tên
-          </label>
-          <input
-            id="rubric-search"
-            value={search}
-            onChange={(event) => onSearch(event.target.value)}
-            placeholder="Tìm theo tên Rubric hoặc từ khóa..."
-            className="rubric-search-input"
-          />
-          {search && (
-            <button
-              type="button"
-              className="rubric-search-clear"
-              onClick={() => onSearch('')}
-              aria-label="Xóa tìm kiếm"
-            >
-              <X size={14} />
-            </button>
+        <div className="rubric-toolbar-filters">
+          <div className="rubric-search-wrap">
+            <Search size={16} className="rubric-search-icon" />
+            <label className="sr-only" htmlFor="rubric-search">
+              Tìm theo tên
+            </label>
+            <input
+              id="rubric-search"
+              value={search}
+              onChange={(event) => onSearch(event.target.value)}
+              placeholder="Tìm theo tên Rubric hoặc từ khóa..."
+              className="rubric-search-input"
+            />
+            {search && (
+              <button
+                type="button"
+                className="rubric-search-clear"
+                onClick={() => onSearch('')}
+                aria-label="Xóa tìm kiếm"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Course / Subject Filter */}
+          {subjects && subjects.length > 0 && onSubjectChange && (
+            <div className="rubric-subject-select-wrap">
+              <label className="sr-only" htmlFor="rubric-subject-filter">
+                Lọc theo môn học
+              </label>
+              <div className="rubric-select-container">
+                <BookOpen size={15} className="rubric-select-icon" />
+                <select
+                  id="rubric-subject-filter"
+                  aria-label="Lọc theo môn học"
+                  value={selectedSubjectId ?? 'all'}
+                  onChange={(event) => onSubjectChange(event.target.value)}
+                  className="rubric-subject-select"
+                >
+                  <option value="all">Tất cả môn học ({rows.length})</option>
+                  {subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.code ? `${subject.code} · ` : ''}{subject.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           )}
         </div>
+
         <div className="rubric-toolbar-meta">
           <span className="rubric-count-badge">
-            {rows.length} Rubric {search ? 'phù hợp' : ''}
+            {rows.length} Rubric {search || (selectedSubjectId && selectedSubjectId !== 'all') ? 'phù hợp' : ''}
           </span>
         </div>
       </div>
@@ -154,15 +190,25 @@ export function RubricListView({
             (total, item) => total + Number(item.maximumScore || 0),
             0,
           )
+          const matchedSubject = subjects?.find((s) => s.id === rubric.subjectId)
+
           return (
             <article key={rubric.id} className="rubric-item-card">
               <header className="rubric-item-head">
                 <span className="rubric-icon-box">
                   <Award size={18} />
                 </span>
-                <span className="font-mono text-[11px] text-slate-500 rubric-meta-pill">
-                  {rubric.criteria.length} TIÊU CHÍ · {totalScore} ĐIỂM
-                </span>
+                <div className="rubric-card-tags">
+                  {matchedSubject && (
+                    <span className="rubric-subject-pill" title={`Môn học: ${matchedSubject.name}`}>
+                      <BookOpen size={11} />
+                      <span>{matchedSubject.code || matchedSubject.name}</span>
+                    </span>
+                  )}
+                  <span className="font-mono text-[11px] text-slate-500 rubric-meta-pill">
+                    {rubric.criteria.length} TIÊU CHÍ · {totalScore} ĐIỂM
+                  </span>
+                </div>
               </header>
 
               <div className="rubric-item-body">
@@ -216,13 +262,13 @@ export function RubricListView({
           <div className="rubric-empty-icon">
             <GraduationCap size={32} />
           </div>
-          <h3>{search ? 'Không tìm thấy Rubric phù hợp' : 'Chưa có bộ tiêu chí Rubric nào'}</h3>
+          <h3>{search || (selectedSubjectId && selectedSubjectId !== 'all') ? 'Không tìm thấy Rubric phù hợp' : 'Chưa có bộ tiêu chí Rubric nào'}</h3>
           <p>
-            {search
-              ? 'Thử thay đổi từ khóa tìm kiếm hoặc xóa bộ lọc để xem tất cả.'
+            {search || (selectedSubjectId && selectedSubjectId !== 'all')
+              ? 'Thử thay đổi môn học, từ khóa tìm kiếm hoặc đặt lại bộ lọc để xem danh sách.'
               : 'Tạo bộ tiêu chí đầu tiên để bắt đầu chuẩn hóa việc chấm thi vấn đáp.'}
           </p>
-          {!search && (
+          {!search && selectedSubjectId === 'all' && (
             <Link className="button primary gap-2" to="new">
               <Plus size={16} />
               <span>{subjectId ? 'Tạo rubric đầu tiên' : 'Tạo Rubric đầu tiên'}</span>

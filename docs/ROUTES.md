@@ -56,8 +56,8 @@ Additional recovery/callback routes depend on the identity-provider contract and
 | Route | Screen | Guard / Contract | Stitch coverage |
 |---|---|---|---|
 | `/student` | Student dashboard | Student | Missing design |
-| `/student/exams` | Eligible/upcoming exams | Student; backend eligibility | Missing design |
-| `/student/exams/:examId` | Exam detail and instructions | Student; backend eligibility | Missing design |
+| `/student/exams` | Personal schedule with server pagination/status filter | Student; JWT-owned attempts | Implemented using existing student portal layout |
+| `/student/exams/:examId` | JWT-owned slot detail and instructions; carries `attemptId` query | Student; backend eligibility | Implemented |
 | `/student/exams/:examId/check` | Device check / ready preflight | Student; microphone and optional camera policy | STITCH-13 |
 | `/student/exams/:examId/session` | Active Viva session | Student; dedicated `ExamLayout`; backend session state | STITCH-05 state only |
 | `/student/exams/:examId/completed` | Submission receipt | Student; backend-confirmed completion | Live-only, unconfirmed node |

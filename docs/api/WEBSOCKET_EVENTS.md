@@ -1,88 +1,32 @@
-# Realtime Event Contract
+# Speech WebSocket contract — source verified03/11/2026
 
-> Event names are placeholders until backend protocol is finalized.
+Source: BE main `aef1275328acd6f97c67c27e780cd442fb6d263a`, SpeechController/SpeechProtocol/SpeechSessionService and doc/MODULE3_SPEECH.md. Deployment/provider operation not established by this source review.
 
-## Envelope Recommendation
+REST issues one-use ticket (JWT STUDENT + owned IN_PROGRESS attempt); connect `/ws/interview/speech?ticket=...` with allowed browser Origin. No JWT/provider key in query; no logging tickets/audio/transcripts.
 
-```ts
-type RealtimeEvent<T> = {
-  id: string;
-  type: string;
-  sessionId: string;
-  sequence?: number;
-  serverTimestamp: string;
-  payload: T;
-};
-```
+Client JSON requires UUID requestId:
+- `answer.start`: questionTurnId (AI TranscriptTurn.id), audio `{encoding:'PCM_S16LE',sampleRate:16000,channels:1}`.
+- `answer.end`: answerId from answer.started, separate requestId.
+- `ping`: heartbeat, approximately10seconds between questions.
 
-Use backend's actual schema when available.
+Wait session.ready then answer.started before binary capture. Raw mono16kHz signed16 little-endian; no container/base64. Recommended20–100ms frames, max32768bytes and even byte count. Client sends50ms frames, bounded bufferedAmount, flushes before answer.end.
 
-## Conceptual Server → Client Events
+Server envelope: `{type,requestId,answerId,data}`; IDs may be null.
 
-### session.snapshot
-Authoritative current Viva session state.
+| Type | Data / meaning |
+|---|---|
+| session.ready | encoding/sampleRate/channels/maxFrameBytes/maxAnswerSeconds, sttProvider, ttsProvider=browser, ttsLanguage. Only transport readiness. |
+| answer.started | questionTurnId, deadline ISO. Permits audio. |
+| transcript.partial | segmentId numeric string, revision, text. Replace same segment; not persisted. |
+| transcript.final | Final recognition segment. Still not proof of DB commit. |
+| answer.finalizing | Lock capture/audio; wait for persistence. |
+| answer.finalized | transcriptTurnId/text receipt. One answer committed, no next question/score/completion. |
+| speech.error | code/message/retryable. Preserve unknown-save state; no auto replay. |
+| pong | Heartbeat acknowledgement. |
 
-### question.ready
-Current main question is ready.
+Only process current answerId and fresh segment revisions; final segments are not overwritten by later partials. Timer-triggered finalization can have null requestId. Backend is authoritative for deadlines; FE does not finish the exam on local clock zero. Ignore late-audio INVALID_STATE after known server finalizing so the client does not cancel its in-flight commit.
 
-### tts.started
-AI question playback started.
+For lost ACK/reload: GET `/api/interview/attempts/{attemptId}/speech/answers/{answerId}`.404 may be temporary; keep uncertain state and allow checking again. No mid-answer resume/replay. Metadata stores only answerId scoped to authenticated user/attempt/prompt, never raw audio/text. NO_SPEECH can be retried only while backend still accepts the prompt.
 
-### tts.completed
-AI question playback completed.
-
-### transcript.partial
-Ephemeral partial STT text.
-
-### transcript.final
-Final transcript for the answer.
-
-### ai.processing.started
-AI analysis has started.
-
-### followup.ready
-Adaptive follow-up generated.
-
-### next_question.ready
-Next main question selected.
-
-### answer.accepted
-Backend confirms answer/evidence saved.
-
-### timer.updated
-Only if timer is server-driven.
-
-### attempt.completing
-Completion started.
-
-### attempt.completed
-Attempt officially completed.
-
-### session.error
-Structured exam/session failure.
-
-## Conceptual Client → Server Commands
-
-Depending on transport:
-- start attempt,
-- start answer,
-- stop/submit answer,
-- acknowledge playback,
-- reconnect/resume.
-
-Exact commands: TBD.
-
-## Reconnect
-
-After reconnect, prefer an authoritative snapshot rather than replaying guessed UI transitions.
-
-## Deduplication
-
-If event IDs or sequence numbers are provided:
-- ignore duplicates,
-- detect gaps where practical,
-- resync on invalid sequence.
-
-## Security
-
-Every realtime connection must be scoped to the authenticated user's authorized session/attempt.
+## Not implemented / future interview contract
+Old conceptual names session.snapshot/question.ready/followup.ready/attempt.completed are NOT speech events and are not consumed as real events. The backend has no complete start/current/next/finish contract yet. Full interview transitions require a future verified backend contract, not guessed FE events.
