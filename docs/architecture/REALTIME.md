@@ -84,3 +84,7 @@ Do not persist/display a partial transcript as finalized evidence.
 The interface should show a clear AI processing state when a follow-up takes longer than conversational expectations.
 
 Do not fake a generated follow-up before backend sends it.
+
+## Current speech subset —03/11/2026
+
+The API room now uses native WebSocket with one-use speech tickets, not STOMP/Socket.IO. See WEBSOCKET_EVENTS.md and features/fe1-speech-integration.md. There is no interview snapshot/current API yet; reconnect can retrieve a single known answer receipt, not reconstruct the whole interview or replay unfinished audio. No official question transition/completion is inferred. Deadline display is approximate when the client clock is skewed; backend finalizing ends capture.

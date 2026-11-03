@@ -9,7 +9,8 @@ import { useStudentMySlot } from '../../exams/exam-hooks'
 import { runtimeConfig } from '../../../services/api/runtime-config'
 import { useOnline } from '../../../hooks/use-online'
 import { VivaSessionView } from '../views/VivaSessionView'
-import { matchesRequestedAttempt, studentExamPath } from '../../exams/student-exam-navigation'
+import { ApiInterviewRoom } from '../views/ApiInterviewRoom'
+import { matchesRequestedAttempt } from '../../exams/student-exam-navigation'
 import { demoPrompts, demoSessionReducer, formatDemoTime, initialDemoSession, type DemoPhase } from '../mocks/demo-session'
 
 export function VivaInterviewRoom() {
@@ -18,15 +19,15 @@ export function VivaInterviewRoom() {
 }
 function ApiRoom({ examId }: { examId: string }) {
   const { session } = useSession()
-  const online = useOnline()
   const [search] = useSearchParams()
   const slot = useStudentMySlot(examId, session.user?.id)
   if (slot.isPending) return <LoadingPage label="Đang xác minh ca thi" />
   if (slot.isError) return <><ErrorState description={slot.error.message} /><Button onClick={() => void slot.refetch()}>Thử lại</Button></>
   if (!slot.data) return <ErrorState description="Không tìm thấy ca thi được cấp quyền." />
+  if (!session.user) return <ErrorState description="Bạn cần đăng nhập để sử dụng phòng thi." />
   if (!matchesRequestedAttempt(search.get('attemptId'), slot.data.attemptId)) return <><ErrorState description="Ca thi đã thay đổi hoặc không khớp. Vui lòng mở lại từ danh sách lịch thi của bạn." /><Link className="button outline" to="/student/exams">Xem lịch thi</Link></>
-  if (!['READY', 'IN_PROGRESS'].includes(slot.data.status)) return <><ErrorState description="Ca thi hiện không cho phép tham gia. Vui lòng kiểm tra lại lịch thi." /><Link className="button outline" to="/student/exams">Xem lịch thi</Link></>
-  return <VivaSessionView name={session.user?.displayName ?? 'Sinh viên'} title={slot.data.examTitle} phase="Chưa có kết nối phiên vấn đáp" timer="—" progress={`Ca ${slot.data.slotNumber}`} transcript={[]} connection={online ? 'Có mạng · chưa kết nối máy chủ phiên thi' : 'Mất kết nối mạng'} notice={<InlineNotice>Chưa thể bắt đầu vấn đáp: kết nối realtime, ghi âm và xác nhận câu trả lời chưa được hệ thống hỗ trợ. Không có câu trả lời nào được gửi từ màn này.</InlineNotice>} controls={<><Button disabled>Bắt đầu trả lời</Button><Link className="button outline" to={studentExamPath(examId, slot.data.attemptId)}>Quay lại ca thi</Link></>} />
+  if (!['READY', 'IN_PROGRESS', 'COMPLETED'].includes(slot.data.status)) return <><ErrorState description="Ca thi hiện không cho phép tham gia. Vui lòng kiểm tra lại lịch thi." /><Link className="button outline" to="/student/exams">Xem lịch thi</Link></>
+  return <ApiInterviewRoom key={`${session.user.id}:${slot.data.attemptId}`} slot={slot.data} userId={session.user.id} name={session.user.displayName} />
 }
 const phaseLabels: Record<DemoPhase, string> = { READY: 'Sẵn sàng mô phỏng', AI_SPEAKING: 'Đang trình bày câu hỏi mẫu', WAITING_FOR_ANSWER: 'Chờ câu trả lời demo', RECORDING: 'Đang nhập câu trả lời demo', TRANSCRIBING: 'Mô phỏng nhận transcript', AI_PROCESSING: 'Mô phỏng AI xử lý', FOLLOW_UP: 'Chuẩn bị câu hỏi phụ demo', NEXT_QUESTION: 'Chọn bước tiếp theo trong demo', COMPLETING: 'Đang hoàn tất mô phỏng', COMPLETED: 'Đã hoàn tất mô phỏng', TIMEOUT: 'Hết thời gian demo' }
 function DemoRoom({ examId }: { examId: string }) {

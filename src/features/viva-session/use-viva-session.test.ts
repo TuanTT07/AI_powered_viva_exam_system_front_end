@@ -55,7 +55,7 @@ describe('useVivaSession', () => {
   it('shows an explicit failure in API mode instead of falling back to mock data', async () => {
     const { result } = renderHook(() => useVivaSession('e4', { repository: apiVivaSessionRepository, speech: speech() }))
     await waitFor(() => expect(result.current.state.phase).toBe('LOAD_FAILED'))
-    expect(result.current.state.error).toContain('chưa được backend hỗ trợ')
+    expect(result.current.state.error).toContain('adapter interview-api và speech riêng')
     expect(result.current.state.transcript).toEqual([])
   })
 
