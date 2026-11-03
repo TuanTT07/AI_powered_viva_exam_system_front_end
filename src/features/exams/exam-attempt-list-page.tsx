@@ -76,7 +76,7 @@ export function ExamAttemptListPage() {
           {Object.entries(attemptStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </div>
-      <AttemptTable rows={filtered} examId={examId} allowReview summary={summary} demo={query.data.demo} />
+      <AttemptTable rows={filtered} evaluations={evaluationsList} examId={examId} allowReview summary={summary} demo={query.data.demo} />
       <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {rows.length} hồ sơ</p>
 
       {/* DEV3 API: Bảng kết quả chấm điểm học phần từ Backend */}

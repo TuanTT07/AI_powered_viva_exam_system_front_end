@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link, useParams, useSearchParams, useBlocker } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { DemoLabel } from '../../components/common/inline-notice'
@@ -35,32 +35,65 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   const [triggering, setTriggering] = useState(false)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
 
+  // Dev3 API: Query evaluations of this exam to resolve questionAttemptId if needed
+  const examEvals = useQuery({
+    queryKey: ['dev3-exam-evaluations', examId],
+    queryFn: () => apiEvaluationService.findByExam(examId),
+    enabled: Boolean(examId),
+    retry: false,
+  })
+
+  // Resolve questionAttemptId: If attemptId is an examAttemptId, find corresponding questionAttemptId
+  const resolvedQuestionAttemptId = useMemo(() => {
+    if (!examEvals.data?.content || examEvals.data.content.length === 0) return attemptId
+    const match = examEvals.data.content.find(
+      e => e.questionAttemptId === attemptId || e.id === attemptId
+    )
+    if (match) return match.questionAttemptId
+    if (examEvals.data.content.length === 1) {
+      return examEvals.data.content[0].questionAttemptId
+    }
+    return attemptId
+  }, [examEvals.data, attemptId])
+
   // Dev3 API call: GET /api/question-attempts/{questionAttemptId}/evaluation
   const evalQuery = useQuery({
-    queryKey: ['dev3-evaluation', attemptId],
+    queryKey: ['dev3-evaluation', resolvedQuestionAttemptId],
     queryFn: async () => {
       try {
-        return await apiEvaluationService.getByQuestionAttempt(attemptId)
+        return await apiEvaluationService.getByQuestionAttempt(resolvedQuestionAttemptId)
       } catch {
-        return null
+        const fallback = examEvals.data?.content.find(
+          e => e.questionAttemptId === resolvedQuestionAttemptId
+        )
+        return fallback ?? null
       }
     },
-    enabled: Boolean(attemptId),
+    enabled: Boolean(resolvedQuestionAttemptId),
     retry: false,
   })
 
   const evaluation = evalQuery.data
-  const candidate = query.data?.candidateStatuses.find(c => c.attemptId === attemptId) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
-  const stored = getStoredGrading(examId, attemptId)
+  const candidate = query.data?.candidateStatuses.find(
+    c => c.attemptId === attemptId || c.attemptId === resolvedQuestionAttemptId
+  ) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
+  const stored = getStoredGrading(examId, resolvedQuestionAttemptId)
 
-  const defaultScores = evaluation
-    ? Object.fromEntries(evaluation.criteria.map(c => [c.criterionId, String(c.finalScore ?? c.aiScore ?? '')]))
-    : {}
+  const defaultScores = useMemo(() => {
+    if (!evaluation) return {}
+    return Object.fromEntries(
+      evaluation.criteria.map(c => [c.criterionId, String(c.finalScore ?? c.aiScore ?? '')])
+    )
+  }, [evaluation])
+
   const [userScores, setUserScores] = useState<Record<string, string> | null>(null)
   const [userNotes, setUserNotes] = useState<string | null>(null)
-  const [confirmed, setConfirmed] = useState<boolean>(() => stored?.confirmed ?? false)
+  const [isEditing, setIsEditing] = useState<boolean>(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
+
+  const isGraded = evaluation?.status === 'GRADED' || Boolean(stored?.confirmed)
+  const confirmed = isGraded && !isEditing
 
   const scores = userScores ?? stored?.scores ?? defaultScores
   const notes = userNotes ?? stored?.notes ?? evaluation?.overallFeedback ?? ''
@@ -75,18 +108,43 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       }))
     : []
 
+  const handleResetToAi = () => {
+    if (!evaluation) return
+    const aiScores = Object.fromEntries(
+      evaluation.criteria.map(c => [c.criterionId, String(c.aiScore ?? '')])
+    )
+    setUserScores(aiScores)
+    setUserNotes(evaluation.overallFeedback ?? '')
+    setActionMessage('Đã đặt lại về điểm do AI đề xuất ban đầu.')
+  }
+
   const handleTriggerAi = async () => {
     setTriggering(true)
     setActionMessage(null)
     try {
-      await apiEvaluationService.gradeWithAi(attemptId)
+      await apiEvaluationService.gradeWithAi(resolvedQuestionAttemptId)
       await evalQuery.refetch()
+      await examEvals.refetch()
       setActionMessage('Đã kích hoạt AI chấm điểm thành công!')
     } catch (err: unknown) {
       setActionMessage(err instanceof Error ? err.message : 'Không thể kích hoạt AI chấm điểm.')
     } finally {
       setTriggering(false)
     }
+  }
+
+  const handleOpenConfirm = () => {
+    const invalid = criteria.find(c => {
+      const val = scores[c.id]
+      if (val === undefined || val === '') return true
+      const num = Number(val)
+      return isNaN(num) || num < 0 || num > c.max
+    })
+    if (invalid) {
+      setActionMessage(`Điểm cho tiêu chí "${invalid.name}" phải là số hợp lệ từ 0 đến ${invalid.max}.`)
+      return
+    }
+    setConfirmOpen(true)
   }
 
   const handleConfirmFinalize = async () => {
@@ -98,14 +156,14 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         finalScore: Number(scores[c.id]) || 0,
         comment: c.evidence,
       }))
-      const res = await apiEvaluationService.finalizeEvaluation(attemptId, {
+      const res = await apiEvaluationService.finalizeEvaluation(resolvedQuestionAttemptId, {
         criteria: criteriaPayload,
         overallFeedback: notes,
       })
-      setConfirmed(true)
+      setIsEditing(false)
       setConfirmOpen(false)
       const finalScore = res.finalScore ?? Object.values(scores).reduce((sum, v) => sum + (Number(v) || 0), 0)
-      saveStoredGrading(examId, attemptId, {
+      saveStoredGrading(examId, resolvedQuestionAttemptId, {
         scores,
         notes,
         confirmed: true,
@@ -114,6 +172,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       })
       setActionMessage('Đã chốt điểm thành công!')
       await evalQuery.refetch()
+      await examEvals.refetch()
     } catch (err: unknown) {
       setActionMessage(err instanceof Error ? err.message : 'Chốt điểm thất bại.')
     } finally {
@@ -190,12 +249,25 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
                 {triggering ? 'Đang gọi AI...' : 'Gọi AI chấm điểm'}
               </Button>
             )}
-            <Button
-              disabled={confirmed || !criteria.length}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {confirmed ? 'ĐÃ CHỐT ĐIỂM' : 'Chốt điểm'}
-            </Button>
+            {confirmed ? (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                Sửa điểm / Chấm lại
+              </Button>
+            ) : (
+              <>
+                {evaluation && (
+                  <Button variant="outline" onClick={handleResetToAi}>
+                    Đặt lại điểm AI
+                  </Button>
+                )}
+                <Button
+                  disabled={!criteria.length || isFinalizing}
+                  onClick={handleOpenConfirm}
+                >
+                  {isGraded ? 'Cập nhật điểm' : 'Chốt điểm'}
+                </Button>
+              </>
+            )}
           </>
         }
       />
