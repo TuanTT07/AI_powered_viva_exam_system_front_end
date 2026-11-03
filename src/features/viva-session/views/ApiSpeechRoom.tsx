@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Mic, Volume2, RotateCcw, CheckCircle2, RefreshCw, LogOut } from "lucide-react";
+import { Sparkles, Mic, Volume2, RotateCcw, RefreshCw, LogOut, Square } from "lucide-react";
 import { Button, Dialog } from "../../../components/ui/primitives";
 import { InlineNotice } from "../../../components/common/inline-notice";
 import { UnsavedChangesGuard } from "../../../components/common/unsaved-changes-guard";
@@ -107,12 +107,44 @@ export function ApiSpeechRoom({
     if (state.phase === "saved") onAnswerSaved(state.receipt);
   }, [state.phase, state.receipt, onAnswerSaved]);
   const retry = ["idle", "disconnected", "error"].includes(state.phase);
+
+  const totalSteps = slot.examConfig?.maxMainQuestions ?? 3;
+  const currentStep = Math.min(totalSteps, Math.max(1, (history.filter((h) => h.role === "ai").length || 0) + 1));
+  const startTimeFormatted = slot.scheduledStartTime
+    ? new Date(slot.scheduledStartTime).toLocaleString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "10:00, 20/01/2025";
+  const durationFormatted =
+    slot.scheduledStartTime && slot.scheduledEndTime
+      ? `${Math.round((Date.parse(slot.scheduledEndTime) - Date.parse(slot.scheduledStartTime)) / 60000)} phút`
+      : "30 phút";
+  const slotCodeFormatted =
+    slot.accessCode ||
+    (slot.courseCode
+      ? `${slot.courseCode}-${String(slot.slotNumber ?? 1).padStart(3, "0")}`
+      : slot.slotNumber
+        ? `AIVES-CA-${slot.slotNumber}`
+        : "AIVES-JAVA-001");
+
   return (
     <>
       <UnsavedChangesGuard when={awaiting} />
       <VivaSessionView
         name={name}
         title={slot.examTitle}
+        courseName={slot.courseName || slot.examTitle || "Lập trình Java"}
+        slotCode={slotCodeFormatted}
+        startTime={startTimeFormatted}
+        duration={durationFormatted}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        isRecording={state.phase === "recording"}
+        isAiSpeaking={state.phase === "speaking"}
         question={
           isProcessing ? (
             <div className="py-6 space-y-2 text-center">
@@ -137,8 +169,8 @@ export function ApiSpeechRoom({
             deadline={state.deadline ?? prompt.deadlineAt}
           />
         }
-        timerLabel="Thời gian trả lời"
-        progress={`Ca ${slot.slotNumber}`}
+        timerLabel="Thời gian còn lại"
+        progress={`Ca ${slot.slotNumber ?? 1}`}
         transcript={transcript}
         connection={
           !online
@@ -306,10 +338,10 @@ export function ApiSpeechRoom({
                   <Button
                     aria-label="Kết thúc câu trả lời"
                     onClick={() => void stop()}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold inline-flex items-center gap-1.5 shadow-xs"
+                    className="border border-slate-300 hover:bg-slate-50 font-bold text-slate-800 bg-white inline-flex items-center gap-2 shadow-2xs px-5 py-2"
                   >
-                    <CheckCircle2 size={16} />
-                    <span>Hoàn thành &amp; Gửi câu trả lời</span>
+                    <Square size={13} className="fill-slate-800 text-slate-800" />
+                    <span>Kết thúc câu trả lời</span>
                   </Button>
                   <Button
                     variant="outline"

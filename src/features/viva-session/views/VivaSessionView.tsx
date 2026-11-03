@@ -1,6 +1,62 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { FileText, Mic, ShieldCheck, Video, VideoOff, Wifi, CheckCircle2, User } from 'lucide-react'
+import {
+  BookOpen,
+  Bot,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Clock,
+  FileText,
+  Headphones,
+  HelpCircle,
+  Info,
+  Layers,
+  LayoutGrid,
+  Mic,
+  Monitor,
+  User,
+  Video,
+  Volume2,
+  Wifi,
+} from 'lucide-react'
 import { TranscriptMessage, type TranscriptMessageProps } from '../components/TranscriptMessage'
+
+function BotFaceIcon({ className = 'w-10 h-10' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="14" width="28" height="24" rx="12" fill="white" />
+      <path d="M24 6V14" stroke="white" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="24" cy="5" r="3" fill="#60A5FA" />
+      <rect x="14" y="20" width="20" height="12" rx="6" fill="#1E40AF" />
+      {/* Smiling curved eyes */}
+      <circle cx="20" cy="26" r="2.5" fill="#60A5FA" />
+      <circle cx="28" cy="26" r="2.5" fill="#60A5FA" />
+      {/* Ear pods */}
+      <rect x="6" y="21" width="4" height="10" rx="2" fill="white" />
+      <rect x="38" y="21" width="4" height="10" rx="2" fill="white" />
+    </svg>
+  )
+}
+
+function WaveformBars({ active = false, count = 10 }: { active?: boolean; count?: number }) {
+  const heights = [20, 45, 75, 95, 60, 85, 45, 65, 35, 15, 55, 30]
+  return (
+    <div className="flex items-center gap-1 h-10 overflow-hidden">
+      {heights.slice(0, count).map((h, i) => (
+        <span
+          key={i}
+          className={`w-1 rounded-full transition-all duration-150 ${
+            active ? 'bg-blue-500 animate-pulse' : 'bg-blue-200/80'
+          }`}
+          style={{
+            height: active ? `${Math.max(16, h * (0.6 + ((i % 3) * 0.2)))}%` : `${h * 0.35}%`,
+            animationDelay: `${(i * 0.08).toFixed(2)}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
 
 export function VivaSessionView({
   name,
@@ -14,7 +70,14 @@ export function VivaSessionView({
   controls,
   connection,
   draft,
-  timerLabel = 'Thời gian còn lại',
+  courseName,
+  slotCode,
+  startTime,
+  duration,
+  currentStep = 2,
+  totalSteps = 3,
+  isRecording = false,
+  isAiSpeaking = false,
 }: {
   name: string
   title: string
@@ -28,10 +91,19 @@ export function VivaSessionView({
   connection: string
   draft?: ReactNode
   timerLabel?: string
+  courseName?: string
+  slotCode?: string
+  startTime?: string
+  duration?: string
+  currentStep?: number
+  totalSteps?: number
+  isRecording?: boolean
+  isAiSpeaking?: boolean
 }) {
   const isCompleted = phase.includes('hoàn tất') || phase.includes('kết thúc')
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
 
   const stopCamera = () => {
@@ -66,42 +138,336 @@ export function VivaSessionView({
     }
   }, [])
 
+  const displayCourse = courseName || title || 'Lập trình Java'
+  const displaySlotCode = slotCode || 'AIVES-JAVA-001'
+  const displayStartTime = startTime || '10:00, 20/01/2025'
+  const displayDuration = duration || '30 phút'
+
   return (
-    <section className="source-screen max-w-7xl mx-auto viva-room p-4 md:p-6 space-y-4">
-      {/* Session Header Card */}
-      <div className="viva-session-header bg-white border border-slate-200 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold tracking-wide uppercase">
-            <span>Cổng khảo thí • Phòng vấn đáp</span>
+    <section className="source-screen max-w-7xl mx-auto viva-room p-3 md:p-6 space-y-4">
+      {/* Top Header Row matching mockup */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+            <Mic size={22} />
           </div>
-          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 mt-2 tracking-tight">{title}</h1>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
-            Thí sinh: <span className="text-slate-800 font-semibold">{name}</span> • <span className="text-blue-700">{progress}</span>
-          </p>
-          <div className="inline-flex items-center gap-2 mt-2">
-            <span className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-blue-600 animate-pulse'}`} />
-            <span role="status" className={`text-xs font-bold ${isCompleted ? 'text-emerald-700' : 'text-blue-700'}`}>
-              {phase}
-            </span>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Đang thi vấn đáp <span className="text-blue-600">AI</span>
+              </h1>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{isCompleted ? 'Đã hoàn thành' : 'Đang diễn ra'}</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              Phiên thi đang diễn ra. Hãy lắng nghe câu hỏi từ Giám khảo AI và trả lời rõ ràng, mạch lạc.
+            </p>
           </div>
         </div>
 
-        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 px-6 py-3.5 shrink-0 text-center md:text-right shadow-2xs">
-          <p className="text-[11px] uppercase text-blue-700 font-bold tracking-wider">{timerLabel}</p>
-          <strong className="font-mono text-2xl md:text-3xl text-blue-900 font-extrabold block mt-0.5">{timer}</strong>
+        {/* Top Right Timer Card in mockup */}
+        <div className="rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 border border-blue-100 px-5 py-3 flex items-center justify-between md:justify-end gap-4 shadow-2xs md:min-w-[240px]">
+          <div className="flex items-center gap-2 text-slate-700 font-bold text-xs sm:text-sm">
+            <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+              <Clock size={16} />
+            </div>
+            <span>Thời gian còn lại:</span>
+          </div>
+          <span className="font-mono text-2xl md:text-3xl font-extrabold text-blue-600 tracking-tight">
+            {timer}
+          </span>
         </div>
-      </div>
+      </header>
 
       {notice}
 
+      {/* Main 2-Column Grid */}
       <div className="grid lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: Camera & Status Sidebar */}
-        <aside className="viva-camera-panel lg:col-span-4 space-y-4">
-          <section className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-            <div className="p-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 flex items-center justify-between">
+        {/* Left Column (Main Interview Workflow): ~65% width */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* Card 1: Giám khảo AI Card */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 leading-tight">Giám khảo AI</h2>
+                  <p className="text-xs text-slate-500">Hệ thống giám khảo thông minh của AIVES</p>
+                </div>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-600 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/60">
+                {progress}
+              </span>
+            </div>
+
+            {/* Glowing Bot Avatar with Waveform animation */}
+            <div className="py-4 flex flex-col items-center justify-center">
+              <div className="flex items-center justify-center gap-4 sm:gap-8 w-full max-w-md px-2">
+                <WaveformBars active={isAiSpeaking} count={10} />
+
+                <div className="relative shrink-0">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-blue-100/90 to-indigo-100/50 p-2.5 flex items-center justify-center shadow-inner">
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+                      <BotFaceIcon className="w-14 h-14 sm:w-16 sm:h-16" />
+                    </div>
+                  </div>
+                </div>
+
+                <WaveformBars active={isAiSpeaking} count={10} />
+              </div>
+
+              {/* Status pill below avatar */}
+              <div className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold shadow-2xs">
+                <Volume2 size={13} className={isAiSpeaking ? 'animate-pulse' : ''} />
+                <span>
+                  {isAiSpeaking
+                    ? 'AI đang đặt câu hỏi'
+                    : isRecording
+                      ? 'AI đang lắng nghe câu trả lời của bạn'
+                      : phase || 'Sẵn sàng tương tác'}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Card 2: Câu hỏi Card */}
+          <section className="rounded-2xl border border-blue-200/70 bg-gradient-to-r from-blue-50/50 via-indigo-50/20 to-blue-50/40 p-4 md:p-5 flex items-start gap-3.5 shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-xs">
+              <HelpCircle size={20} />
+            </div>
+            <div className="space-y-1 flex-1">
+              <h3 className="text-xs font-bold text-blue-700 tracking-wide uppercase">
+                Câu hỏi (Câu {currentStep}/{totalSteps})
+              </h3>
+              <div className="text-base md:text-lg font-bold text-slate-900 leading-snug">
+                {question || 'Chờ câu hỏi được hệ thống cấp quyền.'}
+              </div>
+            </div>
+          </section>
+
+          {/* Card 3: Câu trả lời của bạn Card */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Mic size={18} className="text-blue-600" />
+                <span>Câu trả lời của bạn</span>
+              </div>
+              <p className="text-xs text-slate-400 flex items-center gap-1">
+                <Info size={13} />
+                <span>Hãy trả lời ngắn gọn, rõ ràng và đúng trọng tâm.</span>
+              </p>
+            </div>
+
+            {/* Student Microphone Visualizer & Controls */}
+            <div className="py-2 flex flex-col items-center justify-center space-y-3">
+              <div className="flex items-center justify-center gap-4 sm:gap-6 w-full max-w-md px-2">
+                <WaveformBars active={isRecording} count={12} />
+
+                <div className="relative shrink-0">
+                  <div
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all shadow-md ${
+                      isRecording
+                        ? 'bg-blue-600 text-white shadow-blue-500/30 scale-105 ring-4 ring-blue-100 animate-pulse'
+                        : 'bg-blue-50 text-blue-600 border border-blue-200'
+                    }`}
+                  >
+                    <Mic size={24} />
+                  </div>
+                </div>
+
+                <WaveformBars active={isRecording} count={12} />
+              </div>
+
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-700">
+                    {isRecording ? 'Đang trả lời...' : 'Sẵn sàng trả lời'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live recognized draft content */}
+            {draft}
+
+            {/* Action buttons (controls) */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3 border-t border-slate-100">
+              {controls}
+            </div>
+
+            {/* Listening bar footer inside answer card */}
+            <div className="rounded-xl bg-blue-50/60 border border-blue-100 px-4 py-2.5 flex items-center justify-between text-xs text-blue-700">
               <div className="flex items-center gap-2">
-                <User size={16} className="text-blue-600" />
-                <span>Không gian thí sinh</span>
+                <Headphones size={15} />
+                <span>
+                  {isRecording
+                    ? 'AI đang lắng nghe câu trả lời của bạn...'
+                    : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+              </div>
+            </div>
+          </section>
+
+          {/* Collapsible Transcript History Section */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700 cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={15} className="text-blue-600" />
+                <span>Biên bản hội thoại đã ghi nhận ({transcript.length} lượt)</span>
+              </div>
+              <span className="text-blue-600 text-xs font-medium lowercase">
+                {historyOpen ? 'Thu gọn' : 'Xem chi tiết'}
+              </span>
+            </button>
+
+            {historyOpen && (
+              <div className="max-h-[360px] overflow-y-auto space-y-3 mt-4 pt-3 border-t border-slate-100 pr-1">
+                {transcript.map((line, index) => (
+                  <TranscriptMessage key={line.id ?? `${line.role}-${index}`} {...line} />
+                ))}
+                {!transcript.length && (
+                  <p className="text-xs text-slate-400 text-center py-4">Chưa có lượt hội thoại nào.</p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Right Sidebar Column: ~35% width */}
+        <aside className="lg:col-span-4 space-y-4">
+          {/* Card 2: Tiến trình phiên thi */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 space-y-3.5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800">
+                <Layers size={16} className="text-blue-600" />
+                <span>Tiến trình phiên thi</span>
+              </div>
+              <span className="text-xs font-bold text-slate-500">
+                {currentStep}/{totalSteps} câu
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.max(10, (currentStep / totalSteps) * 100))}%` }}
+              />
+            </div>
+
+            {/* Question Step List */}
+            <div className="space-y-2 pt-1 text-xs">
+              {Array.from({ length: totalSteps }).map((_, idx) => {
+                const qNum = idx + 1
+                const isDone = qNum < currentStep
+                const isCurrent = qNum === currentStep
+                return (
+                  <div
+                    key={qNum}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'bg-blue-50/60 border-blue-200 font-bold text-blue-900 shadow-2xs'
+                        : isDone
+                          ? 'bg-slate-50/60 border-slate-100 text-slate-700 font-medium'
+                          : 'border-transparent text-slate-400 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isDone ? (
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                      ) : isCurrent ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-blue-600 flex items-center justify-center shrink-0">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                        </div>
+                      ) : (
+                        <Circle size={16} className="text-slate-300 shrink-0" />
+                      )}
+                      <span>Câu {qNum}</span>
+                    </div>
+                    <div>
+                      {isDone ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-[11px] font-semibold">
+                          Đã hoàn thành
+                        </span>
+                      ) : isCurrent ? (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200/60 text-blue-800 text-[11px] font-semibold">
+                          Đang trả lời
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">Chưa diễn ra</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* Card 3: Thông tin ca thi */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 space-y-3 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2.5">
+              <FileText size={16} className="text-blue-600" />
+              <span>Thông tin ca thi</span>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Môn thi</span>
+                <span className="text-slate-900 font-semibold flex items-center gap-1.5">
+                  <BookOpen size={13} className="text-slate-400" />
+                  {displayCourse}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Vai trò</span>
+                <span className="text-slate-900 font-semibold flex items-center gap-1.5">
+                  <User size={13} className="text-slate-400" />
+                  Thí sinh ({name})
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Thời gian bắt đầu</span>
+                <span className="text-slate-900 font-semibold flex items-center gap-1.5">
+                  <Calendar size={13} className="text-slate-400" />
+                  {displayStartTime}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Thời lượng</span>
+                <span className="text-slate-900 font-semibold flex items-center gap-1.5">
+                  <Clock size={13} className="text-slate-400" />
+                  {displayDuration}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Mã ca thi</span>
+                <span className="text-slate-900 font-mono font-bold flex items-center gap-1.5">
+                  <LayoutGrid size={13} className="text-slate-400" />
+                  {displaySlotCode}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Card 4: Thiết bị & kết nối */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800">
+                <Monitor size={16} className="text-blue-600" />
+                <span>Thiết bị &amp; kết nối</span>
               </div>
               {!isCompleted && (
                 <button
@@ -110,35 +476,16 @@ export function VivaSessionView({
                     if (cameraActive) stopCamera()
                     else void startCamera()
                   }}
-                  className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
                 >
-                  {cameraActive ? (
-                    <>
-                      <VideoOff size={13} />
-                      <span>Tắt cam</span>
-                    </>
-                  ) : (
-                    <>
-                      <Video size={13} />
-                      <span>Mở cam (tùy chọn)</span>
-                    </>
-                  )}
+                  {cameraActive ? 'Tắt cam' : 'Mở cam (tùy chọn)'}
                 </button>
               )}
             </div>
 
-            {isCompleted ? (
-              <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-950 flex flex-col gap-2.5 items-center justify-center text-slate-300 p-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Phiên thi đã hoàn tất</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Micro đã đóng an toàn</p>
-                </div>
-              </div>
-            ) : cameraActive ? (
-              <div className="aspect-video bg-slate-950 relative overflow-hidden flex items-center justify-center">
+            {/* Optional video stream preview if turned on */}
+            {cameraActive && (
+              <div className="aspect-video bg-slate-950 rounded-xl overflow-hidden relative shadow-inner">
                 <video
                   ref={(node) => {
                     videoRef.current = node
@@ -151,98 +498,77 @@ export function VivaSessionView({
                   muted
                   className="w-full h-full object-cover -scale-x-100"
                 />
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-[10px] font-semibold text-white">
+                <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 text-[10px] text-white font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                   <span>Trực tiếp</span>
                 </div>
               </div>
-            ) : (
-              <div className="py-6 px-4 bg-gradient-to-br from-slate-50 to-blue-50/40 flex flex-col items-center justify-center text-center gap-2.5">
-                <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shadow-2xs">
-                  <User size={28} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">{name}</h3>
-                  <p className="text-xs text-slate-500 font-medium">{progress}</p>
-                </div>
-              </div>
             )}
 
-            <div className="p-4 space-y-2.5 text-xs text-slate-600 bg-slate-50/60 border-t border-slate-100">
-              <p className="flex items-center gap-2">
-                <Wifi size={14} className="text-blue-600 shrink-0" />
-                <span>{connection}</span>
-              </p>
-              <p className="flex items-center gap-2">
-                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                <span>Biên bản thi được ký số bảo mật</span>
-              </p>
-            </div>
-          </section>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* Mic */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Mic size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">Mic</p>
+                    <p className="text-[10px] text-slate-500">Hoạt động</p>
+                  </div>
+                </div>
+                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+              </div>
 
-          <section className="border border-slate-200 rounded-2xl bg-white p-5 space-y-2.5 shadow-sm">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex gap-2 items-center">
-              <Mic size={15} className="text-blue-600" />
-              <span>Trạng thái phiên thi</span>
-            </h2>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-              <p className="text-xs font-bold text-blue-700">{phase}</p>
-              <p className="text-[11px] text-slate-500">
-                {isCompleted
-                  ? 'Toàn bộ dữ liệu phiên thi đã được gửi lên hệ thống khảo thí.'
-                  : 'Không rời trang khi hệ thống đang xử lý câu trả lời.'}
-              </p>
+              {/* Loa */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Volume2 size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">Loa</p>
+                    <p className="text-[10px] text-slate-500">Hoạt động</p>
+                  </div>
+                </div>
+                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+              </div>
+
+              {/* Camera */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Video size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">Camera</p>
+                    <p className="text-[10px] text-slate-500">{cameraActive ? 'Hoạt động' : 'Tùy chọn'}</p>
+                  </div>
+                </div>
+                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+              </div>
+
+              {/* Mạng */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Wifi size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 leading-tight">Mạng</p>
+                    <p className="text-[10px] text-slate-500">
+                      {connection.includes('Mất') ? 'Mất mạng' : 'Kết nối ổn định'}
+                    </p>
+                  </div>
+                </div>
+                <CheckCircle2
+                  size={13}
+                  className={connection.includes('Mất') ? 'text-red-500 shrink-0' : 'text-emerald-500 shrink-0'}
+                />
+              </div>
             </div>
           </section>
         </aside>
-
-        {/* Right Column: Question & Transcript Area */}
-        <div className="viva-answer-panel lg:col-span-8 space-y-4">
-          <section className="border border-slate-200 rounded-2xl bg-white p-5 md:p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-xs uppercase tracking-wider text-slate-500 font-bold">
-                {isCompleted ? 'Tổng kết phiên thi' : 'Câu hỏi đang trình bày'}
-              </h2>
-              <span className="text-[11px] font-semibold text-slate-600">AIVES AI Engine</span>
-            </div>
-
-            <div className="text-base text-slate-900 leading-relaxed font-medium">
-              {question || 'Chờ câu hỏi được hệ thống cấp quyền.'}
-            </div>
-
-            {draft}
-
-            <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-100">
-              {controls}
-            </div>
-          </section>
-
-          <section className="border border-slate-200 rounded-2xl bg-white p-5 md:p-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-xs uppercase tracking-wider text-slate-700 font-bold flex items-center gap-2">
-                <FileText size={15} className="text-blue-600" />
-                <span>Biên bản hội thoại</span>
-              </h2>
-              <span className="text-[11px] text-slate-600 font-medium">
-                {transcript.length} lượt tương tác
-              </span>
-            </div>
-
-            <div className="max-h-[520px] overflow-y-auto space-y-3 pr-1">
-              {transcript.map((line, index) => (
-                <TranscriptMessage key={line.id ?? `${line.role}-${index}`} {...line} />
-              ))}
-              {!transcript.length && (
-                <div className="py-12 text-center space-y-2">
-                  <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
-                    <FileText size={18} />
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium">Chưa có hội thoại được xác nhận.</p>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
       </div>
     </section>
   )

@@ -217,11 +217,44 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </div>
   ) : undefined
 
+  const totalSteps = slot.examConfig?.maxMainQuestions ?? 3
+  const currentStep = isCompleted
+    ? totalSteps
+    : Math.min(totalSteps, Math.max(1, (history.filter((h) => h.role === 'ai').length || 0) + 1))
+  const startTimeFormatted = slot.scheduledStartTime
+    ? new Date(slot.scheduledStartTime).toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '10:00, 20/01/2025'
+  const durationFormatted =
+    slot.scheduledStartTime && slot.scheduledEndTime
+      ? `${Math.round((Date.parse(slot.scheduledEndTime) - Date.parse(slot.scheduledStartTime)) / 60000)} phút`
+      : '30 phút'
+  const slotCodeFormatted =
+    slot.accessCode ||
+    (slot.courseCode
+      ? `${slot.courseCode}-${String(slot.slotNumber ?? 1).padStart(3, '0')}`
+      : slot.slotNumber
+        ? `AIVES-CA-${slot.slotNumber}`
+        : 'AIVES-JAVA-001')
+
   return (
     <>
       <VivaSessionView
         name={name}
         title={slot.examTitle}
+        courseName={slot.courseName || slot.examTitle || 'Lập trình Java'}
+        slotCode={slotCodeFormatted}
+        startTime={startTimeFormatted}
+        duration={durationFormatted}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        isAiSpeaking={false}
+        isRecording={false}
         phase={isReady ? 'Sẵn sàng bắt đầu phiên thi' : isCompleted ? 'Phiên thi đã hoàn tất' : 'Hệ thống đang xử lý lượt thi'}
         timer="—"
         timerLabel="Thời gian trả lời"
