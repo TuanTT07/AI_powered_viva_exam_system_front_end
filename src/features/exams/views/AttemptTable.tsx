@@ -40,7 +40,7 @@ export function AttemptTable({
               (e.studentCode && e.studentCode === row.studentCode) ||
               e.questionAttemptId === row.attemptId ||
               e.id === row.attemptId
-            ) ?? (evaluations && evaluations.length === 1 && rows.length === 1 ? evaluations[0] : undefined)
+            )
             const stored = getStoredGrading(examId, evalItem?.questionAttemptId ?? row.attemptId)
             const isConfirmed = Boolean(evalItem?.status === 'GRADED' || stored?.confirmed)
             const confirmedScore = evalItem?.finalScore ?? stored?.finalScore
@@ -82,7 +82,7 @@ export function AttemptTable({
                       className="button outline"
                       to={`/lecturer/exams/${examId}/attempts/${targetAttemptId}${summary ? '?tab=summary' : ''}`}
                     >
-                      Mở hồ sơ
+                      {summary ? 'Xem tổng kết' : 'Mở hồ sơ'}
                     </Link>
                   ) : (
                     <span className="text-slate-400 text-xs">Chưa có lượt thi</span>

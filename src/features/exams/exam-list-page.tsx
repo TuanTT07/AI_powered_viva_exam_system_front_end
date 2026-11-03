@@ -14,6 +14,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   FolderKanban,
+  LayoutGrid,
+  List,
   RotateCcw,
 } from 'lucide-react'
 import { Alert, Button, Dialog, Input, Skeleton } from '../../components/ui/primitives'
@@ -25,7 +27,7 @@ import { examRoutes } from './exam-routes'
 import { parseExamSearchParams } from './exam-url'
 import './exam-list.css'
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 function formatSchedule(value: string) {
   return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -49,6 +51,7 @@ export function ExamListPage() {
   const summary = useExamSummary()
   const [target, setTarget] = useState<import('./exam-types').ExamSession | null>(null)
   const remove = useDeleteExam()
+  const [view, setView] = useState<'cards' | 'table'>('cards')
 
   if (session.user && !session.user.roles.includes('lecturer')) return <PermissionDenied />
   const data = query.data
@@ -66,7 +69,7 @@ export function ExamListPage() {
         <div className="exam-list-hero-content">
           <div className="exam-list-hero-badge">
             <GraduationCap size={14} />
-            <span>LƯU TRỮ KHẢO THÍ · KHOA CNTT</span>
+            <span>KHẢO THÍ · GIẢNG VIÊN</span>
           </div>
           <h1 className="exam-list-hero-title">Kỳ thi vấn đáp</h1>
           <p className="exam-list-hero-desc">
@@ -149,7 +152,17 @@ export function ExamListPage() {
       </div>
 
       {/* Unified Data Surface: Toolbar + Table + Pagination as One Cohesive Card */}
-      <div className="exam-data-surface">
+      <div className="exam-data-surface" data-view={view}>
+        <div className="exam-library-heading">
+          <div>
+            <h2>Danh sách kỳ thi</h2>
+            <p>{hasFilters ? 'Kết quả theo bộ lọc' : 'Các kỳ thi bạn có quyền quản lý'}</p>
+          </div>
+          <div className="exam-view-toggle" role="group" aria-label="Kiểu hiển thị kỳ thi">
+            <button type="button" aria-pressed={view === 'cards'} onClick={() => setView('cards')}><LayoutGrid size={16} /> Thẻ</button>
+            <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}><List size={16} /> Bảng</button>
+          </div>
+        </div>
         {/* Seamless Toolbar Header */}
         <div className="exam-table-toolbar exam-list-filters">
           <div className="exam-toolbar-left">
@@ -161,7 +174,7 @@ export function ExamListPage() {
                   id="exam-search"
                   value={parsed.q}
                   onChange={(event) => setFilter('q', event.target.value)}
-                  placeholder="Tìm kiếm theo tên kỳ thi, mã ca thi, môn học..."
+                  placeholder="Tìm theo tên kỳ thi…"
                 />
               </div>
             </label>
@@ -416,37 +429,33 @@ function ExamCard({
   const meta = examStatusMeta[exam.status]
   const deletable = ['DRAFT', 'PUBLISHED', 'SCHEDULED'].includes(exam.status)
   return (
-    <article className="exam-card">
+    <article className="exam-card" data-status={exam.status}>
       <header>
         <div className="exam-name">
           <h2>
             <Link to={examRoutes.detail(exam.id)}>{exam.title}</Link>
           </h2>
-          <span className="exam-id-badge">{exam.id}</span>
+          <span className="exam-card-course">{exam.subjectCode} · {exam.subjectName}</span>
         </div>
         <StatusBadge label={meta.label} tone={meta.tone} />
       </header>
       <dl>
         <div>
-          <dt>Môn học</dt>
-          <dd>{exam.subjectName}</dd>
-        </div>
-        <div>
-          <dt>Thời gian</dt>
+          <dt><Calendar size={13} /> Lịch thi</dt>
           <dd>{formatSchedule(exam.scheduledAt)}</dd>
         </div>
         <div>
-          <dt>Thời lượng</dt>
+          <dt><Clock size={13} /> Thời lượng</dt>
           <dd>{exam.durationMinutes} phút</dd>
         </div>
         <div>
-          <dt>Số thí sinh</dt>
+          <dt><Users size={13} /> Thí sinh</dt>
           <dd>{exam.studentCount} SV</dd>
         </div>
       </dl>
       <footer className="exam-card-actions">
         <Link className="exam-btn-detail" to={examRoutes.detail(exam.id)}>
-          <span>Chi tiết</span>
+          <span>Mở kỳ thi</span><ChevronRight size={15} />
         </Link>
         <ExamActionMenu
           exam={exam}

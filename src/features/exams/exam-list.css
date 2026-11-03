@@ -716,3 +716,97 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Lecturer exam directory */
+.exam-list-hero {
+  isolation: isolate;
+  position: relative;
+  min-height: 190px;
+  overflow: hidden;
+  border-color: #193263;
+  background: radial-gradient(ellipse at 95% 0%, #2755a4 0%, transparent 55%), linear-gradient(115deg, #10213e, #162f58);
+  color: #fff;
+}
+.exam-list-hero::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 50%;
+  background: repeating-linear-gradient(135deg, transparent 0 24px, #ffffff10 24px 25px);
+  content: '';
+  pointer-events: none;
+}
+.exam-list-hero-title { color: #fff; font-size: clamp(1.9rem, 4vw, 2.65rem); }
+.exam-list-hero-desc { color: #dbe8ff; }
+.exam-list-hero-badge { color: #e5efff; background: #ffffff15; border-color: #ffffff30; }
+.exam-library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 22px 0;
+}
+.exam-library-heading h2 { margin: 0; font-size: 1.15rem; color: #0f172a; }
+.exam-library-heading p { margin: 3px 0 0; color: #64748b; font-size: .82rem; }
+.exam-view-toggle { display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: #eef2f8; }
+.exam-view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 11px;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+}
+.exam-view-toggle button[aria-pressed="true"] { background: white; color: #164bb5; box-shadow: 0 1px 3px #142b4d20; }
+.exam-data-surface[data-view="cards"] .exam-list-table-wrap { display: none; }
+.exam-data-surface[data-view="cards"] .exam-list-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+  padding: 18px 22px;
+}
+.exam-data-surface[data-view="table"] .exam-list-table-wrap { display: block; }
+.exam-data-surface[data-view="table"] .exam-list-cards { display: none; }
+.exam-card { border-top: 3px solid #9aaac2; grid-template-rows: auto 1fr auto; }
+.exam-card[data-status="PUBLISHED"], .exam-card[data-status="SCHEDULED"] { border-top-color: #2563eb; }
+.exam-card[data-status="IN_PROGRESS"] { border-top-color: #d97706; }
+.exam-card[data-status="COMPLETED"] { border-top-color: #059669; }
+.exam-card[data-status="CANCELLED"] { border-top-color: #dc2626; }
+.exam-card h2 { font-size: 1rem; overflow-wrap: anywhere; }
+.exam-card-course { color: #52627a; font-size: .76rem; overflow-wrap: anywhere; }
+.exam-card dl { align-content: start; }
+.exam-card dl > :first-child { grid-column: 1 / -1; }
+.exam-card dt { display: flex; align-items: center; gap: 5px; }
+.exam-card footer { align-items: center; }
+
+.exam-list-hero.exam-overview-hero {
+  min-height: auto;
+  padding-block: 16px;
+}
+.exam-overview-hero .exam-list-hero-title {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.exam-demo-masthead {
+  background:
+    radial-gradient(ellipse at 90% 12%, #2563eb88, transparent 58%),
+    linear-gradient(112deg, #0b1833 15%, #192e60 72%, #25468c);
+}
+.exam-demo-masthead::after {
+  inset: 0 0 0 40%;
+  background: radial-gradient(circle, #e2edff45 1px, transparent 1.3px) 0 0 / 18px 18px;
+  mask-image: linear-gradient(90deg, transparent, black);
+}
+.exam-setup-tile {
+  background: linear-gradient(115deg, #f8fbff, white 75%);
+  transition: border-color 150ms, background-color 150ms, box-shadow 150ms;
+}
+.exam-setup-tile:hover, .exam-setup-tile:focus-visible {
+  border-color: #93b7fa;
+  box-shadow: 0 2px 10px #1e40af14;
+}
+.exam-schedule-progress { background: linear-gradient(115deg, #eaf3ff, #f7fbff); }
+.exam-schedule-progress progress { accent-color: #2563eb; }
