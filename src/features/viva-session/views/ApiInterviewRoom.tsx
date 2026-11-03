@@ -77,8 +77,8 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
       setHistory((prev) => {
         const exists = prev.some(
           (m) =>
-            (message.id && m.id === message.id) ||
-            (m.role === message.role && m.text === message.text)
+            m.role === message.role &&
+            ((message.id && m.id === message.id) || m.text === message.text)
         )
         if (exists) return prev
         const next = [...prev, message]
