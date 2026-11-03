@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { CheckCircle2, Bot, Sparkles, FileText, Calendar } from 'lucide-react'
-import { Button } from '../../../components/ui/primitives'
+import { Link, useNavigate } from 'react-router-dom'
+import { CheckCircle2, Bot, Sparkles, FileText, Calendar, RefreshCw, LogOut, Play } from 'lucide-react'
+import { Button, Dialog } from '../../../components/ui/primitives'
 import { ErrorState, LoadingPage, PermissionDenied } from '../../../components/common/states'
 import { InlineNotice } from '../../../components/common/inline-notice'
 import { ApiError } from '../../../services/api/client'
@@ -40,8 +40,10 @@ function saveStoredTranscript(attemptId: string, items: TranscriptMessageProps[]
 
 export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot; userId: string; name: string }) {
   const client = useQueryClient()
+  const navigate = useNavigate()
   const online = useOnline()
   const [busy, setBusy] = useState(false)
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const key = ['student-interview', userId, slot.attemptId] as const
@@ -116,15 +118,47 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     },
     [client, slot.attemptId, userId, appendHistory]
   )
-  const back = <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Về ca thi</Link>
+  const leaveButton = (
+    <Button
+      variant="outline"
+      onClick={() => setLeaveDialogOpen(true)}
+      className="text-slate-500 hover:text-slate-700 ml-auto inline-flex items-center gap-1.5"
+    >
+      <LogOut size={14} />
+      <span>Rời phòng thi</span>
+    </Button>
+  )
 
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
-  if (current.isError && !busy) return <>
-    <ErrorState description={current.error.message} />
-    <Button disabled={!online || current.isFetching} onClick={() => void current.refetch()}>Đồng bộ lại phiên thi</Button>{back}
-  </>
+  if (current.isError && !busy) return (
+    <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
+      <ErrorState description={current.error.message} />
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        <Button
+          aria-label="Đồng bộ lại phiên thi"
+          disabled={!online || current.isFetching}
+          onClick={() => void current.refetch()}
+        >
+          <RefreshCw size={14} className="mr-1.5" />
+          <span>Làm mới trạng thái</span>
+        </Button>
+        <Link className="button outline inline-flex items-center gap-1.5" to={studentExamPath(slot.examId, slot.attemptId)}>
+          <LogOut size={14} />
+          <span>Quay lại chi tiết ca thi</span>
+        </Link>
+      </div>
+    </section>
+  )
 
-  if (!snapshot || !current.isFetchedAfterMount) return online ? <LoadingPage label="Đang lấy trạng thái phiên thi" /> : <><ErrorState description="Mất kết nối mạng. Kết nối lại để lấy trạng thái phiên thi." />{back}</>
+  if (!snapshot || !current.isFetchedAfterMount) return online ? <LoadingPage label="Đang lấy trạng thái phiên thi" /> : (
+    <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
+      <ErrorState description="Mất kết nối mạng. Hãy kết nối lại để tiếp tục phiên thi." />
+      <Link className="button outline inline-flex items-center gap-1.5" to={studentExamPath(slot.examId, slot.attemptId)}>
+        <LogOut size={14} />
+        <span>Quay lại chi tiết ca thi</span>
+      </Link>
+    </section>
+  )
   if (snapshot.status !== 'READY' && snapshot.status !== 'COMPLETED' && (snapshot.prompt ?? activePrompt)) {
     return (
       <ApiSpeechRoom
@@ -183,38 +217,106 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </div>
   ) : undefined
 
-  return <VivaSessionView
-    name={name} title={slot.examTitle}
-    phase={isReady ? 'Sẵn sàng bắt đầu phiên thi' : isCompleted ? 'Phiên thi đã hoàn tất' : 'Hệ thống đang xử lý lượt thi'}
-    timer="—" timerLabel="Thời gian trả lời"
-    progress={slot.slotNumber == null ? 'Ca thi của bạn' : `Ca ${slot.slotNumber}`}
-    question={customQuestion}
-    transcript={history} connection={online ? 'Đồng bộ trạng thái phiên thi' : 'Mất kết nối mạng'}
-    notice={<div className="space-y-2">
-      {start.isError && <InlineNotice>{start.error.message} Hãy kiểm tra trạng thái phiên trước khi thử lại.</InlineNotice>}
-      <InlineNotice>{isReady
-        ? 'Nhấn bắt đầu để hệ thống mở phiên thi và cấp câu hỏi đầu tiên.'
-        : isCompleted
-          ? 'Hệ thống đã xác nhận phiên thi kết thúc. Kết quả sẽ hiển thị khi được công bố.'
-          : 'Vui lòng chờ. Hệ thống sẽ cấp lượt hỏi tiếp theo hoặc xác nhận kết thúc phiên thi.'}</InlineNotice>
-    </div>}
-    controls={<>
-      {isReady && <Button disabled={!online || start.isPending || current.isFetching} onClick={() => start.mutate()}>{start.isPending ? 'Đang bắt đầu…' : 'Bắt đầu phiên thi'}</Button>}
-      {isProcessing && <Button disabled>Đang chờ hệ thống…</Button>}
-      {isCompleted && (
-        <>
-          <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result`}>
-            <FileText size={15} />
-            <span>Xem kết quả &amp; phúc khảo</span>
-          </Link>
-          <Link className="button outline inline-flex items-center gap-1.5" to="/student/exams">
-            <Calendar size={15} />
-            <span>Lịch thi của tôi</span>
-          </Link>
-        </>
-      )}
-      {!isCompleted && <Button variant="outline" disabled={!online || current.isFetching || start.isPending} onClick={() => void current.refetch()}>Đồng bộ phiên thi</Button>}
-      {back}
-    </>}
-  />
+  return (
+    <>
+      <VivaSessionView
+        name={name}
+        title={slot.examTitle}
+        phase={isReady ? 'Sẵn sàng bắt đầu phiên thi' : isCompleted ? 'Phiên thi đã hoàn tất' : 'Hệ thống đang xử lý lượt thi'}
+        timer="—"
+        timerLabel="Thời gian trả lời"
+        progress={slot.slotNumber == null ? 'Ca thi của bạn' : `Ca ${slot.slotNumber}`}
+        question={customQuestion}
+        transcript={history}
+        connection={online ? 'Đã kết nối máy chủ khảo thí' : 'Mất kết nối mạng'}
+        notice={
+          <div className="space-y-2">
+            {start.isError && (
+              <InlineNotice>
+                <span className="text-red-700 font-semibold">Lỗi bắt đầu: </span>
+                {start.error.message} Hãy kiểm tra trạng thái phiên trước khi thử lại.
+              </InlineNotice>
+            )}
+            <InlineNotice>
+              {isReady
+                ? 'Nhấn Bắt đầu phiên thi để hệ thống kích hoạt câu hỏi đầu tiên.'
+                : isCompleted
+                  ? 'Hệ thống đã xác nhận phiên thi kết thúc an toàn. Kết quả sẽ hiển thị khi được công bố.'
+                  : 'Vui lòng chờ. Giám khảo AI đang phân tích câu trả lời và chuẩn bị lượt hỏi tiếp theo.'}
+            </InlineNotice>
+          </div>
+        }
+        controls={
+          <>
+            {isReady && (
+              <Button
+                disabled={!online || start.isPending || current.isFetching}
+                onClick={() => start.mutate()}
+                className="inline-flex items-center gap-1.5"
+              >
+                <Play size={15} fill="currentColor" />
+                <span>{start.isPending ? 'Đang mở phiên thi…' : 'Bắt đầu phiên thi'}</span>
+              </Button>
+            )}
+            {isProcessing && (
+              <Button disabled className="inline-flex items-center gap-1.5">
+                <Sparkles size={14} className="animate-spin" />
+                <span>Đang chờ hệ thống…</span>
+              </Button>
+            )}
+            {isCompleted && (
+              <>
+                <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result`}>
+                  <FileText size={15} />
+                  <span>Xem kết quả &amp; phúc khảo</span>
+                </Link>
+                <Link className="button outline inline-flex items-center gap-1.5" to="/student/exams">
+                  <Calendar size={15} />
+                  <span>Lịch thi của tôi</span>
+                </Link>
+              </>
+            )}
+            {!isCompleted && (
+              <Button
+                variant="outline"
+                aria-label="Đồng bộ phiên thi"
+                disabled={!online || current.isFetching || start.isPending}
+                onClick={() => void current.refetch()}
+                className="inline-flex items-center gap-1.5"
+              >
+                <RefreshCw size={14} className={current.isFetching ? 'animate-spin' : ''} />
+                <span>{current.isFetching ? 'Đang kiểm tra…' : 'Làm mới trạng thái'}</span>
+              </Button>
+            )}
+            {!isCompleted && leaveButton}
+          </>
+        }
+      />
+      <Dialog
+        open={leaveDialogOpen}
+        onClose={() => setLeaveDialogOpen(false)}
+        title="Tạm rời phòng thi vấn đáp?"
+      >
+        <div className="space-y-4 p-1">
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Phiên thi của bạn vẫn đang diễn ra. Bạn có thể quay lại phòng thi bất kỳ lúc nào nếu ca thi vẫn còn trong khung giờ hiệu lực.
+          </p>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button variant="outline" onClick={() => setLeaveDialogOpen(false)}>
+              Ở lại tiếp tục thi
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setLeaveDialogOpen(false);
+                navigate(studentExamPath(slot.examId, slot.attemptId));
+              }}
+            >
+              Xác nhận rời phòng
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </>
+  )
 }

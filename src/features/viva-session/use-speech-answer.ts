@@ -41,7 +41,9 @@ export function useSpeechAnswer(
   const serverFinalizing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const turnIdRef = useRef(turnId);
-  turnIdRef.current = turnId;
+  useEffect(() => {
+    turnIdRef.current = turnId;
+  }, [turnId]);
   const key = `aives-speech:${userId}:${attemptId}:${turnId}`;
 
   const release = useCallback(() => {
@@ -221,7 +223,7 @@ export function useSpeechAnswer(
         }
       }
     },
-    [dispatch, fail, key, saved, turnId, getPhase],
+    [dispatch, fail, key, saved, getPhase],
   );
 
   const connect = useCallback(async () => {
@@ -497,5 +499,30 @@ export function useSpeechAnswer(
     dispatch({ type: "CLEAR_STALE_ANSWER" });
   }, [key, dispatch]);
 
-  return { state, connect, speak, start, stop, clearStaleAnswer };
+  const restartAnswer = useCallback(async () => {
+    if (!active) return;
+    clearTimeout(timer.current);
+    capture.current?.cancel();
+    capture.current = null;
+    serverFinalizing.current = false;
+    startRequest.current = null;
+    endRequest.current = null;
+    pending.current = null;
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // Ignore
+    }
+
+    controller.current?.abort();
+    socket.current?.close();
+    socket.current = null;
+
+    const question = current.current.question;
+    dispatch({ type: "RESET_TURN", question: question ?? undefined });
+
+    await connect();
+  }, [active, connect, dispatch, key]);
+
+  return { state, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

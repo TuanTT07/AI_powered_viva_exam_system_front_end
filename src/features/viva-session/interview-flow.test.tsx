@@ -144,4 +144,56 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     await screen.findByRole('button', { name: 'Bắt đầu phiên thi' })
     expect(request.mock.calls.some(([path]) => path.endsWith('/start'))).toBe(false)
   })
+  it('allows student to discard mistranscribed answer and re-record during the turn', async () => {
+    server = { attemptId, status: 'AWAITING_ANSWER', prompt }
+    mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
+    await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start' })))
+    const firstCommand = media.command.mock.calls[0][0]
+    act(() => media.emit?.({ type: 'answer.started', requestId: firstCommand.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    expect(media.captureStart).toHaveBeenCalledOnce()
+
+    // Server returns wrong transcript
+    act(() => media.emit?.({
+      type: 'transcript.final',
+      answerId,
+      requestId: null,
+      data: { segmentId: '1', revision: 1, text: 'Từ ngữ bị bắt sai hoàn toàn' },
+    }))
+    expect(await screen.findByText('Từ ngữ bị bắt sai hoàn toàn')).toBeInTheDocument()
+
+    // Student clicks retry button
+    const retryBtn = await screen.findByRole('button', { name: /trả lời lại/i })
+    fireEvent.click(retryBtn)
+
+    // Verify current capture was cancelled and socket closed
+    await waitFor(() => expect(media.cancel).toHaveBeenCalled())
+    expect(media.close).toHaveBeenCalled()
+
+    // Verify user can start answering again
+    const startAgainBtn = await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
+    expect(startAgainBtn).toBeInTheDocument()
+    expect(screen.getByText(/Đã hủy bản thu trước/i)).toBeInTheDocument()
+
+    // Student clicks start answering again
+    const secondAnswerId = '99999999-9999-4999-8999-999999999999'
+    fireEvent.click(startAgainBtn)
+    await waitFor(() => expect(media.command.mock.calls.length).toBeGreaterThan(1))
+    const secondCommand = media.command.mock.calls.at(-1)![0]
+    act(() => media.emit?.({ type: 'answer.started', requestId: secondCommand.requestId, answerId: secondAnswerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+
+    // Server returns correct transcript
+    act(() => media.emit?.({
+      type: 'transcript.final',
+      answerId: secondAnswerId,
+      requestId: null,
+      data: { segmentId: '1', revision: 1, text: 'Câu trả lời chuẩn xác lần 2' },
+    }))
+    expect(await screen.findByText('Câu trả lời chuẩn xác lần 2')).toBeInTheDocument()
+
+    // Finish and submit answer
+    fireEvent.click(screen.getByRole('button', { name: 'Kết thúc câu trả lời' }))
+    await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.end', answerId: secondAnswerId })))
+  })
 })
