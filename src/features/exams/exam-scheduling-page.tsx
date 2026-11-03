@@ -16,7 +16,6 @@ import {
   useExamSchedule,
   useSaveExamSchedule,
   useApiExamSchedule,
-  useAssignApiCandidates,
   useAutoScheduleApiExam,
   useRescheduleApiExam,
 } from "./exam-hooks";
@@ -385,12 +384,8 @@ function ApiExamSchedulingPage() {
   const { examId = "" } = useParams();
   const validExamId = isExamUuid(examId) ? examId : undefined;
   const schedule = useApiExamSchedule(validExamId);
-  const assign = useAssignApiCandidates();
   const auto = useAutoScheduleApiExam();
   const reschedule = useRescheduleApiExam();
-  const [studentIds, setStudentIds] = useState(
-    runtimeConfig.demoCandidateIds.join("\n"),
-  );
   const [slotDuration, setSlotDuration] = useState("15");
   const [breakMinutes, setBreakMinutes] = useState("5");
   const [selected, setSelected] = useState<CandidateScheduleDto | null>(null);
@@ -419,18 +414,7 @@ function ApiExamSchedulingPage() {
       </section>
     );
   const slots = schedule.data ?? [];
-  const ids = studentIds
-    .split(/[\s,;]+/)
-    .map((value) => value.trim())
-    .filter(Boolean);
   const assignedIds = slots.map((slot) => slot.studentId);
-  const submitAssign = () => {
-    if (!ids.length || assign.isPending) return;
-    assign.mutate(
-      { examId, studentIds: ids },
-      { onSuccess: () => setStudentIds("") },
-    );
-  };
   const submitAuto = () => {
     if (!assignedIds.length || auto.isPending) return;
     auto.mutate({
@@ -490,36 +474,8 @@ function ApiExamSchedulingPage() {
         </Link>
       </header>
       <Alert tone="info">
-        Bạn có thể thêm sinh viên rồi tạo lịch theo thời lượng và thời gian nghỉ.
+        Thêm sinh viên ở tab Thí sinh, sau đó quay lại đây để xếp lịch.
       </Alert>
-      <section className="schedule-config">
-        <h2>Thêm sinh viên</h2>
-        <label>
-          Mã sinh viên (ngăn cách bằng dấu phẩy hoặc dòng mới)
-          <textarea
-            value={studentIds}
-            onChange={(event) => setStudentIds(event.target.value)}
-            placeholder="11111111-1111-4111-8111-111111111111"
-          />
-        </label>
-        <Button
-          pending={assign.isPending}
-          disabled={!ids.length}
-          onClick={submitAssign}
-        >
-          Gán ứng viên
-        </Button>
-        {assign.isError && (
-          <Alert tone="danger">
-            {assign.error instanceof Error
-              ? assign.error.message
-              : "Không thể gán ứng viên."}
-          </Alert>
-        )}
-        {assign.data && (
-          <Alert tone="success">Đã gửi yêu cầu gán ứng viên thành công.</Alert>
-        )}
-      </section>
       <section className="schedule-config">
         <h2>Tự động xếp lịch</h2>
         <div className="schedule-config-grid">
