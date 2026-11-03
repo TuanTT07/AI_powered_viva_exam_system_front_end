@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, Bot, Sparkles, FileText, Calendar } from 'lucide-react'
@@ -10,14 +10,58 @@ import { useOnline } from '../../../hooks/use-online'
 import type { StudentExamSlot } from '../../exams/api-student-exam-repository'
 import { studentExamPath } from '../../exams/student-exam-navigation'
 import { interviewApi } from '../interview-api'
+import type { AnswerReceipt } from '../speech-api'
+import type { TranscriptMessageProps } from '../components/TranscriptMessage'
 import { ApiSpeechRoom } from './ApiSpeechRoom'
 import { VivaSessionView } from './VivaSessionView'
+
+const transcriptStorageKey = (attemptId: string) => `aives.interview.transcript.${attemptId}`
+
+function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
+  try {
+    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId))
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return []
+}
+
+function saveStoredTranscript(attemptId: string, items: TranscriptMessageProps[]) {
+  try {
+    sessionStorage.setItem(transcriptStorageKey(attemptId), JSON.stringify(items))
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot; userId: string; name: string }) {
   const client = useQueryClient()
   const online = useOnline()
   const [busy, setBusy] = useState(false)
+  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
   const key = ['student-interview', userId, slot.attemptId] as const
+
+  const appendHistory = useCallback(
+    (message: TranscriptMessageProps) => {
+      setHistory((prev) => {
+        const exists = prev.some(
+          (m) =>
+            (message.id && m.id === message.id) ||
+            (m.role === message.role && m.text === message.text)
+        )
+        if (exists) return prev
+        const next = [...prev, message]
+        saveStoredTranscript(slot.attemptId, next)
+        return next
+      })
+    },
+    [slot.attemptId]
+  )
+
   const start = useMutation({
     mutationFn: () => interviewApi.start(slot.attemptId),
     retry: false,
@@ -35,14 +79,38 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     refetchInterval: query => busy || start.isPending || query.state.status === 'error' || query.state.data?.status === 'COMPLETED' ? false : 2000,
   })
   const snapshot = current.data
+
+  useEffect(() => {
+    if (snapshot?.status === 'AWAITING_ANSWER' && snapshot.prompt) {
+      appendHistory({
+        id: snapshot.prompt.questionTurnId,
+        role: 'ai',
+        text: snapshot.prompt.text,
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      })
+    }
+  }, [snapshot, appendHistory])
+
   const busyChanged = useCallback((next: boolean) => {
     // Cancel a read before media starts so a late response cannot replace its prompt.
     if (next) void client.cancelQueries({ queryKey: ['student-interview', userId, slot.attemptId] })
     setBusy(next)
   }, [client, userId, slot.attemptId])
-  const answerSaved = useCallback(() => {
-    void client.invalidateQueries({ queryKey: ['student-interview', userId, slot.attemptId] })
-  }, [client, slot.attemptId, userId])
+
+  const answerSaved = useCallback(
+    (receipt?: AnswerReceipt | null) => {
+      if (receipt) {
+        appendHistory({
+          id: receipt.transcriptTurnId,
+          role: 'student',
+          text: receipt.text,
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        })
+      }
+      void client.invalidateQueries({ queryKey: ['student-interview', userId, slot.attemptId] })
+    },
+    [client, slot.attemptId, userId, appendHistory]
+  )
   const back = <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Về ca thi</Link>
 
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
@@ -54,6 +122,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   if (snapshot.status === 'AWAITING_ANSWER' && snapshot.prompt) return <ApiSpeechRoom
     key={`${userId}:${slot.attemptId}:${snapshot.prompt.questionTurnId}`}
     slot={slot} prompt={snapshot.prompt} userId={userId} name={name}
+    history={history}
     onBusyChange={busyChanged} onAnswerSaved={answerSaved}
   />
 
@@ -105,7 +174,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     timer="—" timerLabel="Thời gian trả lời"
     progress={slot.slotNumber == null ? 'Ca thi của bạn' : `Ca ${slot.slotNumber}`}
     question={customQuestion}
-    transcript={[]} connection={online ? 'Đồng bộ trạng thái phiên thi' : 'Mất kết nối mạng'}
+    transcript={history} connection={online ? 'Đồng bộ trạng thái phiên thi' : 'Mất kết nối mạng'}
     notice={<div className="space-y-2">
       {start.isError && <InlineNotice>{start.error.message} Hãy kiểm tra trạng thái phiên trước khi thử lại.</InlineNotice>}
       <InlineNotice>{isReady

@@ -9,6 +9,7 @@ import { useSpeechAnswer } from "../use-speech-answer";
 import { speechDraft, type SpeechPhase } from "../speech-session-model";
 import { VivaSessionView } from "./VivaSessionView";
 import type { InterviewPrompt } from "../interview-api";
+import type { AnswerReceipt } from "../speech-api";
 import { studentExamPath } from "../../exams/student-exam-navigation";
 import type { TranscriptMessageProps } from "../components/TranscriptMessage";
 
@@ -32,13 +33,15 @@ export function ApiSpeechRoom({
   onAnswerSaved,
   userId,
   name,
+  history = [],
 }: {
   slot: StudentExamSlot;
   prompt: InterviewPrompt;
   onBusyChange: (busy: boolean) => void;
-  onAnswerSaved: () => void;
+  onAnswerSaved: (receipt?: AnswerReceipt | null) => void;
   userId: string;
   name: string;
+  history?: TranscriptMessageProps[];
 }) {
   const questionTurnId = prompt.questionTurnId;
   const { state, connect, speak, start, stop } = useSpeechAnswer(
@@ -48,20 +51,36 @@ export function ApiSpeechRoom({
     true,
   );
   const online = useOnline();
-  const transcript: TranscriptMessageProps[] = [];
-  transcript.push({
+
+  // Accumulate history dialogue with current prompt and student receipt
+  const transcript: TranscriptMessageProps[] = [...history];
+  const hasPrompt = transcript.some(
+    (t) => t.id === prompt.questionTurnId || (t.role === "ai" && t.text === prompt.text)
+  );
+  if (!hasPrompt) {
+    transcript.push({
       id: prompt.questionTurnId,
       role: "ai",
       text: prompt.text,
-      timestamp: "",
+      timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
     });
-  if (state.receipt)
-    transcript.push({
-      id: state.receipt.transcriptTurnId,
-      role: "student",
-      text: state.receipt.text,
-      timestamp: "",
-    });
+  }
+  if (state.receipt) {
+    const hasReceipt = transcript.some(
+      (t) =>
+        t.id === state.receipt?.transcriptTurnId ||
+        (t.role === "student" && t.text === state.receipt?.text)
+    );
+    if (!hasReceipt) {
+      transcript.push({
+        id: state.receipt.transcriptTurnId,
+        role: "student",
+        text: state.receipt.text,
+        timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      });
+    }
+  }
+
   const draft = speechDraft(state);
   const awaiting =
     ["starting", "recording", "finalizing", "checking"].includes(state.phase) ||
@@ -69,7 +88,9 @@ export function ApiSpeechRoom({
   const busy = awaiting || ["connecting", "speaking"].includes(state.phase);
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
-  useEffect(() => { if (state.phase === "saved") onAnswerSaved(); }, [state.phase, onAnswerSaved]);
+  useEffect(() => {
+    if (state.phase === "saved") onAnswerSaved(state.receipt);
+  }, [state.phase, state.receipt, onAnswerSaved]);
   const retry = ["idle", "disconnected", "error"].includes(state.phase);
   return (
     <>
