@@ -152,6 +152,8 @@ export function VivaSessionView({
   totalSteps = 3,
   isRecording = false,
   isAiSpeaking = false,
+  isCompleted: isCompletedProp,
+  isProcessing = false,
 }: {
   name: string
   title: string
@@ -173,8 +175,14 @@ export function VivaSessionView({
   totalSteps?: number
   isRecording?: boolean
   isAiSpeaking?: boolean
+  isCompleted?: boolean
+  isProcessing?: boolean
 }) {
-  const isCompleted = phase.includes('hoàn tất') || phase.includes('kết thúc')
+  const completed =
+    isCompletedProp ??
+    (phase.toLowerCase().includes('hoàn tất') ||
+      phase.toLowerCase().includes('kết thúc') ||
+      phase.toLowerCase().includes('completed'))
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -252,8 +260,8 @@ export function VivaSessionView({
                   Đang thi vấn đáp <span className="text-blue-600">AI</span>
                 </h1>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{isCompleted ? 'Đã hoàn thành' : 'Đang diễn ra'}</span>
+                  <span className={`w-2 h-2 rounded-full bg-emerald-500 ${completed ? '' : 'animate-pulse'}`} />
+                  <span>{completed ? 'Đã hoàn thành' : 'Đang diễn ra'}</span>
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">
@@ -296,26 +304,46 @@ export function VivaSessionView({
 
               {/* Status pill below avatar */}
               <div className="mt-3.5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs font-semibold shadow-2xs">
-                <SoundWaveIcon className="text-blue-600" />
+                {completed ? (
+                  <CheckCircle2 size={14} className="text-emerald-600" />
+                ) : (
+                  <SoundWaveIcon className="text-blue-600" />
+                )}
                 <span>
-                  {isAiSpeaking
-                    ? 'AI đang đặt câu hỏi'
-                    : isRecording
-                      ? 'AI đang lắng nghe câu trả lời của bạn'
-                      : phase || 'AI đang đặt câu hỏi'}
+                  {completed
+                    ? 'Phiên thi đã hoàn tất'
+                    : isAiSpeaking
+                      ? 'AI đang đặt câu hỏi'
+                      : isRecording
+                        ? 'AI đang lắng nghe câu trả lời của bạn'
+                        : phase || 'AI đang đặt câu hỏi'}
                 </span>
               </div>
             </div>
           </section>
 
-          {/* Card 2: Câu hỏi Card */}
-          <section className="rounded-2xl border border-blue-200/70 bg-[#f0f6ff] p-4 md:p-5 flex items-start gap-3.5 shadow-xs">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-base shadow-xs">
-              ?
+          {/* Card 2: Câu hỏi Card / Hoàn thành */}
+          <section
+            className={`rounded-2xl border p-4 md:p-5 flex items-start gap-3.5 shadow-xs ${
+              completed
+                ? 'border-emerald-200/70 bg-gradient-to-r from-emerald-50/40 via-teal-50/20 to-emerald-50/30'
+                : 'border-blue-200/70 bg-[#f0f6ff]'
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-xl text-white flex items-center justify-center shrink-0 font-bold text-base shadow-xs ${
+                completed ? 'bg-emerald-600' : 'bg-blue-600'
+              }`}
+            >
+              {completed ? <CheckCircle2 size={18} /> : '?'}
             </div>
             <div className="space-y-1 flex-1">
-              <h3 className="text-xs font-bold text-blue-600 tracking-wide uppercase">
-                Câu hỏi (Câu {currentStep}/{totalSteps})
+              <h3
+                className={`text-xs font-bold tracking-wide uppercase ${
+                  completed ? 'text-emerald-700' : 'text-blue-600'
+                }`}
+              >
+                {completed ? 'Hoàn thành phiên thi' : `Câu hỏi (Câu ${currentStep}/${totalSteps})`}
               </h3>
               <div className="text-base md:text-lg font-bold text-slate-900 leading-snug">
                 {question || 'Chờ câu hỏi được hệ thống cấp quyền.'}
@@ -359,9 +387,9 @@ export function VivaSessionView({
               <div className="text-center">
                 <div className="inline-flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-700">
-                    {isRecording ? 'Đang trả lời...' : 'Sẵn sàng trả lời'}
+                    {completed ? 'Đã hoàn thành ca thi' : isRecording ? 'Đang trả lời...' : 'Sẵn sàng trả lời'}
                   </span>
-                  {isRecording && (
+                  {isRecording && !completed && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                       {formatSeconds(recordingSeconds || 14)}
                     </span>
@@ -379,20 +407,30 @@ export function VivaSessionView({
             </div>
 
             {/* Listening bar footer inside answer card */}
-            <div className="rounded-xl bg-blue-50/60 border border-blue-100 px-4 py-2.5 flex items-center justify-between text-xs text-blue-700">
+            <div
+              className={`rounded-xl px-4 py-2.5 flex items-center justify-between text-xs border ${
+                completed
+                  ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800'
+                  : 'bg-blue-50/60 border-blue-100 text-blue-700'
+              }`}
+            >
               <div className="flex items-center gap-2">
-                <Headphones size={15} />
+                {completed ? <CheckCircle2 size={15} className="text-emerald-600" /> : <Headphones size={15} />}
                 <span>
-                  {isRecording
-                    ? 'AI đang lắng nghe câu trả lời của bạn...'
-                    : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
+                  {completed
+                    ? 'Phiên thi đã kết thúc. Toàn bộ câu trả lời của bạn đã được ghi nhận và lưu trữ an toàn.'
+                    : isRecording
+                      ? 'AI đang lắng nghe câu trả lời của bạn...'
+                      : 'Hệ thống sẵn sàng thu nhận câu trả lời.'}
                 </span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
-              </div>
+              {!completed && (
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+                </div>
+              )}
             </div>
           </section>
 
@@ -448,7 +486,7 @@ export function VivaSessionView({
                 <span>Tiến trình phiên thi</span>
               </div>
               <span className="text-xs font-bold text-slate-400">
-                {currentStep}/{totalSteps} câu
+                {completed ? `${totalSteps}/${totalSteps} câu` : `${currentStep}/${totalSteps} câu`}
               </span>
             </div>
 
@@ -456,7 +494,11 @@ export function VivaSessionView({
             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.max(10, (currentStep / totalSteps) * 100))}%` }}
+                style={{
+                  width: completed
+                    ? '100%'
+                    : `${Math.min(100, Math.max(10, (currentStep / totalSteps) * 100))}%`,
+                }}
               />
             </div>
 
@@ -464,8 +506,8 @@ export function VivaSessionView({
             <div className="space-y-2 pt-1 text-xs">
               {Array.from({ length: totalSteps }).map((_, idx) => {
                 const qNum = idx + 1
-                const isDone = qNum < currentStep
-                const isCurrent = qNum === currentStep
+                const isDone = completed ? true : qNum < currentStep
+                const isCurrent = !completed && qNum === currentStep
                 return (
                   <div
                     key={qNum}
@@ -496,7 +538,7 @@ export function VivaSessionView({
                         </span>
                       ) : isCurrent ? (
                         <span className="px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200/60 text-blue-800 text-[11px] font-semibold">
-                          Đang trả lời
+                          {isProcessing ? 'Đang xử lý' : 'Đang trả lời'}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-400">Chưa diễn ra</span>
@@ -561,7 +603,7 @@ export function VivaSessionView({
                 <Monitor size={16} className="text-blue-600" />
                 <span>Thiết bị &amp; kết nối</span>
               </div>
-              {!isCompleted && (
+              {!completed && (
                 <button
                   type="button"
                   onClick={() => {
@@ -629,7 +671,7 @@ export function VivaSessionView({
               {/* Camera */}
               <div
                 onClick={() => {
-                  if (!isCompleted) {
+                  if (!completed) {
                     if (cameraActive) stopCamera()
                     else void startCamera()
                   }

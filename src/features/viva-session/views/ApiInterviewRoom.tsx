@@ -253,6 +253,8 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         duration={durationFormatted}
         currentStep={currentStep}
         totalSteps={totalSteps}
+        isCompleted={isCompleted}
+        isProcessing={isProcessing}
         isAiSpeaking={false}
         isRecording={false}
         phase={isReady ? 'Sẵn sàng bắt đầu phiên thi' : isCompleted ? 'Phiên thi đã hoàn tất' : 'Hệ thống đang xử lý lượt thi'}
