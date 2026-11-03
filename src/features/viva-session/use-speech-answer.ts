@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { ApiError } from "../../services/api/client";
 import {
   connectSpeech,
@@ -24,6 +24,7 @@ export function useSpeechAnswer(
   active: boolean,
 ) {
   const [state, reactDispatch] = useReducer(speechReducer, initialSpeechState);
+  const [audioLevel, setAudioLevel] = useState(0);
   const current = useRef(initialSpeechState);
   const getPhase = useCallback(() => current.current.phase, []);
   const dispatch = useCallback((action: SpeechAction) => {
@@ -49,6 +50,7 @@ export function useSpeechAnswer(
   const release = useCallback(() => {
     clearTimeout(timer.current);
     tts.current?.abort();
+    setAudioLevel(0);
     capture.current?.cancel();
     capture.current = null;
     socket.current?.close();
@@ -71,6 +73,7 @@ export function useSpeechAnswer(
     (answerId: string, receipt: AnswerReceipt) => {
       if (pending.current !== answerId) return;
       clearTimeout(timer.current);
+      setAudioLevel(0);
       capture.current?.cancel();
       capture.current = null;
       dispatch({ type: "SAVED", answerId, receipt });
@@ -393,6 +396,7 @@ export function useSpeechAnswer(
         (value) => socket.current!.audio(value),
         fail,
         controller.current.signal,
+        (lvl) => setAudioLevel(lvl),
       );
       if (id !== generation.current || getPhase() !== "starting") {
         mic.cancel();
@@ -430,6 +434,7 @@ export function useSpeechAnswer(
   };
   const stop = useCallback(async () => {
     if (getPhase() !== "recording" || !pending.current) return;
+    setAudioLevel(0);
     dispatch({ type: "FINALIZING" });
     const id = generation.current;
     try {
@@ -556,5 +561,5 @@ export function useSpeechAnswer(
     await connect();
   }, [active, connect, dispatch, key]);
 
-  return { state, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
+  return { state, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

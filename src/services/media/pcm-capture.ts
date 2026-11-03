@@ -3,10 +3,26 @@ export type PcmCapture = {
   finish: () => Promise<void>;
   cancel: () => void;
 };
+
+function computeRmsVolume(buffer: ArrayBuffer): number {
+  if (buffer.byteLength < 2) return 0;
+  const samples = new Int16Array(buffer);
+  let sumSquares = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i] / 32768;
+    sumSquares += s * s;
+  }
+  const rms = Math.sqrt(sumSquares / samples.length);
+  // Silence threshold is ~0.006; normal speech ranges from 0.03 to 0.20
+  if (rms < 0.006) return 0;
+  return Math.min(1, Math.max(0, (rms - 0.006) * 5.5));
+}
+
 export async function preparePcmCapture(
   onAudio: (value: ArrayBuffer) => void,
   onFailure: (message: string) => void,
   signal: AbortSignal,
+  onVolume?: (volume: number) => void,
 ): Promise<PcmCapture> {
   if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode)
     throw new Error(
@@ -37,6 +53,7 @@ export async function preparePcmCapture(
     closed = true;
     started = false;
     preRoll.length = 0;
+    onVolume?.(0);
     signal.removeEventListener("abort", cancel);
     for (const track of stream.getTracks()) {
       track.onended = null;
@@ -81,6 +98,7 @@ export async function preparePcmCapture(
         return;
       }
       if (closed || !(data instanceof ArrayBuffer)) return;
+      onVolume?.(computeRmsVolume(data));
       if (!started) {
         preRoll.push(data);
         if (preRoll.length > MAX_PRE_ROLL_FRAMES) preRoll.shift();
@@ -125,6 +143,7 @@ export async function preparePcmCapture(
       async finish() {
         if (closed)
           throw new Error("Micro đã đóng trước khi gửi hết âm thanh.");
+        onVolume?.(0);
         try {
           await new Promise<void>((resolve, reject) => {
             const timer = setTimeout(() => {

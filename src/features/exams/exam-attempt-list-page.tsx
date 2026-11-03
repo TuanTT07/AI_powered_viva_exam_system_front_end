@@ -22,7 +22,7 @@ export function ExamAttemptListPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
 
-  // Dev3 API: Query exam-specific evaluations first, fallback to course
+  // Dev3 API: Query exam-specific evaluations
   const examEvals = useQuery({
     queryKey: ['dev3-exam-evaluations', examId],
     queryFn: () => apiEvaluationService.findByExam(examId),
@@ -30,16 +30,7 @@ export function ExamAttemptListPage() {
     retry: false,
   })
 
-  const courseEvals = useQuery({
-    queryKey: ['dev3-course-evaluations', exam.data?.subjectId],
-    queryFn: () => apiEvaluationService.findByCourse(exam.data?.subjectId ?? ''),
-    enabled: runtimeConfig.dataSource === 'api' && Boolean(exam.data?.subjectId) && (!examEvals.data || examEvals.data.content.length === 0),
-    retry: false,
-  })
-
-  const evaluationsList = (examEvals.data?.content && examEvals.data.content.length > 0)
-    ? examEvals.data.content
-    : (courseEvals.data?.content ?? [])
+  const evaluationsList = examEvals.data?.content ?? []
 
   if (exam.isPending || query.isPending) return <LoadingPage label="Đang tải danh sách lượt thi" />
   if (exam.isError || query.isError) return <><ErrorState description={exam.error?.message || query.error?.message || 'Không thể tải lượt thi.'} /><Button onClick={() => { void exam.refetch(); void query.refetch() }}>Thử lại</Button></>
@@ -85,7 +76,7 @@ export function ExamAttemptListPage() {
           {Object.entries(attemptStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
       </div>
-      <AttemptTable rows={filtered} examId={examId} allowReview summary={summary} demo={query.data.demo} />
+      <AttemptTable rows={filtered} evaluations={evaluationsList} examId={examId} allowReview summary={summary} demo={query.data.demo} />
       <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {rows.length} hồ sơ</p>
 
       {/* DEV3 API: Bảng kết quả chấm điểm học phần từ Backend */}
@@ -95,7 +86,7 @@ export function ExamAttemptListPage() {
             <div className="flex items-center gap-2">
               <Sparkles className="text-blue-600" size={18} />
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                {examEvals.data?.content && examEvals.data.content.length > 0 ? 'Bài thi đã chấm điểm AI của kỳ thi này (API: /api/exams/{examId}/evaluations)' : 'Bài thi đã chấm điểm AI theo học phần (API: /api/courses/{courseId}/evaluations)'}
+                Kết quả đánh giá bài thi của kỳ thi
               </h3>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">

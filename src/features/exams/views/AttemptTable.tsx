@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { AttemptRow } from '../use-assessment-overview'
+import type { EvaluationResponseDto } from '../../grading/api-evaluation-service'
 import { attemptStatusLabels } from '../attempt-status'
 import { getStoredGrading } from '../../grading/grading-repository'
 
@@ -9,8 +10,10 @@ export function AttemptTable({
   allowReview,
   summary = false,
   demo = false,
+  evaluations,
 }: {
   rows: AttemptRow[]
+  evaluations?: EvaluationResponseDto[]
   examId: string
   allowReview: boolean
   summary?: boolean
@@ -31,9 +34,12 @@ export function AttemptTable({
         </thead>
         <tbody>
           {rows.map(row => {
-            const stored = getStoredGrading(examId, row.attemptId)
-            const isConfirmed = stored?.confirmed
-            const confirmedScore = stored?.finalScore
+            const evalItem = evaluations?.find(e => e.questionAttemptId === row.attemptId || e.id === row.attemptId)
+              ?? (evaluations && evaluations.length === 1 && rows.length === 1 ? evaluations[0] : undefined)
+            const stored = getStoredGrading(examId, evalItem?.questionAttemptId ?? row.attemptId)
+            const isConfirmed = Boolean(evalItem?.status === 'GRADED' || stored?.confirmed)
+            const confirmedScore = evalItem?.finalScore ?? stored?.finalScore
+            const targetAttemptId = evalItem?.questionAttemptId ?? row.attemptId
 
             return (
               <tr key={row.attemptId} className="border-t border-slate-100 hover:bg-slate-50/80 transition-colors">
@@ -69,7 +75,7 @@ export function AttemptTable({
                   {allowReview && (!demo || row.status === 'COMPLETED') ? (
                     <Link
                       className="button outline"
-                      to={`/lecturer/exams/${examId}/attempts/${row.attemptId}${summary ? '?tab=summary' : ''}`}
+                      to={`/lecturer/exams/${examId}/attempts/${targetAttemptId}${summary ? '?tab=summary' : ''}`}
                     >
                       Mở hồ sơ
                     </Link>
