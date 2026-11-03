@@ -50,7 +50,7 @@ export function ApiSpeechRoom({
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [answerResetNotice, setAnswerResetNotice] = useState(false);
   const questionTurnId = prompt.questionTurnId;
-  const { state, connect, speak, start, stop, restartAnswer } = useSpeechAnswer(
+  const { state, audioLevel, connect, speak, start, stop, restartAnswer } = useSpeechAnswer(
     slot.attemptId,
     questionTurnId,
     userId,
@@ -146,6 +146,7 @@ export function ApiSpeechRoom({
         isRecording={state.phase === "recording"}
         isAiSpeaking={state.phase === "speaking"}
         isProcessing={isProcessing}
+        audioLevel={state.phase === "recording" ? audioLevel : 0}
         question={
           isProcessing ? (
             <div className="py-6 space-y-2 text-center">
