@@ -35,14 +35,26 @@ export function ExamAttemptListPage() {
   if (exam.isPending || query.isPending) return <LoadingPage label="Đang tải danh sách lượt thi" />
   if (exam.isError || query.isError) return <><ErrorState description={exam.error?.message || query.error?.message || 'Không thể tải lượt thi.'} /><Button onClick={() => { void exam.refetch(); void query.refetch() }}>Thử lại</Button></>
   if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
-  const { rows, total, completed, active } = query.data
-  const filtered = rows.filter(r => (!status || r.status === status) && `${r.studentName} ${r.studentCode} ${r.studentEmail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const { rows, total } = query.data
+  const pendingReview = evaluationsList.filter(item => item.status === 'PENDING_REVIEW')
+  const finalized = evaluationsList.filter(item => item.status === 'GRADED')
+  const queue = rows.filter(row => {
+    if (row.status !== 'COMPLETED') return false
+    const matches = evaluationsList.filter(item =>
+      item.examAttemptId ? item.examAttemptId === row.attemptId
+        : item.studentId ? item.studentId === row.studentId
+        : Boolean(item.studentCode && item.studentCode === row.studentCode),
+    )
+    return !matches.length || matches.some(item => item.status !== 'GRADED')
+  })
+  const visibleRows = summary ? rows : queue
+  const filtered = visibleRows.filter(r => (!summary || !status || r.status === status) && `${r.studentName} ${r.studentCode} ${r.studentEmail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
 
   return (
     <section className="source-screen max-w-7xl mx-auto space-y-6 pb-12">
       <SourcePageHeader
-        eyebrow="Khảo thí · Hồ sơ thí sinh"
-        title={summary ? 'Tổng hợp & Chốt điểm' : 'Danh sách lượt thi'}
+        eyebrow={summary ? "Khảo thí · Kết quả kỳ thi" : "Khảo thí · Hàng đợi chấm điểm"}
+        title={summary ? 'Tổng hợp & Chốt điểm' : 'Chấm điểm'}
         description={exam.data.title}
         actions={
           <>
@@ -61,36 +73,39 @@ export function ExamAttemptListPage() {
         }
       />
       {runtimeConfig.dataSource === 'mock' && <DemoLabel detail="Danh sách, trạng thái và điểm trong chế độ demo đều là dữ liệu mô phỏng." />}
+      {examEvals.isError && <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm">
+        Không thể tải trạng thái chấm điểm. <Button variant="outline" onClick={() => examEvals.refetch()}>Thử lại</Button>
+      </div>}
       <div className="grid sm:grid-cols-3 gap-4">
-        <SourceMetric label="THÍ SINH" value={total} icon={Users} />
-        <SourceMetric label="ĐANG THI" value={active ?? '—'} icon={Clock} tone="amber" />
-        <SourceMetric label="HOÀN TẤT LƯỢT THI" value={completed ?? '—'} detail="Hoàn tất lượt thi chưa đồng nghĩa đã chốt điểm" icon={CheckCircle2} tone="emerald" />
+        <SourceMetric label={summary ? 'THÍ SINH' : 'LƯỢT THI CẦN XỬ LÝ'} value={summary ? total : queue.length} icon={Users} />
+        <SourceMetric label="ĐÁNH GIÁ CHỜ DUYỆT" value={pendingReview.length} icon={Clock} tone="amber" />
+        {summary && <SourceMetric label="ĐÁNH GIÁ ĐÃ CHỐT" value={finalized.length} icon={CheckCircle2} tone="emerald" />}
       </div>
       <div className="assessment-filters">
         <label className="flex items-center gap-2 border border-slate-200 rounded-lg bg-white px-3 flex-1">
           <Search size={16} />
           <input aria-label="Tìm thí sinh" className="input border-0 w-full" value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm tên, mã sinh viên hoặc email" />
         </label>
-        <select className="input assessment-status-filter" aria-label="Lọc trạng thái lượt thi" value={status} onChange={e => setStatus(e.target.value)}>
+        {summary && <select className="input assessment-status-filter" aria-label="Lọc trạng thái lượt thi" value={status} onChange={e => setStatus(e.target.value)}>
           <option value="">Tất cả trạng thái</option>
           {Object.entries(attemptStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
+        </select>}
       </div>
       <AttemptTable rows={filtered} evaluations={evaluationsList} examId={examId} allowReview summary={summary} demo={query.data.demo} />
-      <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {rows.length} hồ sơ</p>
+      <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {visibleRows.length} hồ sơ</p>
 
       {/* DEV3 API: Bảng kết quả chấm điểm học phần từ Backend */}
-      {runtimeConfig.dataSource === 'api' && evaluationsList.length > 0 && (
+      {!summary && runtimeConfig.dataSource === 'api' && pendingReview.length > 0 && (
         <div className="mt-8 rounded-xl border border-blue-200 bg-white p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="text-blue-600" size={18} />
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                Kết quả đánh giá bài thi của kỳ thi
+                Điểm AI chờ duyệt
               </h3>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">
-              {evaluationsList.length} bài đánh giá
+              {pendingReview.length} bài đánh giá
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -105,7 +120,7 @@ export function ExamAttemptListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {evaluationsList.map(item => (
+                {pendingReview.map(item => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 max-w-md">
                       <strong className="block text-slate-900 text-xs line-clamp-1">{item.questionContent}</strong>
