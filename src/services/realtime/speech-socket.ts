@@ -11,6 +11,19 @@ export type SpeechConnection = {
   audio: (value: ArrayBuffer) => void;
   close: () => void;
 };
+
+const MAX_FRAME_BYTES = 32_768;
+// Above this WebSocket buffer size, new frames wait in a local FIFO queue instead of being dropped.
+const SEND_HIGH_WATER_BYTES = 64_000;
+// 16 kHz mono PCM16 is 32 KB/s, so this tolerates roughly 10 s of network stall before giving up.
+const MAX_BACKLOG_BYTES = 320_000;
+const DRAIN_INTERVAL_MS = 40;
+const HEARTBEAT_MS = 10_000;
+// Three missed heartbeats: treat the socket as half-open and let the caller recover.
+const STALE_AFTER_MS = 35_000;
+
+type Outgoing = string | ArrayBuffer;
+
 export function connectSpeech(
   ticket: string,
   onEvent: (event: SpeechEvent) => void,
@@ -36,6 +49,45 @@ export function connectSpeech(
       intentional = false,
       closed = false;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let drainTimer: ReturnType<typeof setInterval> | undefined;
+    let lastSeen = Date.now();
+    // Audio and commands share one ordered queue so `answer.end` can never overtake queued audio.
+    const queue: Outgoing[] = [];
+    let queuedBytes = 0;
+    const sizeOf = (item: Outgoing) =>
+      typeof item === "string" ? item.length : item.byteLength;
+    const stopDrain = () => {
+      clearInterval(drainTimer);
+      drainTimer = undefined;
+    };
+    const drain = () => {
+      while (
+        queue.length &&
+        ws.readyState === WebSocket.OPEN &&
+        ws.bufferedAmount < SEND_HIGH_WATER_BYTES
+      ) {
+        const item = queue.shift()!;
+        queuedBytes -= sizeOf(item);
+        ws.send(item);
+      }
+      if (!queue.length) stopDrain();
+    };
+    const send = (item: Outgoing, critical: boolean) => {
+      if (!queue.length && ws.bufferedAmount < SEND_HIGH_WATER_BYTES) {
+        ws.send(item);
+        return;
+      }
+      if (
+        !critical &&
+        ws.bufferedAmount + queuedBytes + sizeOf(item) > MAX_BACKLOG_BYTES
+      )
+        throw new Error(
+          "Mạng không theo kịp âm thanh. Đã dừng thu để tránh mất dữ liệu.",
+        );
+      queue.push(item);
+      queuedBytes += sizeOf(item);
+      drainTimer ??= setInterval(drain, DRAIN_INTERVAL_MS);
+    };
     const timeout = setTimeout(
       () => fail("Máy chủ speech chưa sẵn sàng. Vui lòng thử lại."),
       20_000,
@@ -44,6 +96,9 @@ export function connectSpeech(
       intentional = true;
       clearTimeout(timeout);
       clearInterval(heartbeat);
+      stopDrain();
+      queue.length = 0;
+      queuedBytes = 0;
       signal.removeEventListener("abort", close);
       ws.close();
     };
@@ -52,6 +107,7 @@ export function connectSpeech(
       closed = true;
       clearTimeout(timeout);
       clearInterval(heartbeat);
+      stopDrain();
       signal.removeEventListener("abort", close);
       if (!ready)
         reject(
@@ -70,28 +126,25 @@ export function connectSpeech(
       command(value) {
         if (!ready || ws.readyState !== WebSocket.OPEN)
           throw new Error("Kết nối speech đã đóng.");
-        ws.send(JSON.stringify(value));
+        send(JSON.stringify(value), true);
       },
       audio(value) {
         if (!ready || ws.readyState !== WebSocket.OPEN)
           throw new Error("Mất kết nối khi gửi audio.");
-        if (ws.bufferedAmount + value.byteLength > 64_000)
-          throw new Error(
-            "Mạng không theo kịp âm thanh. Đã dừng thu để tránh mất dữ liệu.",
-          );
         if (
           !value.byteLength ||
           value.byteLength % 2 ||
-          value.byteLength > 32768
+          value.byteLength > MAX_FRAME_BYTES
         )
           throw new Error("Khung âm thanh không hợp lệ.");
-        ws.send(value);
+        send(value, false);
       },
       close,
     };
     signal.addEventListener("abort", close, { once: true });
     ws.onmessage = (message) => {
       try {
+        lastSeen = Date.now();
         if (typeof message.data !== "string") throw new Error();
         const value: unknown = JSON.parse(message.data);
         if (!value || typeof value !== "object") throw new Error();
@@ -116,9 +169,12 @@ export function connectSpeech(
             throw new Error();
           ready = true;
           clearTimeout(timeout);
+          lastSeen = Date.now();
           heartbeat = setInterval(() => {
             try {
               if (!tokenManager.getToken()) fail("Phiên đăng nhập hết hạn.");
+              else if (Date.now() - lastSeen > STALE_AFTER_MS)
+                fail("Máy chủ speech không phản hồi. Kết nối có thể đã bị ngắt.");
               else if (ws.readyState === WebSocket.OPEN)
                 connection.command({
                   type: "ping",
@@ -127,7 +183,7 @@ export function connectSpeech(
             } catch {
               fail("Không thể duy trì kết nối speech.");
             }
-          }, 10_000);
+          }, HEARTBEAT_MS);
           resolve(connection);
         } else onEvent(event);
       } catch {
