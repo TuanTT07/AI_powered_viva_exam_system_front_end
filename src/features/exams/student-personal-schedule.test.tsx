@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../../types/auth'
 import { StudentSchedulePortal } from './StudentSchedulePortal'
 import { apiStudentExamRepository, type StudentExamPage, type StudentExamSummary } from './api-student-exam-repository'
 import { matchesRequestedAttempt, studentExamPath, studentRoomSearch } from './student-exam-navigation'
+import { interviewApi } from '../viva-session/interview-api'
 import { VivaInterviewRoom } from '../viva-session/pages/VivaInterviewRoom'
 
 const source = runtimeConfig.dataSource
@@ -117,10 +118,11 @@ describe('personal student schedule', () => {
     expect(screen.getByRole('link', { name: 'Xem lịch thi' })).toHaveAttribute('href', '/student/exams')
     expect(screen.queryByRole('button', { name: 'Bắt đầu trả lời' })).not.toBeInTheDocument()
   })
-  it('blocks a completed slot even when its attempt ID is valid', async () => {
+  it('shows backend-confirmed completion without reopening speech', async () => {
     vi.spyOn(apiStudentExamRepository, 'getMySlot').mockResolvedValue({ ...slot, status: 'COMPLETED', actualStartTime: null, actualEndTime: null, accessCode: null })
+    vi.spyOn(interviewApi, 'current').mockResolvedValue({ attemptId: slot.attemptId, status: 'COMPLETED', prompt: null })
     mount(student, studentExamPath(slot.examId, slot.attemptId, 'session'))
-    expect(await screen.findByText(/Ca thi hiện không cho phép tham gia/)).toBeInTheDocument()
+    expect((await screen.findAllByText('Phiên thi đã hoàn tất')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Bắt đầu trả lời' })).not.toBeInTheDocument()
   })
 })
