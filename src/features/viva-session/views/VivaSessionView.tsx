@@ -272,7 +272,8 @@ export function VivaSessionView({
 
           {notice}
 
-          {/* Card 1: Giám khảo AI Card */}
+          {/* Card 1: Giám khảo AI Card (ẩn sau khi phiên thi hoàn tất) */}
+          {!completed && (
           <section className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white via-white to-blue-50/20 p-5 md:p-6 shadow-sm space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3">
@@ -304,23 +305,18 @@ export function VivaSessionView({
 
               {/* Status pill below avatar */}
               <div className="mt-3.5 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs font-semibold shadow-2xs">
-                {completed ? (
-                  <CheckCircle2 size={14} className="text-emerald-600" />
-                ) : (
-                  <SoundWaveIcon className="text-blue-600" />
-                )}
+                <SoundWaveIcon className="text-blue-600" />
                 <span>
-                  {completed
-                    ? 'Phiên thi đã hoàn tất'
-                    : isAiSpeaking
-                      ? 'AI đang đặt câu hỏi'
-                      : isRecording
-                        ? 'AI đang lắng nghe câu trả lời của bạn'
-                        : phase || 'AI đang đặt câu hỏi'}
+                  {isAiSpeaking
+                    ? 'AI đang đặt câu hỏi'
+                    : isRecording
+                      ? 'AI đang lắng nghe câu trả lời của bạn'
+                      : phase || 'AI đang đặt câu hỏi'}
                 </span>
               </div>
             </div>
           </section>
+          )}
 
           {/* Card 2: Câu hỏi Card / Hoàn thành */}
           <section

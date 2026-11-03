@@ -276,29 +276,59 @@ export function useSpeechAnswer(
         turnId,
         abort.signal,
       );
-      const ticket = await speechApi.ticket(attemptId, abort.signal);
-      if (id !== generation.current || abort.signal.aborted) return;
-      const connection = await connectSpeech(
-        ticket.ticket,
-        (event) => {
-          if (id !== generation.current) return;
+      const onEvent = (event: SpeechEvent) => {
+        if (id !== generation.current) return;
+        try {
+          handleEvent(event);
+        } catch {
+          fail(
+            "Phản hồi speech hoặc lưu mã khôi phục không hợp lệ. Đã dừng thu âm.",
+          );
+        }
+      };
+      // Between answers nothing is in flight, so a dropped socket is safe to replace silently.
+      // Once an answer exists the audio cannot be replayed, so that case still fails explicitly.
+      const reopen = async () => {
+        socket.current = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+          if (id !== generation.current || abort.signal.aborted) return;
           try {
-            handleEvent(event);
+            const next = await open();
+            if (id !== generation.current || abort.signal.aborted) {
+              next.close();
+              return;
+            }
+            socket.current = next;
+            return;
           } catch {
-            fail(
-              "Phản hồi speech hoặc lưu mã khôi phục không hợp lệ. Đã dừng thu âm.",
-            );
+            // Retry with backoff.
           }
-        },
-        () => {
-          if (id === generation.current)
-            fail(
-              "Mất kết nối speech. Audio chưa xác nhận không được tự gửi lại; hãy kết nối và tra cứu trạng thái.",
-              true,
-            );
-        },
-        abort.signal,
-      );
+        }
+        if (id === generation.current)
+          fail(
+            "Mất kết nối speech và chưa thể nối lại. Hãy bấm kết nối lại âm thanh.",
+            true,
+          );
+      };
+      const onLost = () => {
+        if (id !== generation.current) return;
+        if (!pending.current && ["ready", "speaking"].includes(getPhase())) {
+          void reopen();
+          return;
+        }
+        fail(
+          "Mất kết nối speech. Audio chưa xác nhận không được tự gửi lại; hãy kết nối và tra cứu trạng thái.",
+          true,
+        );
+      };
+      const open = async (): Promise<SpeechConnection> => {
+        const ticket = await speechApi.ticket(attemptId, abort.signal);
+        if (id !== generation.current || abort.signal.aborted)
+          throw new Error("Kết nối đã hủy.");
+        return connectSpeech(ticket.ticket, onEvent, onLost, abort.signal);
+      };
+      const connection = await open();
       if (id !== generation.current || abort.signal.aborted) {
         connection.close();
         return;
@@ -346,8 +376,10 @@ export function useSpeechAnswer(
     }
   };
   const start = async () => {
+    if (!active || getPhase() !== "ready" || pending.current) return;
+    // The idle socket may be mid-reconnect; rebuild it first instead of ignoring the click.
+    if (!socket.current) await connect();
     if (
-      !active ||
       getPhase() !== "ready" ||
       pending.current ||
       !socket.current ||
