@@ -20,6 +20,7 @@ import {
   useMarkExamAttemptAbsent,
   useResetExamAttempt,
 } from "./exam-hooks";
+import { apiExamMonitoringRepository } from "./api-exam-monitoring-repository";
 import { examRoutes } from "./exam-routes";
 import "./exam-monitoring.css";
 import { SourcePageHeader } from "../../components/common/source-page";
@@ -69,11 +70,17 @@ function ApiMonitoringPage() {
   const monitor = useExamMonitoring(examId);
   const reset = useResetExamAttempt();
   const absent = useMarkExamAttemptAbsent();
+
   const [target, setTarget] = useState<{
     attemptId: string;
     name: string;
-    action: "reset" | "absent";
+    action: "open" | "reset" | "absent";
   } | null>(null);
+
+  const [openAllConfirm, setOpenAllConfirm] = useState(false);
+  const [isOpeningAll, setIsOpeningAll] = useState(false);
+  const [openAllError, setOpenAllError] = useState<string | null>(null);
+
   if (session.user && !session.user.roles.includes("lecturer"))
     return <PermissionDenied />;
   if (exam.isLoading || monitor.isLoading)
@@ -100,11 +107,51 @@ function ApiMonitoringPage() {
     return (
       <ErrorState description="Không tìm thấy dữ liệu kỳ thi hoặc giám sát." />
     );
+
   const data = monitor.data;
-  const mutate = target?.action === "reset" ? reset : absent;
+  const mutate = target?.action === "absent" ? absent : reset;
+
+  const handleOpenAllScheduled = async () => {
+    setIsOpeningAll(true);
+    setOpenAllError(null);
+    try {
+      const scheduledList = data.candidateStatuses.filter((c) => c.status === "SCHEDULED");
+      await Promise.all(
+        scheduledList.map((c) =>
+          apiExamMonitoringRepository.reset(examId, c.attemptId)
+        )
+      );
+      setOpenAllConfirm(false);
+      void monitor.refetch();
+    } catch (err) {
+      setOpenAllError(
+        err instanceof Error ? err.message : "Không thể mở tất cả ca thi."
+      );
+    } finally {
+      setIsOpeningAll(false);
+    }
+  };
+
   return (
     <section className="source-screen monitoring-page">
-      <SourcePageHeader eyebrow="Khảo thí · Giám sát" title="Giám sát kỳ thi" description={data.examTitle || exam.data.title} actions={<><Link className="button outline" to={examRoutes.detail(examId)}>Tổng quan</Link><Link className="button outline" to={`/lecturer/exams/${examId}/attempts`}>Hồ sơ lượt thi</Link><Link className="button outline" to={`/lecturer/exams/${examId}/report`}>Báo cáo</Link></>} />
+      <SourcePageHeader
+        eyebrow="Khảo thí · Giám sát"
+        title="Giám sát kỳ thi"
+        description={data.examTitle || exam.data.title}
+        actions={
+          <>
+            <Link className="button outline" to={examRoutes.detail(examId)}>
+              Tổng quan
+            </Link>
+            <Link className="button outline" to={`/lecturer/exams/${examId}/attempts`}>
+              Hồ sơ lượt thi
+            </Link>
+            <Link className="button outline" to={`/lecturer/exams/${examId}/report`}>
+              Báo cáo
+            </Link>
+          </>
+        }
+      />
       <div className="monitoring-summary" aria-label="Tóm tắt trạng thái">
         {statuses.map((status) => (
           <div key={status}>
@@ -125,84 +172,137 @@ function ApiMonitoringPage() {
           </div>
         ))}
       </div>
+
       {!data.candidateStatuses.length ? (
         <EmptyState
           title="Chưa có lượt thi"
           description="Chưa có sinh viên trong kỳ thi này."
         />
       ) : (
-        <div className="monitoring-table-wrap">
-          <table className="monitoring-table">
-            <caption className="sr-only">Danh sách lượt thi</caption>
-            <thead>
-              <tr>
-                <th>SINH VIÊN</th>
-                <th>SLOT</th>
-                <th>TRẠNG THÁI</th>
-                <th>THỜI GIAN</th>
-                <th>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.candidateStatuses.map((candidate) => (
-                <tr key={candidate.attemptId}>
-                  <td>
-                    <strong>{candidate.studentName}</strong>
-                    <br />
-                    <small>
-                      {candidate.studentCode} · {candidate.studentEmail}
-                    </small>
-                  </td>
-                  <td>{candidate.slotNumber}</td>
-                  <td>
-                    <StatusBadge
-                      label={labels[candidate.status]}
-                      tone={tones[candidate.status]}
-                    />
-                  </td>
-                  <td>{formatTime(candidate.scheduledStartTime)}</td>
-                  <td>
-                    <div className="dialog-actions">
-                      {candidate.status === "IN_PROGRESS" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            setTarget({
-                              attemptId: candidate.attemptId,
-                              name: candidate.studentName,
-                              action: "reset",
-                            })
-                          }
-                        >
-                          Reset
-                        </Button>
-                      )}
-                      {!["COMPLETED", "ABSENT", "CANCELLED"].includes(
-                        candidate.status,
-                      ) && (
-                        <Button
-                          type="button"
-                          variant="danger"
-                          onClick={() =>
-                            setTarget({
-                              attemptId: candidate.attemptId,
-                              name: candidate.studentName,
-                              action: "absent",
-                            })
-                          }
-                        >
-                          Đánh dấu vắng
-                        </Button>
-                      )}
-                    </div>
-                  </td>
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 border border-slate-200 rounded-xl">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Danh sách lượt thi</h2>
+              <p className="text-xs text-slate-500">
+                Tổng cộng {data.candidateStatuses.length} thí sinh. Ca thi ở trạng thái <strong>SẴN SÀNG</strong> sẽ cho phép sinh viên đăng nhập vào thi.
+              </p>
+            </div>
+            {data.scheduledCount > 0 && (
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => setOpenAllConfirm(true)}
+              >
+                Mở tất cả ca đã xếp lịch ({data.scheduledCount})
+              </Button>
+            )}
+          </div>
+
+          <div className="monitoring-table-wrap">
+            <table className="monitoring-table">
+              <caption className="sr-only">Danh sách lượt thi</caption>
+              <thead>
+                <tr>
+                  <th>SINH VIÊN</th>
+                  <th>SLOT</th>
+                  <th>TRẠNG THÁI</th>
+                  <th>THỜI GIAN</th>
+                  <th>THAO TÁC</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.candidateStatuses.map((candidate) => (
+                  <tr key={candidate.attemptId}>
+                    <td>
+                      <strong>{candidate.studentName}</strong>
+                      <br />
+                      <small>
+                        {candidate.studentCode} · {candidate.studentEmail}
+                      </small>
+                    </td>
+                    <td>{candidate.slotNumber}</td>
+                    <td>
+                      <StatusBadge
+                        label={labels[candidate.status]}
+                        tone={tones[candidate.status]}
+                      />
+                    </td>
+                    <td>{formatTime(candidate.scheduledStartTime)}</td>
+                    <td>
+                      <div className="dialog-actions flex flex-wrap gap-2 items-center">
+                        {candidate.status === "SCHEDULED" && (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            onClick={() =>
+                              setTarget({
+                                attemptId: candidate.attemptId,
+                                name: candidate.studentName,
+                                action: "open",
+                              })
+                            }
+                          >
+                            Mở ca thi
+                          </Button>
+                        )}
+                        {candidate.status === "READY" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              setTarget({
+                                attemptId: candidate.attemptId,
+                                name: candidate.studentName,
+                                action: "reset",
+                              })
+                            }
+                          >
+                            Làm mới ca
+                          </Button>
+                        )}
+                        {candidate.status === "IN_PROGRESS" && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              setTarget({
+                                attemptId: candidate.attemptId,
+                                name: candidate.studentName,
+                                action: "reset",
+                              })
+                            }
+                          >
+                            Reset ca thi
+                          </Button>
+                        )}
+                        {!["COMPLETED", "ABSENT", "CANCELLED"].includes(
+                          candidate.status,
+                        ) && (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            onClick={() =>
+                              setTarget({
+                                attemptId: candidate.attemptId,
+                                name: candidate.studentName,
+                                action: "absent",
+                              })
+                            }
+                          >
+                            Đánh dấu vắng
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      {/* Dialog for Single Candidate Action */}
       <Dialog
         open={Boolean(target)}
         onClose={() => {
@@ -212,14 +312,25 @@ function ApiMonitoringPage() {
           }
         }}
         title={
-          target?.action === "reset" ? "Reset lượt thi?" : "Đánh dấu vắng?"
+          target?.action === "open"
+            ? "Mở ca thi cho sinh viên?"
+            : target?.action === "reset"
+              ? "Reset lượt thi?"
+              : "Đánh dấu vắng?"
         }
       >
         <p>
-          {target?.action === "reset"
-            ? "Đưa lượt thi của "
-            : "Ghi nhận vắng cho "}
-          <strong>{target?.name}</strong>?
+          {target?.action === "open"
+            ? "Cho phép thí sinh "
+            : target?.action === "reset"
+              ? "Đưa lượt thi của "
+              : "Ghi nhận vắng cho "}
+          <strong>{target?.name}</strong>
+          {target?.action === "open"
+            ? " vào phòng thi (chuyển sang trạng thái SẴN SÀNG)?"
+            : target?.action === "reset"
+              ? " về trạng thái SẴN SÀNG để thi lại (xử lý sự cố mạng/thiết bị)?"
+              : "?"}
         </p>
         {mutate.isError && (
           <Alert tone="danger">
@@ -249,7 +360,45 @@ function ApiMonitoringPage() {
               )
             }
           >
-            Xác nhận
+            {target?.action === "open" ? "Xác nhận mở ca" : "Xác nhận"}
+          </Button>
+        </div>
+      </Dialog>
+
+      {/* Dialog for Bulk Open All Scheduled */}
+      <Dialog
+        open={openAllConfirm}
+        onClose={() => {
+          if (!isOpeningAll) {
+            setOpenAllConfirm(false);
+            setOpenAllError(null);
+          }
+        }}
+        title="Mở tất cả ca thi đã xếp lịch?"
+      >
+        <p>
+          Hệ thống sẽ chuyển <strong>{data.scheduledCount}</strong> ca thi từ trạng thái{" "}
+          <strong>ĐÃ XẾP LỊCH</strong> sang <strong>SẴN SÀNG</strong>.
+          <br />
+          Sau khi mở ca, sinh viên có thể đăng nhập vào phòng thi ngay lập tức.
+        </p>
+        {openAllError && <Alert tone="danger">{openAllError}</Alert>}
+        <div className="dialog-actions">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isOpeningAll}
+            onClick={() => setOpenAllConfirm(false)}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            pending={isOpeningAll}
+            onClick={handleOpenAllScheduled}
+          >
+            Xác nhận mở tất cả
           </Button>
         </div>
       </Dialog>
