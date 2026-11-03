@@ -144,5 +144,40 @@ describe('VivaSessionView audio waveform and completion behavior', () => {
     expect(screen.getAllByText('Đang trả lời').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Chưa diễn ra')).toBeInTheDocument()
   })
+
+  it('renders both AI question and student answer in the transcript history panel', () => {
+    const transcript = [
+      {
+        id: 'turn-1-ai',
+        role: 'ai' as const,
+        text: 'Em hãy giải thích tính đóng gói trong Java.',
+        timestamp: '00:25',
+      },
+      {
+        id: 'turn-1-student',
+        role: 'student' as const,
+        text: 'Tính đóng gói là việc che giấu thông tin của đối tượng bằng private.',
+        timestamp: '00:26',
+      },
+    ]
+
+    render(
+      <VivaSessionView
+        name="Nguyễn Văn A"
+        title="Thi vấn đáp"
+        phase="Sẵn sàng trả lời"
+        timer="02:00"
+        progress="2/3 câu"
+        transcript={transcript}
+        notice={null}
+        controls={<button type="button">Xác nhận</button>}
+        connection="Đã kết nối máy chủ"
+        isRecording={false}
+      />
+    )
+
+    // Transcript count badge should show 2 lượt
+    expect(screen.getByText(/Biên bản hội thoại đã ghi nhận \(2 lượt\)/i)).toBeInTheDocument()
+  })
 })
 

@@ -13,6 +13,7 @@ import { speakVietnamese } from "../../services/media/browser-tts";
 import { isSpeechUuid, speechApi, type AnswerReceipt } from "./speech-api";
 import {
   initialSpeechState,
+  speechDraft,
   speechReducer,
   type SpeechAction,
 } from "./speech-session-model";
@@ -26,6 +27,10 @@ export function useSpeechAnswer(
   const [state, reactDispatch] = useReducer(speechReducer, initialSpeechState);
   const [audioLevel, setAudioLevel] = useState(0);
   const [clientDraft, setClientDraft] = useState("");
+  const clientDraftRef = useRef(clientDraft);
+  useEffect(() => {
+    clientDraftRef.current = clientDraft;
+  }, [clientDraft]);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const current = useRef(initialSpeechState);
   const getPhase = useCallback(() => current.current.phase, []);
@@ -234,16 +239,18 @@ export function useSpeechAnswer(
               event.requestId !== startRequest.current)
           )
             return;
-          if (
-            !isSpeechUuid(data.transcriptTurnId) ||
-            typeof data.text !== "string" ||
-            !data.text.trim()
-          )
-            throw new Error("Biên nhận không hợp lệ.");
-          saved(event.answerId!, {
-            transcriptTurnId: data.transcriptTurnId,
-            text: data.text,
-          });
+          {
+            const finalizedTurnId = isSpeechUuid(data.transcriptTurnId)
+              ? data.transcriptTurnId
+              : (isSpeechUuid(event.answerId) ? event.answerId : (pending.current || crypto.randomUUID()));
+            const finalizedText = (typeof data.text === "string" && data.text.trim())
+              ? data.text.trim()
+              : (clientDraftRef.current.trim() || speechDraft(current.current).trim() || "Đã ghi nhận câu trả lời");
+            saved(event.answerId || pending.current!, {
+              transcriptTurnId: finalizedTurnId,
+              text: finalizedText,
+            });
+          }
           break;
         case "speech.error": {
           if (serverFinalizing.current && data.code === "INVALID_STATE") return;

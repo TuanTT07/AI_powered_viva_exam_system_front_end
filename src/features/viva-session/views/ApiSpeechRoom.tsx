@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Mic, Volume2, RotateCcw, RefreshCw, LogOut, Square } from "lucide-react";
 import { Button, Dialog } from "../../../components/ui/primitives";
@@ -62,41 +62,76 @@ export function ApiSpeechRoom({
     new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
   );
 
+  const draft = speechDraft(state) || clientDraft;
+  const latestSpokenTextRef = useRef<string>("");
+  useEffect(() => {
+    if (draft.trim()) {
+      latestSpokenTextRef.current = draft.trim();
+    }
+  }, [draft]);
+
+  // When question changes, reset the draft tracker for the new question
+  const prevQuestionTurnId = useRef(prompt.questionTurnId);
+  useEffect(() => {
+    if (prevQuestionTurnId.current !== prompt.questionTurnId) {
+      prevQuestionTurnId.current = prompt.questionTurnId;
+      latestSpokenTextRef.current = "";
+    }
+  }, [prompt.questionTurnId]);
+
   const handleRestartAnswer = async () => {
     setAnswerResetNotice(true);
     await restartAnswer();
   };
 
+  const handleConfirmAnswer = async () => {
+    const recognizedText = latestSpokenTextRef.current || draft.trim();
+    if (recognizedText) {
+      onAnswerSaved({
+        transcriptTurnId: `student-${prompt.questionTurnId}`,
+        text: recognizedText,
+      });
+    }
+    await stop();
+  };
+
   // Accumulate history dialogue with current prompt and student receipt
   const transcript: TranscriptMessageProps[] = [...history];
   const hasPrompt = transcript.some(
-    (t) => t.id === prompt.questionTurnId || (t.role === "ai" && t.text === prompt.text)
+    (t) =>
+      t.role === "ai" &&
+      (t.id === `ai-${prompt.questionTurnId}` ||
+        t.id === prompt.questionTurnId ||
+        t.text === prompt.text)
   );
   if (!hasPrompt) {
     transcript.push({
-      id: prompt.questionTurnId,
+      id: `ai-${prompt.questionTurnId}`,
       role: "ai",
       text: prompt.text,
       timestamp: currentTime,
     });
   }
-  if (state.receipt) {
+  const currentReceipt = state.receipt;
+  if (currentReceipt) {
     const hasReceipt = transcript.some(
       (t) =>
-        t.id === state.receipt?.transcriptTurnId ||
-        (t.role === "student" && t.text === state.receipt?.text)
+        t.role === "student" &&
+        ((currentReceipt.transcriptTurnId &&
+          (t.id === currentReceipt.transcriptTurnId ||
+            t.id === `student-${currentReceipt.transcriptTurnId}`)) ||
+          t.text === currentReceipt.text)
     );
     if (!hasReceipt) {
       transcript.push({
-        id: state.receipt.transcriptTurnId,
+        id: `student-${currentReceipt.transcriptTurnId || prompt.questionTurnId}`,
         role: "student",
-        text: state.receipt.text,
+        text: currentReceipt.text,
         timestamp: currentTime,
       });
     }
   }
 
-  const draft = speechDraft(state) || clientDraft;
   const awaiting =
     ["starting", "recording", "finalizing", "checking"].includes(state.phase) ||
     (!!state.answerId && !state.receipt);
@@ -104,9 +139,26 @@ export function ApiSpeechRoom({
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
   useEffect(() => {
-    if (state.phase === "saved") onAnswerSaved(state.receipt);
-  }, [state.phase, state.receipt, onAnswerSaved]);
+    if (state.phase === "saved") {
+      const receiptText =
+        state.receipt?.text?.trim() ||
+        latestSpokenTextRef.current ||
+        "Đã ghi nhận câu trả lời";
+      const receiptTurnId =
+        state.receipt?.transcriptTurnId || `student-${prompt.questionTurnId}`;
+      onAnswerSaved({
+        transcriptTurnId: receiptTurnId,
+        text: receiptText,
+      });
+    }
+  }, [state.phase, state.receipt, prompt.questionTurnId, onAnswerSaved]);
   const retry = ["idle", "disconnected", "error"].includes(state.phase);
+
+  const turnLimitSeconds =
+    slot.examConfig?.timeLimitPerTurnSeconds ??
+    (slot as any).timeLimitPerTurnSeconds ??
+    (slot as any).examConfig?.durationPerTurn ??
+    120;
 
   const answeredCount =
     history.filter((h) => h.role === "student").length +
@@ -189,12 +241,16 @@ export function ApiSpeechRoom({
         }
         phase={isProcessing ? "Hệ thống đang xử lý lượt thi" : phases[state.phase]}
         timer={
-          <AnswerCountdown
-            key={state.deadline ?? prompt.deadlineAt ?? "none"}
-            deadline={state.deadline ?? prompt.deadlineAt}
+          <TurnQuestionCountdown
+            key={prompt.questionTurnId}
+            turnDeadline={state.deadline}
+            promptDeadline={prompt.deadlineAt}
+            turnLimitSeconds={turnLimitSeconds}
+            isProcessing={isProcessing}
+            slotEndTime={slot.scheduledEndTime}
           />
         }
-        timerLabel="Thời gian còn lại"
+        timerLabel="Thời gian trả lời"
         progress={`Ca ${slot.slotNumber ?? 1}`}
         transcript={transcript}
         connection={
@@ -362,7 +418,7 @@ export function ApiSpeechRoom({
                 <>
                   <Button
                     aria-label="Xác nhận câu trả lời"
-                    onClick={() => void stop()}
+                    onClick={() => void handleConfirmAnswer()}
                     className="border border-slate-300 hover:bg-slate-50 font-bold text-slate-800 bg-white inline-flex items-center gap-2 shadow-2xs px-5 py-2"
                   >
                     <Square size={13} className="fill-slate-800 text-slate-800" />
@@ -427,14 +483,63 @@ export function ApiSpeechRoom({
   );
 }
 
-function AnswerCountdown({ deadline }: { deadline: string | null }) {
+function TurnQuestionCountdown({
+  turnDeadline,
+  promptDeadline,
+  turnLimitSeconds,
+  isProcessing,
+  slotEndTime,
+}: {
+  turnDeadline?: string | null;
+  promptDeadline?: string | null;
+  turnLimitSeconds: number;
+  isProcessing?: boolean;
+  slotEndTime?: string | null;
+}) {
   const [now, setNow] = useState(Date.now);
+  const [turnStartedAt] = useState(Date.now);
+
   useEffect(() => {
-    if (!deadline) return;
     const timer = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(timer);
-  }, [deadline]);
-  if (!deadline) return "—";
-  const remaining = Math.max(0, Math.ceil((Date.parse(deadline) - now) / 1000));
-  return `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
+  }, []);
+
+  if (isProcessing) {
+    return (
+      <span className="text-sm font-semibold text-blue-600 animate-pulse">
+        Đang xử lý...
+      </span>
+    );
+  }
+
+  let remaining: number;
+  if (turnDeadline && Number.isFinite(Date.parse(turnDeadline))) {
+    remaining = Math.max(0, Math.ceil((Date.parse(turnDeadline) - now) / 1000));
+  } else if (promptDeadline && Number.isFinite(Date.parse(promptDeadline))) {
+    const promptDiff = Math.ceil((Date.parse(promptDeadline) - now) / 1000);
+    if (promptDiff > 0 && promptDiff <= turnLimitSeconds * 2) {
+      remaining = promptDiff;
+    } else {
+      const elapsed = Math.floor((now - turnStartedAt) / 1000);
+      remaining = Math.max(0, turnLimitSeconds - elapsed);
+    }
+  } else {
+    const elapsed = Math.floor((now - turnStartedAt) / 1000);
+    remaining = Math.max(0, turnLimitSeconds - elapsed);
+  }
+
+  if (slotEndTime && Number.isFinite(Date.parse(slotEndTime))) {
+    const slotRemaining = Math.max(0, Math.ceil((Date.parse(slotEndTime) - now) / 1000));
+    remaining = Math.min(remaining, slotRemaining);
+  }
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const isUrgent = remaining <= 15 && remaining > 0;
+
+  return (
+    <span className={isUrgent ? "text-red-600 animate-pulse font-mono" : "font-mono"}>
+      {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+    </span>
+  );
 }
