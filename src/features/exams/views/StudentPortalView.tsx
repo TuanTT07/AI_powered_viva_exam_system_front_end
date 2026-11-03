@@ -12,6 +12,13 @@ export function StudentPortalView({ name, exams, apiMode, list = false, apiConte
 }) {
   const upcomingCount = exams?.filter(e => e.status === 'SCHEDULED' || e.status === 'IN_PROGRESS').length ?? 0
 
+  if (apiMode && list) return (
+    <section className="source-screen mx-auto max-w-6xl space-y-5 pb-10">
+      <header><h1 className="text-2xl font-semibold tracking-tight text-slate-900">Kỳ thi của tôi</h1></header>
+      <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">{apiContent}</section>
+    </section>
+  )
+
   return (
     <section className="source-screen space-y-6 max-w-7xl mx-auto pb-16">
       {/* Student Hero Header Banner */}
@@ -118,33 +125,26 @@ export function StudentPortalView({ name, exams, apiMode, list = false, apiConte
       </div>
 
       {apiMode ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <section className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 space-y-5 shadow-xs">
+        <div className="space-y-4">
+          <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
             {apiContent}
           </section>
-
-          <aside className="lg:col-span-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-6 space-y-4 self-start shadow-xs">
-            <div className="flex items-center gap-2.5 text-blue-900 font-semibold text-sm">
-              <Clock size={18} className="text-blue-600" />
+          <aside className="flex flex-col gap-4 rounded-xl bg-slate-100/70 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <ShieldCheck size={17} className="shrink-0 text-blue-600" aria-hidden="true" />
               <span>Chuẩn bị trước khi dự thi</span>
             </div>
-            <p className="text-xs text-blue-800 leading-relaxed">
-              Kiểm tra thời gian của ca thi, chuẩn bị micro và tai nghe, sau đó thực hiện kiểm tra thiết bị trước khi vào phòng thi.
-            </p>
-            <ul className="text-xs text-blue-800 space-y-2 list-none p-0 m-0">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Không gian yên tĩnh, đủ ánh sáng</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Micro và loa hoạt động rõ ràng, không vang</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Đường truyền mạng internet ổn định</span>
-              </li>
+            <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-xs text-slate-600">
+              {['Không gian yên tĩnh', 'Micro và tai nghe hoạt động tốt', 'Kết nối mạng ổn định'].map(tip => (
+                <li key={tip} className="flex items-center gap-2">
+                  <CheckCircle2 size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
+                  {tip}
+                </li>
+              ))}
             </ul>
+            <Link to="/device-check" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md text-xs font-semibold text-blue-700 hover:text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600">
+              Kiểm tra thiết bị <ArrowRight size={14} aria-hidden="true" />
+            </Link>
           </aside>
         </div>
       ) : (

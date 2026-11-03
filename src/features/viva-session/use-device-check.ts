@@ -69,5 +69,5 @@ export function useDeviceCheck() {
       oscillator.start(); oscillator.stop(audio.currentTime + 0.5)
     } catch { if (alive.current) setSpeaker('error') }
   }
-  return { mic, speaker, volume, error, startMic, testSpeaker, confirmSpeaker: () => setSpeaker('passed'), stop: releaseMic }
+  return { mic, speaker, volume, error, startMic, testSpeaker, confirmSpeaker: () => setSpeaker('passed'), rejectSpeaker: () => setSpeaker('error'), stop: releaseMic }
 }

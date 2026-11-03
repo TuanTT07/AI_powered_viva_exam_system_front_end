@@ -1,156 +1,75 @@
 import { DemoLabel } from '../../components/common/inline-notice'
 import { Link } from 'react-router-dom'
-import { FileCheck2, GraduationCap, Award, Calendar, ArrowRight, Sparkles } from 'lucide-react'
-import { Alert } from '../../components/ui/primitives'
+import { ArrowRight, FileText } from 'lucide-react'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { studentResultsDemo } from './mocks/student-results-demo'
 
 export function StudentResultListPage() {
   const demo = runtimeConfig.dataSource === 'mock'
   const results = demo ? studentResultsDemo : []
-  const avgScore = results.length
-    ? (results.reduce((acc, r) => acc + r.score, 0) / results.length).toFixed(1)
+  const average = results.length
+    ? (results.reduce((sum, result) => sum + result.score, 0) / results.length).toFixed(1)
     : '—'
 
   return (
-    <section className="source-screen max-w-6xl mx-auto space-y-6 pb-16">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 text-white shadow-sm border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-blue-200">
-              <Sparkles size={13} className="text-amber-400" />
-              <span>Cổng thí sinh · Khảo thí</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Kết quả và biên bản
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Xem kết quả được công bố và nhận xét của giảng viên sau các phiên thi vấn đáp.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              className="button outline"
-              to="/student/exams"
-            >
-              Kỳ thi của tôi
-            </Link>
-          </div>
+    <section className="source-screen mx-auto max-w-5xl space-y-6 pb-10">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="border-l-4 border-blue-600 pl-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Kết quả &amp; biên bản</h1>
         </div>
-      </div>
+        <Link className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-blue-700 hover:text-blue-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600" to="/student/exams">Kỳ thi của tôi<ArrowRight size={15} aria-hidden="true" /></Link>
+      </header>
 
-      {demo ? (
-        <DemoLabel detail="Dữ liệu demo · Điểm và nhận xét minh họa, không phải kết quả thi thực." />
-      ) : (
-        <Alert>Chưa có chức năng tra cứu kết quả được công bố từ hệ thống.</Alert>
+      {demo && <DemoLabel detail="Điểm và nhận xét minh họa, không phải kết quả thi thực." />}
+
+      {demo && (
+        <div><dl className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-5">
+            <dt className="text-xs font-medium text-blue-800">Kết quả mẫu</dt>
+            <dd className="mt-2 text-3xl font-semibold tabular-nums text-blue-900">{results.length}</dd>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <dt className="text-xs font-medium text-slate-500">Điểm trung bình mẫu</dt>
+            <dd className="mt-2 text-3xl font-semibold tabular-nums text-blue-700">{average}<span className="text-sm font-normal text-slate-400"> / 10</span></dd>
+          </div>
+        </dl></div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Biên bản đã công bố</span>
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <FileCheck2 size={18} />
-            </span>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white" aria-labelledby="student-results-heading">
+        <header className="flex items-center gap-2 border-b border-blue-100 bg-blue-50/70 px-5 py-4 text-blue-800">
+          <FileText size={18} aria-hidden="true" />
+          <h2 id="student-results-heading" className="text-sm font-semibold">Bảng điểm{demo ? ' mẫu' : ''}</h2>
+        </header>
+        {results.length ? (
+          <div className="relative overflow-x-auto focus-visible:outline-2 focus-visible:outline-blue-600" role="region" aria-label="Bảng điểm có thể cuộn ngang" tabIndex={0}>
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <caption className="sr-only">Kết quả minh họa theo kỳ thi, thang điểm 10</caption>
+              <thead className="border-b border-slate-100 text-xs text-slate-500"><tr>
+                <th scope="col" className="px-5 py-3 font-medium">Kỳ thi / học phần</th>
+                <th scope="col" className="px-5 py-3 font-medium">Ngày thi</th>
+                <th scope="col" className="px-5 py-3 text-right font-medium">Điểm mẫu</th>
+                <th scope="col" className="px-5 py-3"><span className="sr-only">Xem biên bản</span></th>
+              </tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {results.map(result => (
+                  <tr key={result.id} className="transition-colors hover:bg-blue-50/40">
+                    <th scope="row" className="px-5 py-4 font-normal"><span className="block font-semibold text-slate-900">{result.title}</span><span className="mt-1 block text-xs text-slate-500">{result.subject}</span></th>
+                    <td className="whitespace-nowrap px-5 py-4 text-xs tabular-nums text-slate-600">{new Date(result.date).toLocaleDateString('vi-VN')}</td>
+                    <td className="px-5 py-4 text-right text-lg font-semibold tabular-nums text-blue-700">{result.score.toFixed(1)}</td>
+                    <td className="px-5 py-4 text-right"><Link aria-label={`Xem biên bản ${result.title}`} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" to={`/student/exams/${result.id}/result`}>Biên bản<ArrowRight size={14} aria-hidden="true" /></Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-slate-900 font-mono">{results.length}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Kỳ thi hoàn tất</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Điểm trung bình</span>
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <Award size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-emerald-600 font-mono">{avgScore}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Thang điểm 10</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Đánh giá &amp; Minh chứng</span>
-            <span className="p-2 rounded-xl bg-violet-50 text-violet-600">
-              <GraduationCap size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-bold text-slate-900">Giảng viên phê duyệt</div>
-            <p className="text-xs text-slate-500 mt-0.5">Bảo lưu transcript &amp; rubric</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Results List */}
-      <div className="space-y-4">
-        {results.map(result => (
-          <article
-            key={result.id}
-            className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-5 sm:p-6 shadow-xs transition-all hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-5 group"
-          >
-            <div className="flex gap-4 items-start">
-              <span className="rounded-2xl bg-blue-50 text-blue-600 p-3.5 shrink-0 group-hover:scale-105 transition-transform">
-                <FileCheck2 size={24} />
-              </span>
-              <div className="space-y-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  Kết quả công bố mẫu
-                </span>
-                <h2 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {result.title}
-                </h2>
-                <p className="text-xs text-slate-500 flex items-center gap-2">
-                  <span>{result.subject}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar size={12} className="text-slate-400" />
-                    {new Date(result.date).toLocaleDateString('vi-VN')}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-              <div className="text-center sm:text-right">
-                <p className="text-[11px] text-slate-400 uppercase font-semibold">Điểm demo</p>
-                <strong className="text-2xl font-mono text-emerald-700 font-bold">
-                  {result.score.toFixed(1)}
-                  <small className="text-xs text-slate-400 font-normal"> / 10</small>
-                </strong>
-              </div>
-              <Link
-                className="button outline"
-                to={`/student/exams/${result.id}/result`}
-              >
-                Xem biên bản
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </article>
-        ))}
-
-        {!results.length && (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-3 shadow-xs">
-            <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-              <GraduationCap size={32} />
-            </div>
-            <h2 className="text-base font-semibold text-slate-900">Chưa có kết quả để hiển thị</h2>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              Kết quả chỉ xuất hiện khi hệ thống cho phép công bố.
-            </p>
+        ) : (
+          <div className="flex flex-col items-center gap-3 px-5 py-14 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><FileText size={26} strokeWidth={1.5} aria-hidden="true" /></span>
+            <h3 className="text-base font-semibold text-slate-900">{demo ? 'Chưa có kết quả để hiển thị' : 'Chưa thể tra cứu kết quả'}</h3>
+            <p className="max-w-sm text-sm text-slate-500">{demo ? 'Chưa có kết quả mẫu.' : 'Chức năng tra cứu điểm chưa được kết nối với backend.'}</p>
           </div>
         )}
-      </div>
+      </section>
     </section>
   )
 }
-
