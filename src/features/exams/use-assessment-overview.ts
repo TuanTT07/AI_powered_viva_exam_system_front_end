@@ -6,7 +6,7 @@ import { examKeys, monitoringKeys, useExam } from './exam-hooks'
 import { createDemoAssessment } from './mocks/assessment-demo'
 import type { RosterStudent } from './roster-types'
 
-export type AttemptRow = Pick<MonitoringCandidate, 'attemptId' | 'studentName' | 'studentCode' | 'studentEmail'> & { status: MonitoringStatus | null; scheduledStartTime: string | null; demoScore?: number }
+export type AttemptRow = Pick<MonitoringCandidate, 'attemptId' | 'studentName' | 'studentCode' | 'studentEmail'> & { studentId?: string; status: MonitoringStatus | null; scheduledStartTime: string | null; demoScore?: number }
 type AssessmentOverview = { rows: AttemptRow[]; total: number; completed: number | null; active: number | null; absent: number | null; demo: boolean }
 export function useAssessmentOverview(examId: string) {
   const api = runtimeConfig.dataSource === 'api'
