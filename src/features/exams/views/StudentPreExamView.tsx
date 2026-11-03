@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Clock, ShieldCheck, Video, Sparkles } from 'lucide-react'
 import { Alert, Button } from '../../../components/ui/primitives'
 import { StatusBadge } from '../../../components/common/states'
 import type { StudentExamSlot } from '../api-student-exam-repository'
+import { studentExamPath } from '../student-exam-navigation'
 
 const labels: Record<StudentExamSlot['status'], string> = {
   SCHEDULED: 'Đã xếp lịch',
@@ -13,10 +14,12 @@ const labels: Record<StudentExamSlot['status'], string> = {
   CANCELLED: 'Đã hủy',
 }
 
-const time = (value: string) =>
-  new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+const time = (value: string | null) => value && Number.isFinite(Date.parse(value))
+  ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+  : 'Chưa xếp giờ'
 
 export function StudentPreExamView({ slot }: { slot: StudentExamSlot }) {
+  const [search] = useSearchParams()
   const canJoin = slot.status === 'READY' || slot.status === 'IN_PROGRESS'
 
   return (
@@ -95,7 +98,7 @@ export function StudentPreExamView({ slot }: { slot: StudentExamSlot }) {
             <dl className="space-y-3 text-sm divide-y divide-slate-100">
               <div className="pt-1 flex justify-between items-center">
                 <dt className="text-slate-500 text-xs">Ca thi</dt>
-                <dd className="font-bold text-slate-900 font-mono">Ca {slot.slotNumber}</dd>
+                <dd className="font-bold text-slate-900 font-mono">{slot.slotNumber == null ? 'Chưa phân số ca' : `Ca ${slot.slotNumber}`}</dd>
               </div>
               <div className="pt-3 flex justify-between items-center">
                 <dt className="text-slate-500 text-xs">Bắt đầu</dt>
@@ -125,7 +128,7 @@ export function StudentPreExamView({ slot }: { slot: StudentExamSlot }) {
                 : 'Ca thi hiện không cho phép tham gia.'}
             </p>
             {canJoin ? (
-              <Link className="button primary w-full text-center" to={`/student/exams/${slot.examId}/check`}>
+              <Link className="button primary w-full text-center" to={studentExamPath(slot.examId, slot.attemptId, 'check', search.get('questionTurnId'))}>
                 Kiểm tra thiết bị
               </Link>
             ) : (

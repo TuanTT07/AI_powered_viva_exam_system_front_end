@@ -1,5 +1,5 @@
 import { DemoLabel } from '../../components/common/inline-notice'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Alert, Button } from '../../components/ui/primitives'
 import { ErrorState, LoadingPage, PermissionDenied } from '../../components/common/states'
 import { useSession } from '../../app/providers/use-session'
@@ -7,6 +7,7 @@ import { runtimeConfig } from '../../services/api/runtime-config'
 import { StudentPreExamView } from './views/StudentPreExamView'
 import { useExam, useStudentMySlot } from './exam-hooks'
 import { Mic, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react'
+import { matchesRequestedAttempt } from './student-exam-navigation'
 
 export function StudentExamSlotPage() {
   return runtimeConfig.dataSource === 'api' ? <ApiStudentExamSlotPage /> : <MockStudentExamSlotPage />
@@ -105,6 +106,7 @@ function MockStudentExamSlotPage() {
 
 function ApiStudentExamSlotPage() {
   const { examId = '' } = useParams()
+  const [search] = useSearchParams()
   const { session } = useSession()
   const studentId = session.user?.roles.includes('student') ? session.user.id : undefined
   const slot = useStudentMySlot(examId, studentId)
@@ -119,6 +121,7 @@ function ApiStudentExamSlotPage() {
     </section>
   )
   if (!slot.data) return <ErrorState description="Bạn chưa được xếp ca thi hoặc ca thi không tồn tại." />
+  if (!matchesRequestedAttempt(search.get('attemptId'), slot.data.attemptId)) return <ErrorState description="Ca thi đã thay đổi hoặc không khớp. Vui lòng mở lại từ danh sách lịch thi của bạn." />
   return <StudentPreExamView slot={slot.data} />
 }
 

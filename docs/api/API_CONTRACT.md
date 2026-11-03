@@ -106,7 +106,7 @@ The deployed contract has no `/api/rubrics` endpoint. The global lecturer list a
 
 ## Pagination
 
-Contract: TBD.
+Pagination is endpoint-specific. The student schedule contract below uses `page`; lecturer exam responses use the existing Spring Page contract.
 
 If backend uses cursor pagination, do not convert to page-number assumptions in shared abstractions.
 
@@ -136,14 +136,30 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 | Rubric deletion | API | `DELETE /api/courses/{courseId}/rubrics/{id}` |
 | Exam management CRUD/status | API | `/api/v1/exams`, `/api/v1/exams/{id}`, `/api/v1/exams/{id}/status` |
 | Exam monitoring | API | `/api/v1/exams/{examId}/monitor` and attempt reset/absent |
-| Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot?studentId={studentUuid}` |
+| Student personal schedule | API | `GET /api/v1/student/exams` |
+| Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot` (identity from JWT) |
 | Schedule loading | API | `GET /api/v1/exams/{examId}/schedule` |
 | Automatic scheduling | API | `POST /api/v1/exams/{examId}/schedule/auto` |
 | Manual rescheduling | API | `PUT /api/v1/exams/{examId}/schedule/reschedule` |
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
 
-The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Viva runtime/WebSocket, Grading and Reports.
+## Student personal schedule (Render OpenAPI verified 2026-11-03)
+
+`GET /api/v1/student/exams` uses the existing bearer JWT client. The server selects the authenticated student's attempts; the frontend sends no student ID.
+
+- Query: zero-based `page` (default 0), `size` (default 20, maximum 100), optional `status`: `SCHEDULED`, `READY`, `IN_PROGRESS`, `COMPLETED`, `ABSENT`, `CANCELLED`.
+- Response: `{ content, page, size, totalElements, totalPages }`. Each entry contains `examId`, `attemptId`, `examTitle`, `courseCode`, `courseName`, `slotNumber`, `scheduledStartTime`, `scheduledEndTime`, `status`.
+- Entries are metadata only, ordered by scheduled start descending by the server. HTTP 200 with `content: []` is a successful empty schedule. Missing scheduling times/numbers display as not assigned.
+- Dashboard and My Exams load this list automatically. Filters and page changes request the server. Counts distinguish filtered totals from joinable attempts on the current page. API errors and 403 never substitute mock data.
+- `GET /api/v1/student/exams/{examId}/my-slot` has no `studentId` query. Account identity is used only for client cache isolation; ownership is enforced by the JWT backend.
+- Existing exam routes carry `?attemptId=<assigned attempt UUID>` through detail, equipment check and session. Before entering speech, it must match JWT-derived `my-slot.attemptId`. Legacy exam-only links resolve through my-slot. A URL never grants attempt ownership.
+- Only `READY` and `IN_PROGRESS` entries offer room entry. The schedule does not include an active question turn; the existing speech room still waits until the backend supplies one. No question IDs or content are fabricated.
+
+Validation uses mocked transport/session data for the schedule UI and repository checks. Authenticated Render requests, real microphone/voice and multiple real accounts have not been verified for this change. No Supabase seed was written; the cancelled local seed files were removed.
+
+
+The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Exam Question Configuration, Viva runtime/WebSocket, Grading and Reports.
 
 ## Lecturer course assignment (temporary demo contract)
 

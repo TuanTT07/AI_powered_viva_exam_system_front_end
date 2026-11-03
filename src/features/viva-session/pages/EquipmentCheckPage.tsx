@@ -1,14 +1,17 @@
 import { DemoLabel } from '../../../components/common/inline-notice'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Mic, ShieldCheck, Volume2, Wifi, Sparkles, ArrowRight } from 'lucide-react'
 import { Alert, Button } from '../../../components/ui/primitives'
 import { useOnline } from '../../../hooks/use-online'
 import { useDeviceCheck } from '../use-device-check'
+import { studentRoomSearch } from '../../exams/student-exam-navigation'
 import { runtimeConfig } from '../../../services/api/runtime-config'
 
 export function EquipmentCheckPage({ standalone = false }: { standalone?: boolean }) {
   const { examId = '' } = useParams()
   const navigate = useNavigate()
+  const [search] = useSearchParams()
+  const speechSearch = studentRoomSearch(search)
   const device = useDeviceCheck()
   const online = useOnline()
   const ready = device.mic === 'passed' && device.speaker === 'passed' && online
@@ -207,7 +210,7 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
                 className="w-full flex items-center justify-center gap-2"
                 onClick={() => {
                   device.stop()
-                  navigate(`/student/exams/${examId}/session`)
+                  navigate(`/student/exams/${examId}/session${speechSearch}`)
                 }}
               >
                 Tiếp tục vào phòng thi
@@ -224,7 +227,7 @@ export function EquipmentCheckPage({ standalone = false }: { standalone?: boolea
 
           <Link
             className="button outline w-full text-center"
-            to={standalone ? '/login' : `/student/exams/${examId}`}
+            to={standalone ? '/login' : `/student/exams/${examId}${speechSearch}`}
           >
             {standalone ? 'Về đăng nhập' : 'Quay lại ca thi'}
           </Link>

@@ -1,24 +1,15 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, GraduationCap, ArrowRight, Search, Clock, ShieldCheck, CheckCircle2, Mic, Sparkles } from 'lucide-react'
-import { Alert, Button } from '../../../components/ui/primitives'
-import { isUuid } from '../../question-bank/api-question-repository'
+import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { Calendar, GraduationCap, ArrowRight, Clock, ShieldCheck, CheckCircle2, Mic, Sparkles } from 'lucide-react'
 import type { ExamSession } from '../exam-types'
 import { examStatusMeta } from '../exam-types'
 
 /* StudentPortalView modern hero banner, student KPI status, and cards
    adapted to personal-slot API and mock demo environments. */
-export function StudentPortalView({ name, exams, apiMode, list = false }: { name: string; exams?: ExamSession[]; apiMode: boolean; list?: boolean }) {
-  const navigate = useNavigate(), [examId, setExamId] = useState(''), [error, setError] = useState('')
-  const findSlot = (event: FormEvent) => {
-    event.preventDefault()
-    if (!isUuid(examId.trim())) {
-      setError('Nhập mã kỳ thi hợp lệ được giảng viên cung cấp.')
-      return
-    }
-    navigate(`/student/exams/${encodeURIComponent(examId.trim())}`)
-  }
-
+export function StudentPortalView({ name, exams, apiMode, list = false, apiContent, assignedCount, joinableCount, filtered = false }: {
+  name: string; exams?: ExamSession[]; apiMode: boolean; list?: boolean
+  apiContent?: ReactNode; assignedCount?: number; joinableCount?: number; filtered?: boolean
+}) {
   const upcomingCount = exams?.filter(e => e.status === 'SCHEDULED' || e.status === 'IN_PROGRESS').length ?? 0
 
   return (
@@ -58,34 +49,34 @@ export function StudentPortalView({ name, exams, apiMode, list = false }: { name
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Kỳ thi tham gia</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{apiMode ? filtered ? 'Ca theo bộ lọc' : 'Ca thi được phân' : 'Kỳ thi tham gia'}</span>
             <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
               <Calendar size={18} />
             </span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-900 font-mono">
-              {apiMode ? 'Tra cứu' : (exams?.length ?? 0)}
+              {apiMode ? assignedCount ?? '—' : (exams?.length ?? 0)}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {apiMode ? 'Theo mã kỳ thi' : 'Được phân công'}
+              {apiMode ? 'Theo tài khoản đăng nhập' : 'Được phân công'}
             </p>
           </div>
         </div>
 
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Ca thi sắp tới</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{apiMode ? 'Ca có thể vào' : 'Ca thi sắp tới'}</span>
             <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
               <Clock size={18} />
             </span>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-indigo-600 font-mono">
-              {apiMode ? 'Theo lịch' : `${upcomingCount} ca`}
+              {apiMode ? joinableCount ?? '—' : `${upcomingCount} ca`}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {upcomingCount > 0 ? 'Cần chuẩn bị' : 'Đang cập nhật'}
+              {apiMode ? 'Trong trang đang xem' : upcomingCount > 0 ? 'Cần chuẩn bị' : 'Đang cập nhật'}
             </p>
           </div>
         </div>
@@ -129,42 +120,7 @@ export function StudentPortalView({ name, exams, apiMode, list = false }: { name
       {apiMode ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <section className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 space-y-5 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-                <Search size={20} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Tra cứu ca thi cá nhân
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Nhập mã định danh kỳ thi được giảng viên cung cấp để xác định phòng thi và thứ tự vấn đáp của bạn.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={findSlot} className="space-y-4 pt-1">
-              <div>
-                <label className="block text-xs text-slate-700 font-semibold mb-1.5" htmlFor="student-exam-lookup">
-                  Mã kỳ thi (UUID)
-                </label>
-                <div className="relative">
-                  <input
-                    id="student-exam-lookup"
-                    value={examId}
-                    onChange={event => { setExamId(event.target.value); setError('') }}
-                    className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm transition-all"
-                    placeholder="Ví dụ: e3b0c442-98fc-1c14-9afbf4c8996fb924"
-                    required
-                  />
-                </div>
-              </div>
-              {error && <Alert tone="danger">{error}</Alert>}
-              <Button type="submit">
-                Xem ca thi
-                <ArrowRight size={14} />
-              </Button>
-            </form>
+            {apiContent}
           </section>
 
           <aside className="lg:col-span-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-6 space-y-4 self-start shadow-xs">
