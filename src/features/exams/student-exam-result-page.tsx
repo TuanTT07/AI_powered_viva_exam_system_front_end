@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   FileText,
@@ -16,15 +16,51 @@ import { runtimeConfig } from '../../services/api/runtime-config'
 import { studentResultsDemo } from './mocks/student-results-demo'
 import { GradeAppealDialog } from './grade-appeal-dialog'
 import { getGradeAppeal, cancelGradeAppeal, APPEAL_CATEGORIES, type GradeAppeal } from './grade-appeal-storage'
+import { TranscriptMessage, type TranscriptMessageProps } from '../viva-session/components/TranscriptMessage'
 import '../students/student.css'
+
+function loadInterviewTranscript(examId: string, attemptId?: string): TranscriptMessageProps[] {
+  try {
+    const keys = [
+      attemptId ? `aives.interview.transcript.${attemptId}` : null,
+      examId ? `aives.interview.transcript.${examId}` : null,
+    ].filter(Boolean) as string[]
+
+    for (const k of keys) {
+      const raw = sessionStorage.getItem(k)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    }
+
+    // Fallback: search all sessionStorage keys matching aives.interview.transcript
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i)
+      if (k && k.startsWith('aives.interview.transcript.')) {
+        const raw = sessionStorage.getItem(k)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        }
+      }
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return []
+}
 
 export function StudentExamResultPage() {
   const { examId = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const attemptId = searchParams.get('attemptId') || ''
   const demo = runtimeConfig.dataSource === 'mock'
   const result = demo ? studentResultsDemo.find((r) => r.id === examId) : undefined
   const [appeal, setAppeal] = useState<GradeAppeal | null>(() => (demo && examId ? getGradeAppeal(examId) : null))
   const [appealDialogOpen, setAppealDialogOpen] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null)
+  const [transcript] = useState<TranscriptMessageProps[]>(() => loadInterviewTranscript(examId, attemptId))
   const visibleAppeal = result ? appeal : null
 
   function handleCancelAppeal() {
@@ -178,13 +214,26 @@ export function StudentExamResultPage() {
                 </div>
                 <div>
                   <h2 className="section-title">Biên bản hội thoại</h2>
-                  <p className="section-subtitle">Ghi âm và lược thuật câu trả lời.</p>
+                  <p className="section-subtitle">Ghi âm và lược thuật toàn bộ lượt hỏi - đáp của ca thi.</p>
                 </div>
               </div>
+              {transcript.length > 0 && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  {transcript.length} lượt hội thoại
+                </span>
+              )}
             </div>
-            <p className="px-5 py-10 text-center text-sm text-slate-500">
-              Chưa có biên bản được cấp quyền xem.
-            </p>
+            {transcript.length > 0 ? (
+              <div className="space-y-3 pt-3 border-t border-slate-100 max-h-[460px] overflow-y-auto pr-1">
+                {transcript.map((line, index) => (
+                  <TranscriptMessage key={line.id ?? `${line.role}-${index}`} {...line} />
+                ))}
+              </div>
+            ) : (
+              <p className="px-5 py-10 text-center text-sm text-slate-500">
+                Chưa có biên bản được cấp quyền xem.
+              </p>
+            )}
           </section>
         </div>
 

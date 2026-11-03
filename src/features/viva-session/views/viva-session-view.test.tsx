@@ -84,3 +84,4 @@ describe('VivaSessionView audio waveform and completion behavior', () => {
     expect(screen.getByText(/Phiên thi đã kết thúc và câu trả lời của bạn đã được hệ thống ghi nhận/i)).toBeInTheDocument()
   })
 })
+

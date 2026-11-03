@@ -50,7 +50,7 @@ export function ApiSpeechRoom({
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [answerResetNotice, setAnswerResetNotice] = useState(false);
   const questionTurnId = prompt.questionTurnId;
-  const { state, audioLevel, connect, speak, start, stop, restartAnswer } = useSpeechAnswer(
+  const { state, clientDraft, audioLevel, connect, speak, start, stop, restartAnswer } = useSpeechAnswer(
     slot.attemptId,
     questionTurnId,
     userId,
@@ -96,7 +96,7 @@ export function ApiSpeechRoom({
     }
   }
 
-  const draft = speechDraft(state);
+  const draft = speechDraft(state) || clientDraft;
   const awaiting =
     ["starting", "recording", "finalizing", "checking"].includes(state.phase) ||
     (!!state.answerId && !state.receipt);

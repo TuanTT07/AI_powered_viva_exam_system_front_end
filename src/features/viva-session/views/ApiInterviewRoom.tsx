@@ -17,9 +17,9 @@ import { VivaSessionView } from './VivaSessionView'
 
 const transcriptStorageKey = (attemptId: string) => `aives.interview.transcript.${attemptId}`
 
-function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
+function loadStoredTranscript(attemptId: string, examId?: string): TranscriptMessageProps[] {
   try {
-    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId))
+    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId)) || (examId ? sessionStorage.getItem(`aives.interview.transcript.${examId}`) : null)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) return parsed
@@ -30,9 +30,12 @@ function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
   return []
 }
 
-function saveStoredTranscript(attemptId: string, items: TranscriptMessageProps[]) {
+function saveStoredTranscript(attemptId: string, examId: string | undefined, items: TranscriptMessageProps[]) {
   try {
     sessionStorage.setItem(transcriptStorageKey(attemptId), JSON.stringify(items))
+    if (examId) {
+      sessionStorage.setItem(`aives.interview.transcript.${examId}`, JSON.stringify(items))
+    }
   } catch {
     // Ignore storage errors
   }
@@ -44,7 +47,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const online = useOnline()
   const [busy, setBusy] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
-  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
+  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId, slot.examId))
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const key = ['student-interview', userId, slot.attemptId] as const
 
@@ -58,11 +61,11 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         )
         if (exists) return prev
         const next = [...prev, message]
-        saveStoredTranscript(slot.attemptId, next)
+        saveStoredTranscript(slot.attemptId, slot.examId, next)
         return next
       })
     },
-    [slot.attemptId]
+    [slot.attemptId, slot.examId]
   )
 
   const start = useMutation({
@@ -301,7 +304,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
             )}
             {isCompleted && (
               <>
-                <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result`}>
+                <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result?attemptId=${encodeURIComponent(slot.attemptId)}`}>
                   <FileText size={15} />
                   <span>Xem kết quả &amp; phúc khảo</span>
                 </Link>
