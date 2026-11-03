@@ -431,7 +431,7 @@ export function useSpeechAnswer(
         fail(
           error instanceof Error
             ? error.message
-            : "Không thể kết thúc câu trả lời.",
+            : "Không thể xác nhận câu trả lời.",
         );
     }
   }, [dispatch, fail, getPhase]);

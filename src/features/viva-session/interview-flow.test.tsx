@@ -84,9 +84,9 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     expect(media.audio).toHaveBeenCalledOnce()
     server = { attemptId, status: 'PROCESSING', prompt: null }
     await view.sync()
-    expect(screen.getByRole('button', { name: 'Kết thúc câu trả lời' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Xác nhận câu trả lời' })).toBeInTheDocument()
     expect(media.cancel).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Kết thúc câu trả lời' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận câu trả lời' }))
     await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.end', answerId })))
     const endCommand = media.command.mock.calls.at(-1)![0]
     act(() => media.emit?.({ type: 'answer.finalized', requestId: endCommand.requestId, answerId, data: { transcriptTurnId: '88888888-8888-4888-8888-888888888888', text: 'Đóng gói giúp che giấu trạng thái bên trong.' } }))
@@ -193,7 +193,7 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     expect(await screen.findByText('Câu trả lời chuẩn xác lần 2')).toBeInTheDocument()
 
     // Finish and submit answer
-    fireEvent.click(screen.getByRole('button', { name: 'Kết thúc câu trả lời' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận câu trả lời' }))
     await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.end', answerId: secondAnswerId })))
   })
 })

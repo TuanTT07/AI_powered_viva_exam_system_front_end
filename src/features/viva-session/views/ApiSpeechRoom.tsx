@@ -206,7 +206,7 @@ export function ApiSpeechRoom({
               </InlineNotice>
             ) : state.phase === "recording" ? (
               <InlineNotice>
-                🎙️ Micro đang thu âm trực tiếp. Hãy nói rõ ràng, tự tin. Nhấn <strong>Hoàn thành &amp; Gửi câu trả lời</strong> khi nói xong, hoặc <strong>Bắt sai? Trả lời lại</strong> nếu cần nói lại từ đầu.
+                🎙️ Micro đang thu âm trực tiếp. Hãy nói rõ ràng, tự tin. Nhấn <strong>Xác nhận câu trả lời</strong> khi nói xong, hoặc <strong>Bắt sai? Trả lời lại</strong> nếu cần nói lại từ đầu.
               </InlineNotice>
             ) : (
               <InlineNotice>
@@ -336,12 +336,12 @@ export function ApiSpeechRoom({
               {state.phase === "recording" && (
                 <>
                   <Button
-                    aria-label="Kết thúc câu trả lời"
+                    aria-label="Xác nhận câu trả lời"
                     onClick={() => void stop()}
                     className="border border-slate-300 hover:bg-slate-50 font-bold text-slate-800 bg-white inline-flex items-center gap-2 shadow-2xs px-5 py-2"
                   >
                     <Square size={13} className="fill-slate-800 text-slate-800" />
-                    <span>Kết thúc câu trả lời</span>
+                    <span>Xác nhận câu trả lời</span>
                   </Button>
                   <Button
                     variant="outline"
