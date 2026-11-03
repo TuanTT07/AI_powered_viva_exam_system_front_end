@@ -29,6 +29,21 @@ describe('Global Rubric navigation', () => {
     expect(screen.getByRole('link', { name: 'Tạo Rubric' })).toHaveAttribute('href', '/lecturer/rubrics/new')
   })
 
+  it('filters rubrics by course / subject', async () => {
+    const user = userEvent.setup(); const client = new QueryClient()
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/lecturer/rubrics']}><Routes><Route path="/lecturer/rubrics" element={<GlobalRubricListPage />} /></Routes></MemoryRouter></QueryClientProvider>)
+    expect(await screen.findByRole('heading', { name: 'Quản lý Rubric' })).toBeInTheDocument()
+    
+    // Check subject filter combobox exists
+    const subjectSelect = await screen.findByRole('combobox', { name: 'Lọc theo môn học' })
+    expect(subjectSelect).toBeInTheDocument()
+
+    // Filter by 'database' (Cơ sở dữ liệu)
+    await user.selectOptions(subjectSelect, 'database')
+    const dbRubrics = await screen.findAllByRole('heading', { name: /Cơ sở dữ liệu/ })
+    expect(dbRubrics.length).toBe(5)
+  })
+
   it('validates global create and preserves the global route', async () => {
     const user = userEvent.setup(); const client = new QueryClient(); render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/lecturer/rubrics/new']}><Routes><Route path="/lecturer/rubrics/new" element={<GlobalRubricEditorPage />} /></Routes></MemoryRouter></QueryClientProvider>)
     expect(await screen.findByRole('heading', { name: 'Tạo Rubric' })).toBeInTheDocument()

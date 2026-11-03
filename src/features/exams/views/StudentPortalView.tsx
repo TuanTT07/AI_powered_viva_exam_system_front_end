@@ -1,237 +1,243 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, GraduationCap, ArrowRight, Search, Clock, ShieldCheck, CheckCircle2, Mic, Sparkles } from 'lucide-react'
-import { Alert, Button } from '../../../components/ui/primitives'
-import { isUuid } from '../../question-bank/api-question-repository'
+import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Calendar,
+  GraduationCap,
+  ArrowRight,
+  Clock,
+  ShieldCheck,
+  CheckCircle2,
+  Headphones,
+  Mic,
+  Sparkles,
+  Filter,
+} from 'lucide-react'
 import type { ExamSession } from '../exam-types'
 import { examStatusMeta } from '../exam-types'
+import { StatusBadge } from '../../../components/common/states'
+import '../../students/student.css'
 
-/* StudentPortalView modern hero banner, student KPI status, and cards
-   adapted to personal-slot API and mock demo environments. */
-export function StudentPortalView({ name, exams, apiMode, list = false }: { name: string; exams?: ExamSession[]; apiMode: boolean; list?: boolean }) {
-  const navigate = useNavigate(), [examId, setExamId] = useState(''), [error, setError] = useState('')
-  const findSlot = (event: FormEvent) => {
-    event.preventDefault()
-    if (!isUuid(examId.trim())) {
-      setError('Nhập mã kỳ thi hợp lệ được giảng viên cung cấp.')
-      return
-    }
-    navigate(`/student/exams/${encodeURIComponent(examId.trim())}`)
-  }
-
-  const upcomingCount = exams?.filter(e => e.status === 'SCHEDULED' || e.status === 'IN_PROGRESS').length ?? 0
+export function StudentPortalView({
+  name,
+  exams,
+  apiMode,
+  list = false,
+  apiContent,
+  assignedCount,
+  joinableCount,
+  filtered = false,
+}: {
+  name: string
+  exams?: ExamSession[]
+  apiMode: boolean
+  list?: boolean
+  apiContent?: ReactNode
+  assignedCount?: number
+  joinableCount?: number
+  filtered?: boolean
+}) {
+  const upcomingCount = exams?.filter((e) => e.status === 'SCHEDULED' || e.status === 'IN_PROGRESS').length ?? 0
 
   return (
-    <section className="source-screen space-y-6 max-w-7xl mx-auto pb-16">
-      {/* Student Hero Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 text-white shadow-sm border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 -mb-12 w-64 h-64 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-blue-200">
-              <Sparkles size={13} className="text-amber-400" />
-              <span>Cổng khảo thí học viên</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              {list ? 'Kỳ Thi Của Tôi' : `Xin chào, ${name}`}
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Tra cứu lịch thi cá nhân, kiểm tra thiết bị âm thanh và chuẩn bị tốt nhất cho phiên vấn đáp trực tuyến.
-            </p>
+    <section className="student-page">
+      {/* Modern Hero Greeting / Header Banner matching Lecturer style */}
+      <header className="student-hero">
+        <div className="student-hero-content">
+          <div className="student-hero-badge">
+            <Sparkles size={14} />
+            <span>AIVES · CỔNG KHẢO THÍ SINH VIÊN</span>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/student/results"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm backdrop-blur-sm border border-white/15 transition-all shadow-sm active:scale-95"
-            >
-              <GraduationCap size={16} className="text-blue-300" />
-              <span>Kết quả &amp; Biên bản</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Student KPI Status Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Kỳ thi tham gia</span>
-            <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <Calendar size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-slate-900 font-mono">
-              {apiMode ? 'Tra cứu' : (exams?.length ?? 0)}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {apiMode ? 'Theo mã kỳ thi' : 'Được phân công'}
-            </p>
-          </div>
+          <h1 className="student-hero-title">{list ? 'Kỳ thi của tôi' : `Xin chào, ${name} 👋`}</h1>
+          <p className="student-hero-desc">
+            Theo dõi lịch thi cá nhân, kiểm tra thiết bị và chuẩn bị tốt nhất cho các phiên thi vấn đáp trực tuyến.
+          </p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Ca thi sắp tới</span>
-            <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-              <Clock size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold text-indigo-600 font-mono">
-              {apiMode ? 'Theo lịch' : `${upcomingCount} ca`}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {upcomingCount > 0 ? 'Cần chuẩn bị' : 'Đang cập nhật'}
-            </p>
-          </div>
+        <div className="student-actions">
+          <Link className="button outline" to="/student/results">
+            <GraduationCap size={16} />
+            <span>Kết quả &amp; biên bản</span>
+          </Link>
+          <Link className="button outline" to="/device-check">
+            <Headphones size={16} />
+            <span>Kiểm tra thiết bị</span>
+          </Link>
         </div>
+      </header>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Thiết bị ngoại vi</span>
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <Mic size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-base font-bold text-emerald-700 flex items-center gap-1.5">
-              <CheckCircle2 size={16} />
-              <span>Sẵn sàng test</span>
-            </div>
-            <Link to="/device-check" className="text-xs text-blue-600 hover:underline mt-0.5 inline-block">
-              Kiểm tra micro &amp; loa →
-            </Link>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Quy chế thi</span>
-            <span className="p-2 rounded-xl bg-violet-50 text-violet-600">
-              <ShieldCheck size={18} />
-            </span>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-bold text-slate-900">
-              Bảo mật AI
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Ghi âm &amp; biên bản minh bạch
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {apiMode ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <section className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 space-y-5 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-                <Search size={20} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Tra cứu ca thi cá nhân
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Nhập mã định danh kỳ thi được giảng viên cung cấp để xác định phòng thi và thứ tự vấn đáp của bạn.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={findSlot} className="space-y-4 pt-1">
-              <div>
-                <label className="block text-xs text-slate-700 font-semibold mb-1.5" htmlFor="student-exam-lookup">
-                  Mã kỳ thi (UUID)
-                </label>
-                <div className="relative">
-                  <input
-                    id="student-exam-lookup"
-                    value={examId}
-                    onChange={event => { setExamId(event.target.value); setError('') }}
-                    className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm transition-all"
-                    placeholder="Ví dụ: e3b0c442-98fc-1c14-9afbf4c8996fb924"
-                    required
-                  />
+      {/* 4 Modern KPI Metric Cards */}
+      <section className="student-metric-grid" aria-label="Chỉ số khảo thí">
+        {apiMode && list ? (
+          <>
+            <div className="metric-card metric-card--blue">
+              <div className="metric-header">
+                <span className="metric-label">{filtered ? 'Ca theo bộ lọc' : 'Ca thi được phân'}</span>
+                <div className="metric-icon-wrap metric-icon-wrap--blue">
+                  <Calendar size={20} />
                 </div>
               </div>
-              {error && <Alert tone="danger">{error}</Alert>}
-              <Button type="submit">
-                Xem ca thi
-                <ArrowRight size={14} />
-              </Button>
-            </form>
-          </section>
+              <strong className="metric-value">{assignedCount ?? '—'}</strong>
+              <span className="metric-hint">Theo tài khoản đăng nhập</span>
+            </div>
 
-          <aside className="lg:col-span-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-200/80 rounded-2xl p-6 space-y-4 self-start shadow-xs">
-            <div className="flex items-center gap-2.5 text-blue-900 font-semibold text-sm">
-              <Clock size={18} className="text-blue-600" />
+            <div className="metric-card metric-card--indigo">
+              <div className="metric-header">
+                <span className="metric-label">Ca sẵn sàng vào</span>
+                <div className="metric-icon-wrap metric-icon-wrap--indigo">
+                  <Clock size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">{joinableCount ?? '—'}</strong>
+              <span className="metric-hint">Trong trang hiện tại</span>
+            </div>
+
+            <div className="metric-card metric-card--amber">
+              <div className="metric-header">
+                <span className="metric-label">Bộ lọc trạng thái</span>
+                <div className="metric-icon-wrap metric-icon-wrap--amber">
+                  <Filter size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                {filtered ? 'Đang lọc' : 'Tất cả'}
+              </strong>
+              <span className="metric-hint">Trạng thái ca thi</span>
+            </div>
+
+            <div className="metric-card metric-card--emerald">
+              <div className="metric-header">
+                <span className="metric-label">Hệ thống khảo thí</span>
+                <div className="metric-icon-wrap metric-icon-wrap--emerald">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Trực tuyến
+              </strong>
+              <span className="metric-hint">Sẵn sàng kết nối AI</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="metric-card metric-card--blue">
+              <div className="metric-header">
+                <span className="metric-label">{apiMode ? (filtered ? 'Ca theo bộ lọc' : 'Ca thi được phân') : 'Kỳ thi tham gia'}</span>
+                <div className="metric-icon-wrap metric-icon-wrap--blue">
+                  <Calendar size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">
+                {apiMode ? assignedCount ?? '—' : exams?.length ?? 0}
+              </strong>
+              <span className="metric-hint">Được phân công</span>
+            </div>
+
+            <div className="metric-card metric-card--indigo">
+              <div className="metric-header">
+                <span className="metric-label">{apiMode ? 'Ca có thể vào' : 'Ca thi sắp tới'}</span>
+                <div className="metric-icon-wrap metric-icon-wrap--indigo">
+                  <Clock size={20} />
+                </div>
+              </div>
+              <strong className="metric-value">
+                {apiMode ? joinableCount ?? '—' : `${upcomingCount} ca`}
+              </strong>
+              <span className="metric-hint">
+                {upcomingCount > 0 ? 'Cần chuẩn bị' : 'Đang cập nhật'}
+              </span>
+            </div>
+
+            <Link to="/device-check" className="metric-card metric-card--emerald" title="Kiểm tra micro và loa">
+              <div className="metric-header">
+                <span className="metric-label">Thiết bị ngoại vi</span>
+                <div className="metric-icon-wrap metric-icon-wrap--emerald">
+                  <Mic size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Sẵn sàng test
+              </strong>
+              <span className="metric-hint">Micro &amp; Loa · Bấm để thử</span>
+            </Link>
+
+            <div className="metric-card metric-card--amber">
+              <div className="metric-header">
+                <span className="metric-label">Quy chế thi</span>
+                <div className="metric-icon-wrap metric-icon-wrap--amber">
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+              <strong className="metric-value" style={{ fontSize: '1.4rem' }}>
+                Bảo mật AI
+              </strong>
+              <span className="metric-hint">Biên bản minh bạch</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Main Content Area */}
+      {apiMode ? (
+        <div className="space-y-4">
+          <section className="min-w-0">{apiContent}</section>
+          <aside className="flex flex-col gap-4 rounded-xl border border-blue-100 bg-blue-50/60 p-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-2.5 text-sm font-semibold text-blue-950">
+              <ShieldCheck size={18} className="shrink-0 text-blue-600" aria-hidden="true" />
               <span>Chuẩn bị trước khi dự thi</span>
             </div>
-            <p className="text-xs text-blue-800 leading-relaxed">
-              Kiểm tra thời gian của ca thi, chuẩn bị micro và tai nghe, sau đó thực hiện kiểm tra thiết bị trước khi vào phòng thi.
-            </p>
-            <ul className="text-xs text-blue-800 space-y-2 list-none p-0 m-0">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Không gian yên tĩnh, đủ ánh sáng</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Micro và loa hoạt động rõ ràng, không vang</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                <span>Đường truyền mạng internet ổn định</span>
-              </li>
+            <ul className="m-0 flex list-none flex-wrap gap-x-6 gap-y-2 p-0 text-xs text-slate-600">
+              {['Không gian yên tĩnh', 'Micro và tai nghe hoạt động tốt', 'Kết nối mạng ổn định'].map((tip) => (
+                <li key={tip} className="flex items-center gap-2">
+                  <CheckCircle2 size={14} className="shrink-0 text-emerald-600" aria-hidden="true" />
+                  <span>{tip}</span>
+                </li>
+              ))}
             </ul>
+            <Link
+              to="/device-check"
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-xs border border-blue-200 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+            >
+              Kiểm tra thiết bị <ArrowRight size={13} aria-hidden="true" />
+            </Link>
           </aside>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900">
               Danh sách ca thi được phân công ({exams?.length ?? 0})
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {exams?.map(exam => {
+            {exams?.map((exam) => {
               const statusMeta = examStatusMeta[exam.status]
               return (
                 <article
                   key={exam.id}
-                  className="bg-white border border-slate-200/80 hover:border-slate-300 rounded-2xl p-5 shadow-xs transition-all hover:shadow-md flex flex-col justify-between space-y-4 group"
+                  className="student-slot-item flex flex-col justify-between p-5 space-y-4"
                 >
                   <div className="space-y-3">
                     <div className="flex justify-between items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-mono text-xs font-semibold border border-blue-100">
-                        {exam.subjectCode}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                        {statusMeta.label}
-                      </span>
+                      <span className="subject-code-badge">{exam.subjectCode}</span>
+                      <StatusBadge
+                        label={statusMeta.label}
+                        tone={exam.status === 'IN_PROGRESS' || exam.status === 'SCHEDULED' ? 'info' : 'neutral'}
+                      />
                     </div>
 
                     <div>
-                      <h3 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {exam.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">{exam.subjectName}</p>
+                      <h3 className="student-slot-title">{exam.title}</h3>
+                      <p className="student-slot-course mt-1">{exam.subjectName}</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 text-slate-600">
-                        <Calendar size={13} className="text-slate-400" />
+                    <div className="student-slot-times pt-1">
+                      <span className="student-slot-time-item">
+                        <Calendar size={14} className="text-slate-400" />
                         {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(new Date(exam.scheduledAt))}
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 text-slate-600">
-                        <Clock size={13} className="text-slate-400" />
+                      <span className="student-slot-time-item">
+                        <Clock size={14} className="text-slate-400" />
                         {exam.durationMinutes} phút
                       </span>
                     </div>
@@ -239,14 +245,15 @@ export function StudentPortalView({ name, exams, apiMode, list = false }: { name
 
                   <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-slate-100">
                     <Link
-                      className="button outline"
+                      className="button outline button--sm"
                       to={`/student/exams/${encodeURIComponent(exam.id)}`}
                     >
                       Chi tiết ca thi
                     </Link>
                     <Link
-                      className="button primary"
-                      to={`/student/exams/${encodeURIComponent(exam.id)}/check`}>
+                      className="button primary button--sm"
+                      to={`/student/exams/${encodeURIComponent(exam.id)}/check`}
+                    >
                       Kiểm tra thiết bị
                       <ArrowRight size={14} />
                     </Link>
@@ -260,4 +267,3 @@ export function StudentPortalView({ name, exams, apiMode, list = false }: { name
     </section>
   )
 }
-

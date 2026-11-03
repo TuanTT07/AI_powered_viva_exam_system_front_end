@@ -1,0 +1,291 @@
+/* Modern, Clean & Youthful Administration Portal Styling - Unified with Lecturer Design System */
+
+.admin-page {
+  display: grid;
+  gap: 24px;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-bottom: 40px;
+}
+
+/* Hero Greeting / Header Banner matching Lecturer style */
+.admin-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.admin-hero-content {
+  display: grid;
+  gap: 8px;
+  max-width: 760px;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary, #2563eb);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-hero-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 2.5vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--foreground, #0f172a);
+}
+
+.admin-hero-desc {
+  margin: 0;
+  color: var(--secondary, #475569);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  text-decoration: none;
+}
+
+/* 4 Modern KPI Metric Cards */
+.admin-metric-grid,
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-metric-card,
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--surface, #ffffff);
+  box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.04);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.admin-metric-card:hover,
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -6px rgb(15 23 42 / 0.08);
+}
+
+.metric-card--blue:hover { border-color: #93c5fd; }
+.metric-card--indigo:hover { border-color: #a5b4fc; }
+.metric-card--amber:hover { border-color: #fde68a; }
+.metric-card--emerald:hover { border-color: #6ee7b7; }
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-label {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.metric-icon-wrap--blue { background: #eff6ff; color: #2563eb; }
+.metric-icon-wrap--indigo { background: #e0e7ff; color: #4f46e5; }
+.metric-icon-wrap--amber { background: #fef3c7; color: #d97706; }
+.metric-icon-wrap--emerald { background: #d1fae5; color: #059669; }
+
+.metric-value {
+  display: block;
+  font-size: 2.15rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--foreground, #0f172a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.metric-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--secondary, #94a3b8);
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+  gap: 22px;
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  background: var(--surface, #ffffff);
+  padding: 24px;
+  box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.04);
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--foreground, #0f172a);
+}
+
+.section-subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--secondary, #64748b);
+}
+
+/* Toolbar & Search Surface */
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+}
+
+/* Data Table Surface */
+.admin-table-surface {
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.04);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admin-table th {
+  padding: 14px 20px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-table td {
+  padding: 16px 20px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .admin-metric-grid,
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px 20px;
+  }
+  .admin-metric-grid,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

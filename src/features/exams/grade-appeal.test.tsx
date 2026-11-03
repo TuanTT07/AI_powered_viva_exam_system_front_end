@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { StudentExamResultPage } from './student-exam-result-page'
-import { cancelGradeAppeal } from './grade-appeal-storage'
+import { cancelGradeAppeal, getGradeAppeal } from './grade-appeal-storage'
 
 describe('Student Grade Appeal Feature', () => {
   const examId = 'EXAM-2024-CORE-K21'
@@ -64,8 +64,8 @@ describe('Student Grade Appeal Feature', () => {
       expect(screen.queryByRole('heading', { name: 'Đơn yêu cầu phúc khảo kết quả thi' })).not.toBeInTheDocument()
     })
 
-    expect(screen.getByRole('heading', { name: 'Đơn yêu cầu phúc khảo đã được tiếp nhận' })).toBeInTheDocument()
-    expect(screen.getByText(/Đang thẩm định bản ghi âm & transcript/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Đơn phúc khảo mẫu' })).toBeInTheDocument()
+    expect(getGradeAppeal(examId)?.reason).toContain('đa hình trong Java')
     expect(screen.getAllByText(/Nhận diện giọng nói \(STT\) chưa chính xác/i).length).toBeGreaterThanOrEqual(1)
 
     // The CTA to create appeal should no longer be rendered
@@ -100,7 +100,7 @@ describe('Student Grade Appeal Feature', () => {
     )
     await user.click(screen.getByRole('button', { name: /Gửi đơn phúc khảo/i }))
 
-    expect(await screen.findByRole('heading', { name: 'Đơn yêu cầu phúc khảo đã được tiếp nhận' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Đơn phúc khảo mẫu' })).toBeInTheDocument()
 
     // Cancel appeal
     const cancelBtn = screen.getByRole('button', { name: /Hủy đơn phúc khảo/i })
@@ -108,9 +108,10 @@ describe('Student Grade Appeal Feature', () => {
 
     // Should return to clean state
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'Đơn yêu cầu phúc khảo đã được tiếp nhận' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Đơn phúc khảo mẫu' })).not.toBeInTheDocument()
     })
-    expect(screen.getByText(/Đã hủy đơn phúc khảo thành công\./i)).toBeInTheDocument()
+    expect(screen.getByText('Đã hủy đơn phúc khảo mẫu.')).toBeInTheDocument()
+    expect(getGradeAppeal(examId)).toBeNull()
     expect(screen.getByRole('button', { name: 'Tạo đơn phúc khảo' })).toBeInTheDocument()
   })
 })

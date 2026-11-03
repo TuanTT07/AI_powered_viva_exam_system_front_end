@@ -1,6 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Layers,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
   EmptyState,
   LoadingPage,
   StatusBadge,
@@ -14,9 +24,9 @@ import {
   Spinner,
 } from "../../components/ui/primitives";
 import { useMaterials } from "../learning-materials/material-hooks";
-import { useQuestionTopics } from "../question-bank/question-hooks";
+import { questionKeys, useQuestionTopics } from "../question-bank/question-hooks";
 import { useRubrics } from "../rubrics/rubric-hooks";
-import type { BloomLevel } from "../question-bank/question-types";
+import type { BloomLevel, Question } from "../question-bank/question-types";
 import {
   type GeneratedQuestion,
   type GenerationLanguage,
@@ -34,6 +44,10 @@ import {
 import "./ai-question-generation.css";
 import { runtimeConfig } from "../../services/api/runtime-config";
 import type { QuestionApiBloomLevel } from "../question-bank/api-question-repository";
+import { useExams, examKeys } from "../exams/exam-hooks";
+import { examStatusMeta } from "../exams/exam-types";
+import { examRepository } from "../exams/exam-repository";
+import { questionRepository } from "../question-bank/question-repository";
 
 const blooms: BloomLevel[] = [
   "NHỚ",
@@ -79,6 +93,37 @@ export function AIQuestionGenerationPage() {
   const [confirmSave, setConfirmSave] = useState(false);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
+  const examsQuery = useExams({
+    page: 1,
+    pageSize: 100,
+    q: "",
+    subject: subjectId,
+    status: "",
+  });
+  const allExamsQuery = useExams({
+    page: 1,
+    pageSize: 100,
+    q: "",
+    subject: "",
+    status: "",
+  });
+  const rawExams = examsQuery.data?.items?.length
+    ? examsQuery.data.items
+    : (allExamsQuery.data?.items ?? []);
+  const availableExams = rawExams.filter(
+    (exam) => exam.subjectId === subjectId || !examsQuery.data?.items?.length,
+  );
+
+  const [selectedExamId, setSelectedExamId] = useState("");
+  const [assigningPending, setAssigningPending] = useState(false);
+  const [assignedSuccess, setAssignedSuccess] = useState<{
+    examId: string;
+    examTitle: string;
+    count: number;
+  } | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const readyMaterials = (materials.data ?? []).filter(
     (material) =>
@@ -202,6 +247,98 @@ export function AIQuestionGenerationPage() {
   const saveable = questions.filter(
     (question) => question.selected && !question.issues.length,
   );
+
+  const targetExam = availableExams.find((e) => e.id === selectedExamId);
+
+  const handleAssignToExam = async () => {
+    if (!selectedExamId || !saveable.length || assigningPending) return;
+    setAssigningPending(true);
+    setAssignError(null);
+    setAssignedSuccess(null);
+
+    try {
+      const examToUpdate = availableExams.find((e) => e.id === selectedExamId);
+      if (!examToUpdate) throw new Error("Không tìm thấy kỳ thi đã chọn.");
+
+      if (!isApi) {
+        // 1. Lưu câu hỏi vào ngân hàng với trạng thái ĐÃ DUYỆT để hợp lệ gán vào kỳ thi
+        const approvedQuestions: Question[] = saveable.map((q) => ({
+          id: `Q-${subjectId.toUpperCase()}-${crypto.randomUUID().slice(0, 8)}`,
+          subjectId,
+          content: q.content,
+          topic: q.topic || "AI Generated",
+          bloom: q.bloom,
+          suggestedAnswer: q.suggestedAnswer,
+          rubric: q.rubricId ? "Theo rubric đã gắn" : undefined,
+          source: "AI đề xuất" as const,
+          status: "ĐÃ DUYỆT" as const,
+        }));
+
+        for (const q of approvedQuestions) {
+          await questionRepository.save(q);
+        }
+
+        // 2. Lấy cấu hình câu hỏi hiện tại của kỳ thi và kết hợp
+        const currentConfig = await examRepository.getQuestionConfig(selectedExamId);
+        const existingIds = currentConfig?.questionIds ?? [];
+        const newIds = approvedQuestions.map((q) => q.id);
+        const mergedIds = Array.from(new Set([...existingIds, ...newIds]));
+
+        // 3. Đảm bảo số lượng câu hỏi đạt chuẩn tối thiểu cho kỳ thi
+        const requiredCount = examToUpdate.mainQuestionCount || 4;
+        let finalQuestionIds = mergedIds;
+        if (finalQuestionIds.length < requiredCount) {
+          const existingApproved = (await questionRepository.list(examToUpdate.subjectId || subjectId))
+            .filter((q) => q.status === "ĐÃ DUYỆT" && !finalQuestionIds.includes(q.id))
+            .map((q) => q.id);
+          finalQuestionIds = [...finalQuestionIds, ...existingApproved].slice(0, requiredCount);
+        }
+
+        const nextMode = finalQuestionIds.length > requiredCount ? "RANDOM_POOL" : (currentConfig?.mode ?? "MANUAL");
+        await examRepository.saveQuestionConfig(selectedExamId, {
+          mode: nextMode,
+          questionIds: finalQuestionIds,
+        });
+
+        queryClient.invalidateQueries({ queryKey: examKeys.questionConfig(selectedExamId) });
+        queryClient.invalidateQueries({ queryKey: examKeys.detail(selectedExamId) });
+        queryClient.invalidateQueries({ queryKey: questionKeys.list(subjectId) });
+        queryClient.invalidateQueries({ queryKey: ["lecturer-subjects"] });
+
+        setAssignedSuccess({
+          examId: selectedExamId,
+          examTitle: examToUpdate.title,
+          count: saveable.length,
+        });
+
+        // Bỏ chọn các câu hỏi đã gán thành công
+        const savedContentSet = new Set(saveable.map((q) => q.content));
+        setQuestions((current) =>
+          current.map((q) =>
+            savedContentSet.has(q.content) ? { ...q, selected: false } : q,
+          ),
+        );
+      } else {
+        save.mutateGenerated(subjectId, saveable, {
+          onSuccess: () => {
+            setAssignedSuccess({
+              examId: selectedExamId,
+              examTitle: examToUpdate.title,
+              count: saveable.length,
+            });
+            setQuestions([]);
+          },
+          onError: (err) => {
+            setAssignError(err.message || "Không thể gán câu hỏi vào kỳ thi.");
+          },
+        });
+      }
+    } catch (err: any) {
+      setAssignError(err?.message || "Không thể gán câu hỏi vào kỳ thi đã chọn.");
+    } finally {
+      setAssigningPending(false);
+    }
+  };
 
   if (!subjectId)
     return (
@@ -435,6 +572,119 @@ export function AIQuestionGenerationPage() {
             </div>
           ) : (
             <>
+              {/* Quick Exam Assignment Card */}
+              <div className="exam-quick-assign-card">
+                <div className="exam-quick-assign-header">
+                  <div className="exam-quick-assign-badge">
+                    <Sparkles size={13} />
+                    <span>CHỌN NHANH KỲ THI MONG MUỐN</span>
+                  </div>
+                  <h3 className="exam-quick-assign-title">
+                    Gán câu hỏi trực tiếp vào kỳ thi
+                  </h3>
+                  <p className="exam-quick-assign-desc">
+                    Tự động phê duyệt và đưa các câu hỏi AI đã chọn vào ngân hàng câu hỏi của ca thi.
+                  </p>
+                </div>
+
+                <div className="exam-quick-assign-body">
+                  <div className="exam-quick-assign-row">
+                    <div className="exam-quick-select-wrap">
+                      <label className="sr-only" htmlFor="quick-target-exam">
+                        Chọn kỳ thi mong muốn
+                      </label>
+                      <select
+                        id="quick-target-exam"
+                        aria-label="Chọn kỳ thi mong muốn"
+                        value={selectedExamId}
+                        onChange={(e) => {
+                          setSelectedExamId(e.target.value);
+                          setAssignError(null);
+                        }}
+                        className="exam-quick-select"
+                      >
+                        <option value="">-- Chọn kỳ thi mong muốn gán câu hỏi --</option>
+                        {availableExams.map((exam) => (
+                          <option key={exam.id} value={exam.id}>
+                            {exam.title} ({exam.id} · {examStatusMeta[exam.status]?.label ?? exam.status})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="primary"
+                      disabled={!selectedExamId || !saveable.length || assigningPending}
+                      pending={assigningPending}
+                      onClick={handleAssignToExam}
+                      className="exam-assign-btn"
+                    >
+                      <Send size={14} />
+                      <span>Gán {saveable.length} câu vào kỳ thi này</span>
+                    </Button>
+                  </div>
+
+                  {targetExam && (
+                    <div className="target-exam-quick-meta">
+                      <span className="exam-meta-tag">
+                        <Calendar size={12} />
+                        <span>{targetExam.title}</span>
+                      </span>
+                      <span className="exam-meta-tag">
+                        <Layers size={12} />
+                        <span>Cần: {targetExam.mainQuestionCount} câu chính</span>
+                      </span>
+                      <StatusBadge
+                        label={examStatusMeta[targetExam.status]?.label ?? targetExam.status}
+                        tone={examStatusMeta[targetExam.status]?.tone ?? "neutral"}
+                      />
+                    </div>
+                  )}
+
+                  {assignError && <Alert tone="danger">{assignError}</Alert>}
+
+                  {assignedSuccess && (
+                    <div className="exam-assigned-success-banner">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-semibold text-emerald-950">
+                            Đã gán thành công {assignedSuccess.count} câu hỏi vào kỳ thi “{assignedSuccess.examTitle}”!
+                          </p>
+                          <p className="text-xs text-emerald-800">
+                            Các câu hỏi đã được phê duyệt và cập nhật ngay vào cấu hình đề thi của ca vấn đáp.
+                          </p>
+                          <div className="pt-1 flex items-center gap-3">
+                            <Link
+                              className="text-xs font-semibold text-emerald-700 underline hover:text-emerald-900 inline-flex items-center gap-1"
+                              to={`/lecturer/exams/${assignedSuccess.examId}/questions`}
+                            >
+                              <span>Xem cấu hình câu hỏi kỳ thi</span>
+                              <ChevronRight size={13} />
+                            </Link>
+                            <Link
+                              className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                              to={`/lecturer/exams/${assignedSuccess.examId}`}
+                            >
+                              Chi tiết kỳ thi
+                            </Link>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-emerald-700 hover:text-emerald-950 p-1"
+                          onClick={() => setAssignedSuccess(null)}
+                          aria-label="Đóng thông báo"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="review-actions">
                 <Button
                   onClick={() =>
@@ -496,21 +746,35 @@ export function AIQuestionGenerationPage() {
                     </Alert>
                   )}
                 </span>
-                {isApi ? (
-                  <Button
-                    onClick={() => navigate(`/lecturer/subjects/${subjectId}/questions`)}
-                  >
-                    Mở Ngân hàng câu hỏi để duyệt
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={!saveable.length || save.isPending}
-                    onClick={() => setConfirmSave(true)}
-                    pending={save.isPending}
-                  >
-                    Lưu {saveable.length} câu vào ngân hàng
-                  </Button>
-                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedExamId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!saveable.length || assigningPending}
+                      pending={assigningPending}
+                      onClick={handleAssignToExam}
+                    >
+                      <Send size={14} />
+                      <span>Gán {saveable.length} câu vào kỳ thi</span>
+                    </Button>
+                  )}
+                  {isApi ? (
+                    <Button
+                      onClick={() => navigate(`/lecturer/subjects/${subjectId}/questions`)}
+                    >
+                      Mở Ngân hàng câu hỏi để duyệt
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={!saveable.length || save.isPending}
+                      onClick={() => setConfirmSave(true)}
+                      pending={save.isPending}
+                    >
+                      Lưu {saveable.length} câu vào ngân hàng
+                    </Button>
+                  )}
+                </div>
               </footer>
             </>
           )}

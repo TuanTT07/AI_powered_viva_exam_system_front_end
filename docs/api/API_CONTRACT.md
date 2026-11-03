@@ -106,7 +106,7 @@ The deployed contract has no `/api/rubrics` endpoint. The global lecturer list a
 
 ## Pagination
 
-Contract: TBD.
+Pagination is endpoint-specific. The student schedule contract below uses `page`; lecturer exam responses use the existing Spring Page contract.
 
 If backend uses cursor pagination, do not convert to page-number assumptions in shared abstractions.
 
@@ -136,14 +136,29 @@ The current backend does not expose a lecturer student-search/roster-read endpoi
 | Rubric deletion | API | `DELETE /api/courses/{courseId}/rubrics/{id}` |
 | Exam management CRUD/status | API | `/api/v1/exams`, `/api/v1/exams/{id}`, `/api/v1/exams/{id}/status` |
 | Exam monitoring | API | `/api/v1/exams/{examId}/monitor` and attempt reset/absent |
-| Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot?studentId={studentUuid}` |
+| Student personal schedule | API | `GET /api/v1/student/exams` |
+| Student My Slot | API | `GET /api/v1/student/exams/{examId}/my-slot` (identity from JWT) |
 | Schedule loading | API | `GET /api/v1/exams/{examId}/schedule` |
 | Automatic scheduling | API | `POST /api/v1/exams/{examId}/schedule/auto` |
 | Manual rescheduling | API | `PUT /api/v1/exams/{examId}/schedule/reschedule` |
 
 Only `mock` and `api` are supported data-source modes. There is no hybrid mode and a failed API request never changes source. Optional public demo configuration is provided by `VITE_DEMO_COURSE_ID`, `VITE_DEMO_EXAM_ID` and comma-separated `VITE_DEMO_CANDIDATE_IDS`; these values must be real UUIDs and are never hardcoded in components.
 
-The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Student Exam List, Exam Question Configuration, Viva runtime/WebSocket, Grading and Reports.
+## Student personal schedule (Render OpenAPI verified 2026-11-03)
+
+`GET /api/v1/student/exams` uses the existing bearer JWT client. The server selects the authenticated student's attempts; the frontend sends no student ID.
+
+- Query: zero-based `page` (default 0), `size` (default 20, maximum 100), optional `status`: `SCHEDULED`, `READY`, `IN_PROGRESS`, `COMPLETED`, `ABSENT`, `CANCELLED`.
+- Response: `{ content, page, size, totalElements, totalPages }`. Each entry contains `examId`, `attemptId`, `examTitle`, `courseCode`, `courseName`, `slotNumber`, `scheduledStartTime`, `scheduledEndTime`, `status`.
+- Entries are metadata only, ordered by scheduled start descending by the server. HTTP 200 with `content: []` is a successful empty schedule. Missing scheduling times/numbers display as not assigned.
+- Dashboard and My Exams load this list automatically. Filters and page changes request the server. Counts distinguish filtered totals from joinable attempts on the current page. API errors and 403 never substitute mock data.
+- `GET /api/v1/student/exams/{examId}/my-slot` has no `studentId` query. Account identity is used only for client cache isolation; ownership is enforced by the JWT backend.
+- Existing exam routes carry `?attemptId=<assigned attempt UUID>` through detail, equipment check and session. Before entering speech, it must match JWT-derived `my-slot.attemptId`. Legacy exam-only links resolve through my-slot. A URL never grants attempt ownership.
+- Only `READY` and `IN_PROGRESS` entries offer room entry. The schedule does not include an active question turn; the existing speech room still waits until the backend supplies one. No question IDs or content are fabricated.
+
+Validation uses mocked transport/session data for the schedule UI and repository checks. Authenticated Render requests, real microphone/voice and multiple real accounts have not been verified for this change. No Supabase seed was written; the cancelled local seed files were removed.
+
+The following areas remain unavailable in the verified Swagger contract and are not presented as API-backed: lecturer roster read/remove/import, Exam Question Configuration and Reports. See the speech update below; the older blanket WebSocket limitation is superseded for speech. Grading endpoints now exist in BE main and require a separate FE2 review.
 
 ## Lecturer course assignment (temporary demo contract)
 
@@ -181,3 +196,21 @@ Not core to current AIVES scope.
 ## DTO Mapping
 
 If backend uses transport-oriented DTOs, map them into feature view models explicitly rather than leaking unstable shapes across UI components.
+
+## FE1 speech subset —03/11/2026
+
+Verified BE main source `aef1275`: POST `/api/interview/attempts/{attemptId}/speech-ticket`, GET `/api/interview/attempts/{attemptId}/speech/questions/{questionTurnId}/playback`, GET `/api/interview/attempts/{attemptId}/speech/answers/{answerId}` and ticketed `/ws/interview/speech`. FE API room now integrates these three REST endpoints and speech WS through dedicated adapters; start/current are now integrated as described below; advancement is owned by the backend worker. `questionTurnId` must be an existing AI TranscriptTurn UUID from BE, not a Question/QuestionAttempt ID. The room obtains it from the JWT-owned current interview response; URL questionTurnId metadata is ignored. Backend enforces ownership/current-prompt access.
+
+Playback uses Browser TTS (vi), not generated MP3. Receipt confirms only one answer. See [speech integration](../features/fe1-speech-integration.md) and [actual events](WEBSOCKET_EVENTS.md). Source availability is not proof of deployed provider/DB operation; no live audio/account run was made.
+
+## Interview start/current — Render verified 2026-11-03
+
+- POST `/api/interviews/{attemptId}/start`, no body: student JWT, explicit start button, no automatic POST on mount/reload or retries.
+- GET `/api/interviews/{attemptId}/current`: student JWT; response envelope `ApiResponse<InterviewState>` with `{ attemptId, status, prompt }`.
+- `status`: READY (prompt null), AWAITING_ANSWER (validated prompt), PROCESSING (prompt null), COMPLETED (prompt null).
+- `prompt`: `{ questionAttemptId, questionTurnId, text, deadlineAt }`; deadline may be null. It supplies only the currently authorized question, not a question bank or historical transcript.
+- The FE reads current on entry/reload and after a saved answer. Safe online polling checks for backend advancement/completion; polling and prompt replacement pause during active speech or an unresolved answer receipt. Permission errors stop the room; errors never use URL/mock prompts.
+- Start cancels in-flight current reads; the current response supersedes cached my-slot READY metadata for the active speech session. Completed attempts can reopen a read-only completion view.
+- Backend InterviewWorker selects follow-up/next question and completes the attempt. The FE does not invent next/finish endpoints or interpret a receipt/clock expiry as attempt completion.
+
+Automated tests simulate HTTP, speech WS, PCM and Browser TTS. Actual student JWT/Render voice/provider persistence still require a signed-in live run.

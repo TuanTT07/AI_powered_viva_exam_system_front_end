@@ -1,236 +1,289 @@
 import { DemoLabel } from '../../../components/common/inline-notice'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle2, Mic, ShieldCheck, Volume2, Wifi, Sparkles, ArrowRight } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Headphones,
+  Mic,
+  Volume2,
+  Wifi,
+} from 'lucide-react'
 import { Alert, Button } from '../../../components/ui/primitives'
 import { useOnline } from '../../../hooks/use-online'
 import { useDeviceCheck } from '../use-device-check'
+import { studentRoomSearch } from '../../exams/student-exam-navigation'
 import { runtimeConfig } from '../../../services/api/runtime-config'
+import '../../students/student.css'
 
 export function EquipmentCheckPage({ standalone = false }: { standalone?: boolean }) {
   const { examId = '' } = useParams()
   const navigate = useNavigate()
+  const [search] = useSearchParams()
+  const speechSearch = studentRoomSearch(search)
   const device = useDeviceCheck()
   const online = useOnline()
   const ready = device.mic === 'passed' && device.speaker === 'passed' && online
+  const completed = Number(device.mic === 'passed') + Number(device.speaker === 'passed')
+  const micLabel = {
+    untested: 'Chưa kiểm tra',
+    testing: 'Đang kiểm tra',
+    passed: 'Đạt',
+    error: 'Cần thử lại',
+  }[device.mic]
+  const speakerLabel = {
+    untested: 'Chưa kiểm tra',
+    playing: 'Đang phát',
+    confirm: 'Chờ xác nhận',
+    passed: 'Đạt',
+    error: 'Cần thử lại',
+  }[device.speaker]
+  const statusClass = (passed: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+      passed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'
+    }`
 
   return (
-    <section className="source-screen max-w-6xl mx-auto space-y-6 pb-16">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 text-white shadow-sm border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-medium text-blue-200">
-              <Sparkles size={13} className="text-amber-400" />
-              <span>Cổng khảo thí thí sinh · Phòng chờ</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Kiểm tra thiết bị trước khi thi
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Kiểm tra micro, loa và kết nối trước khi vào phòng vấn đáp để đảm bảo quá trình thi diễn ra thuận lợi.
-            </p>
+    <section className="student-page">
+      {/* Modern Hero Greeting / Header Banner matching Lecturer style */}
+      <header className="student-hero">
+        <div className="student-hero-content">
+          <div className="student-hero-badge">
+            <Headphones size={14} />
+            <span>AIVES · TIỆN ÍCH KHẢO THÍ · KIỂM TRA THIẾT BỊ</span>
           </div>
-        </div>
-      </div>
-
-      {runtimeConfig.dataSource === 'mock' && (
-        <DemoLabel
-          detail={
-            standalone
-              ? 'Kiểm tra thiết bị trên máy; không cấp quyền vào thi.'
-              : 'Phiên demo · Kiểm tra thiết bị thật; phiên thi tiếp theo là mô phỏng.'
-          }
-        />
-      )}
-
-      <div className="grid lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 space-y-5">
-          {/* Microphone Card */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center text-sm font-semibold">
-              <span className="flex items-center gap-2.5 text-slate-900">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-                  <Mic size={18} />
-                </div>
-                <span>Microphone</span>
-              </span>
-              <span
-                className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                  device.mic === 'passed'
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                    : device.mic === 'testing'
-                    ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {device.mic === 'passed'
-                  ? 'Đã nhận âm thanh'
-                  : device.mic === 'testing'
-                  ? 'Đang nghe thử'
-                  : 'Chưa xác nhận'}
-              </span>
-            </div>
-
-            <div className="bg-gradient-to-b from-slate-950 to-slate-900 p-8 sm:p-12 flex flex-col items-center gap-5 text-slate-300 relative overflow-hidden">
-              <div
-                className={`p-6 rounded-full transition-all duration-300 ${
-                  device.mic === 'testing'
-                    ? 'bg-blue-600/30 text-blue-400 ring-8 ring-blue-500/20 scale-110'
-                    : device.mic === 'passed'
-                    ? 'bg-emerald-600/20 text-emerald-400'
-                    : 'bg-slate-800 text-slate-400'
-                }`}
-              >
-                <Mic size={36} />
-              </div>
-              <p className="text-sm text-center text-slate-200 font-medium">
-                Hãy nói một câu ngắn để kiểm tra mức âm thanh.
-              </p>
-              <div className="w-full max-w-md space-y-1.5">
-                <meter
-                  className="w-full h-3 rounded-full overflow-hidden block"
-                  min={0}
-                  max={100}
-                  value={device.volume}
-                  aria-label="Mức âm thanh micro"
-                />
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span>Yên lặng</span>
-                  <span className="font-mono">{device.volume}%</span>
-                  <span>Tối đa</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 sm:p-5 space-y-3">
-              {device.error && <Alert tone="danger">{device.error}</Alert>}
-              <div className="flex flex-wrap gap-2.5">
-                <Button
-                  variant="outline"
-                  onClick={() => void device.startMic()}
-                  disabled={device.mic === 'testing'}
-                >
-                  {device.mic === 'untested'
-                    ? 'Cho phép và kiểm tra micro'
-                    : device.mic === 'testing'
-                    ? 'Hãy nói để kiểm tra…'
-                    : 'Kiểm tra lại micro'}
-                </Button>
-                {device.mic === 'testing' && (
-                  <Button variant="outline" onClick={() => void device.startMic()}>
-                    Khởi động lại kiểm tra
-                  </Button>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Speaker Card */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xs">
-            <h2 className="text-sm font-bold text-slate-900 flex gap-2.5 items-center">
-              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-                <Volume2 size={18} />
-              </div>
-              <span>Loa / tai nghe</span>
-            </h2>
-            <p className="text-sm text-slate-500">Phát tiếng bíp, sau đó xác nhận bạn nghe rõ âm thanh.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                disabled={device.speaker === 'playing'}
-                onClick={() => void device.testSpeaker()}
-              >
-                {device.speaker === 'playing' ? 'Đang phát…' : 'Phát âm thanh thử'}
-              </Button>
-              {device.speaker === 'confirm' && (
-                <Button onClick={device.confirmSpeaker}>Tôi nghe rõ âm thanh</Button>
-              )}
-              {device.speaker === 'passed' && (
-                <span className="text-sm text-emerald-700 flex items-center gap-2 font-semibold">
-                  <CheckCircle2 size={16} /> Đã xác nhận nghe rõ
-                </span>
-              )}
-            </div>
-            {device.speaker === 'error' && (
-              <Alert tone="danger">Không thể phát âm thanh. Kiểm tra loa hoặc tai nghe rồi thử lại.</Alert>
-            )}
-          </section>
+          <h1 className="student-hero-title">Kiểm tra thiết bị</h1>
+          <p className="student-hero-desc">
+            Đảm bảo micro, loa và kết nối mạng hoạt động chuẩn xác trước khi bước vào phiên vấn đáp chính thức.
+          </p>
         </div>
 
-        {/* Right Sidebar */}
-        <aside className="lg:col-span-5 space-y-4">
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xs">
-            <h2 className="text-sm font-bold text-slate-900 flex gap-2 items-center">
-              <ShieldCheck size={18} className="text-blue-600" />
-              <span>Hướng dẫn trước khi vào thi</span>
-            </h2>
-            <ol className="list-decimal pl-5 text-sm text-slate-600 space-y-2.5">
-              <li>Chọn nơi yên tĩnh, sử dụng tai nghe nếu có.</li>
-              <li>Cho phép micro và nói thử để kiểm tra tín hiệu.</li>
-              <li>Nghe âm thanh thử và xác nhận loa hoạt động.</li>
-              <li>Giữ kết nối mạng ổn định trong suốt phiên thi.</li>
-            </ol>
-            <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
-              Kiểm tra thiết bị không xác nhận điều kiện vào thi. Quyền tham gia do hệ thống quyết định.
-            </p>
-          </section>
+        <div className="student-actions">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/80 px-3 py-1.5 text-xs font-bold text-blue-800"
+            role="status"
+          >
+            <CheckCircle2 size={14} />
+            <span>{completed}/2 hoàn tất</span>
+          </span>
+        </div>
+      </header>
 
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xs">
-            <span className="flex gap-2.5 items-center text-sm font-semibold text-slate-900">
-              <Wifi size={18} className="text-blue-600" />
-              <span>Kết nối thiết bị</span>
+      {runtimeConfig.dataSource === 'mock' && <DemoLabel detail="Chế độ mô phỏng" />}
+
+      {/* 2-column Grid for Micro & Speaker */}
+      <div className="dashboard-grid">
+        {/* Microphone Section */}
+        <section aria-labelledby="microphone-title" className="dashboard-section justify-between">
+          <div className="section-header-row">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <Mic size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 id="microphone-title" className="section-title">
+                  Micro
+                </h2>
+                <p className="section-subtitle">Thu âm giọng nói của bạn.</p>
+              </div>
+            </div>
+            <span className={statusClass(device.mic === 'passed')} role="status">
+              {device.mic === 'passed' && <CheckCircle2 size={13} aria-hidden="true" />}
+              {micLabel}
             </span>
-            <span
-              className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                online
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                  : 'bg-rose-50 text-rose-700 border border-rose-200/60'
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8">
+            <div
+              className={`flex h-16 w-16 items-center justify-center rounded-2xl transition-all ${
+                device.mic === 'passed'
+                  ? 'bg-emerald-50 text-emerald-700 ring-4 ring-emerald-100'
+                  : 'bg-blue-50 text-blue-600 ring-4 ring-blue-50'
               }`}
             >
-              {online ? 'Có mạng · chưa xác minh máy chủ' : 'Mất kết nối'}
-            </span>
-          </section>
-
-          {!online && <Alert tone="danger">Kết nối lại mạng để tiếp tục.</Alert>}
-
-          {!standalone && (
-            <div className="border border-blue-200/80 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 p-5 sm:p-6 space-y-4 shadow-xs">
-              <h2 className="text-base font-bold text-blue-900">Sẵn sàng vào phòng vấn đáp</h2>
-              <p className="text-xs text-blue-800 leading-relaxed">
-                {ready
-                  ? 'Thiết bị đã được kiểm tra.'
-                  : 'Hoàn tất micro, loa và kết nối mạng để tiếp tục.'}
-              </p>
-              <Button
-                disabled={!ready}
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => {
-                  device.stop()
-                  navigate(`/student/exams/${examId}/session`)
-                }}
-              >
-                Tiếp tục vào phòng thi
-                <ArrowRight size={15} />
-              </Button>
+              <Mic size={30} aria-hidden="true" />
             </div>
-          )}
+            <p className="text-sm font-medium text-slate-700">
+              {device.mic === 'passed' ? 'Đã nhận tín hiệu giọng nói' : 'Nói thử một câu bất kỳ để thử mic'}
+            </p>
+            {device.mic === 'passed' && (
+              <p className="text-xs text-emerald-700 font-medium">
+                Micro của bạn hoạt động tốt. Hãy tiếp tục kiểm tra Loa/Tai nghe ở cột bên phải.
+              </p>
+            )}
+            <div className="w-full max-w-xs">
+              <meter
+                className="block h-3 w-full [&::-webkit-meter-bar]:rounded-full [&::-webkit-meter-bar]:border-0 [&::-webkit-meter-bar]:bg-slate-200 [&::-webkit-meter-optimum-value]:bg-blue-600 [&::-moz-meter-bar]:bg-blue-600"
+                min={0}
+                max={100}
+                value={device.volume}
+                aria-label="Mức âm thanh micro"
+              />
+              <p className="mt-1 text-right text-xs font-mono font-medium text-slate-500" aria-hidden="true">
+                {Math.round(device.volume)}%
+              </p>
+            </div>
+          </div>
 
-          {!standalone && runtimeConfig.dataSource === 'mock' && (
-            <Link className="button outline w-full text-center" to={`/student/exams/${examId}/session`}>
-              Xem mô phỏng không dùng micro
-            </Link>
-          )}
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            {device.error && <Alert tone="danger">{device.error}</Alert>}
+            {device.mic === 'testing' && (
+              <p role="status" className="text-xs text-slate-500">
+                Cho phép micro trong trình duyệt, rồi nói thử.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={device.mic === 'passed' ? 'outline' : 'primary'}
+                onClick={() => void device.startMic()}
+                disabled={device.mic === 'testing'}
+                className="min-h-11"
+              >
+                {device.mic === 'untested'
+                  ? 'Bật micro'
+                  : device.mic === 'testing'
+                    ? 'Đang nghe…'
+                    : 'Kiểm tra lại micro'}
+              </Button>
+              {device.mic === 'testing' && (
+                <Button variant="outline" onClick={() => void device.startMic()} className="min-h-11">
+                  Thử lại
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
 
-          <Link
-            className="button outline w-full text-center"
-            to={standalone ? '/login' : `/student/exams/${examId}`}
-          >
-            {standalone ? 'Về đăng nhập' : 'Quay lại ca thi'}
-          </Link>
-        </aside>
+        {/* Speaker Section */}
+        <section aria-labelledby="speaker-title" className="dashboard-section justify-between">
+          <div className="section-header-row">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                <Volume2 size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <h2 id="speaker-title" className="section-title">
+                  Loa / tai nghe
+                </h2>
+                <p className="section-subtitle">Nghe câu hỏi từ giám thị AI.</p>
+              </div>
+            </div>
+            <span className={statusClass(device.speaker === 'passed')} role="status">
+              {device.speaker === 'passed' && <CheckCircle2 size={13} aria-hidden="true" />}
+              {speakerLabel}
+            </span>
+          </div>
+
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 text-center">
+            <div
+              className={`flex h-16 w-16 items-center justify-center rounded-2xl transition-all ${
+                device.speaker === 'passed'
+                  ? 'bg-emerald-50 text-emerald-700 ring-4 ring-emerald-100'
+                  : 'bg-slate-100 text-slate-600 ring-4 ring-slate-50'
+              }`}
+            >
+              <Headphones size={30} aria-hidden="true" />
+            </div>
+            {device.speaker === 'confirm' ? (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-slate-700">Bạn có nghe thấy chuông thử nghiệm vừa phát không?</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={device.confirmSpeaker} className="min-h-10">
+                    Nghe rõ
+                  </Button>
+                  <Button variant="outline" onClick={device.rejectSpeaker} className="min-h-10">
+                    Không nghe
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-slate-700">
+                {device.speaker === 'passed'
+                  ? 'Đã xác nhận nghe rõ âm thanh'
+                  : 'Bấm "Phát âm thử" bên dưới để kiểm tra loa hoặc tai nghe'}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            {device.speaker === 'error' && (
+              <Alert tone="danger">Kiểm tra âm lượng và kết nối loa, rồi phát lại.</Alert>
+            )}
+            <Button
+              variant="outline"
+              disabled={device.speaker === 'playing'}
+              onClick={() => void device.testSpeaker()}
+              className="min-h-11"
+            >
+              <Volume2 size={15} aria-hidden="true" />
+              <span>{device.speaker === 'playing' ? 'Đang phát…' : device.speaker === 'confirm' ? 'Phát lại âm thử' : 'Phát âm thử'}</span>
+            </Button>
+          </div>
+        </section>
       </div>
+
+      {/* Network Connectivity Status Bar */}
+      <div
+        className={`flex items-center gap-2.5 rounded-xl border p-4 text-xs font-medium ${
+          online
+            ? 'border-blue-100 bg-blue-50/50 text-blue-800'
+            : 'border-rose-200 bg-rose-50 text-rose-700'
+        }`}
+        role="status"
+      >
+        <Wifi size={16} aria-hidden="true" />
+        <span>
+          {online
+            ? 'Có mạng · Chưa xác minh máy chủ'
+            : 'Mất mạng · Kết nối lại để tiếp tục'}
+        </span>
+      </div>
+
+      {/* Footer Navigation matching Lecturer style */}
+      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 pt-4">
+        <Link
+          className="button outline min-h-11"
+          to={standalone ? '/login' : `/student/exams/${examId}${speechSearch}`}
+        >
+          <ArrowLeft size={15} aria-hidden="true" />
+          <span>{standalone ? 'Về đăng nhập' : 'Quay lại'}</span>
+        </Link>
+
+        {standalone ? (
+          <p className="text-xs text-slate-500">Kiểm tra thiết bị không cấp quyền vào thi.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <p id="device-check-requirements" className="sr-only">
+              Cần xác nhận micro, loa và có kết nối mạng trước khi vào phòng thi.
+            </p>
+            {!ready && (
+              <span className="text-xs text-slate-500 hidden sm:inline">
+                Cần hoàn tất cả 2 bước kiểm tra để vào thi
+              </span>
+            )}
+            <Button
+              disabled={!ready}
+              aria-describedby={!ready ? 'device-check-requirements' : undefined}
+              className="min-h-11 button primary"
+              onClick={() => {
+                device.stop()
+                navigate(`/student/exams/${examId}/session${speechSearch}`)
+              }}
+            >
+              <span>Vào phòng thi</span>
+              <ArrowRight size={15} aria-hidden="true" />
+            </Button>
+          </div>
+        )}
+      </footer>
+
+      {!standalone && runtimeConfig.dataSource === 'mock' && (
+        <div className="pt-2 text-center">
+          <Link className="text-xs text-blue-600 hover:underline" to={`/student/exams/${examId}/session`}>
+            Xem mô phỏng không dùng micro →
+          </Link>
+        </div>
+      )}
     </section>
   )
 }
-
