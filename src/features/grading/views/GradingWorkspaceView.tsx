@@ -11,6 +11,7 @@ import {
   Clock,
   HelpCircle,
   AlertTriangle,
+  AlertCircle,
   Play,
   Pause,
 } from 'lucide-react'
@@ -57,6 +58,7 @@ export function GradingWorkspaceView({
   audioUrl?: string | null
 }) {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const [previewSampleAudio, setPreviewSampleAudio] = useState(false)
   const total = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0)
   const aiTotal = criteria.reduce((sum, c) => sum + c.ai, 0)
 
@@ -268,10 +270,41 @@ export function GradingWorkspaceView({
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-slate-500">Chưa có bản ghi được phép phát lại.</p>
-                  <Button variant="outline" disabled>
-                    <Mic size={15} /> Nghe bản ghi
-                  </Button>
+                  <div className="space-y-3">
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 space-y-1.5">
+                    <p className="font-medium flex items-center gap-1.5 text-slate-700">
+                      <AlertCircle size={14} className="text-amber-500 shrink-0" /> Chưa có file âm thanh thực tế từ phòng thi
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      API Backend trả về <code>audioUrl: null</code> vì ca thi thử nghiệm này chưa có file ghi âm micro tải lên kho lưu trữ máy chủ.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" disabled>
+                      <Mic size={14} /> Bản ghi chính thức (Trống)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setPreviewSampleAudio(!previewSampleAudio)}
+                    >
+                      <Volume2 size={14} /> {previewSampleAudio ? 'Đóng audio mẫu' : 'Nghe thử audio mẫu'}
+                    </Button>
+                  </div>
+                  {previewSampleAudio && (
+                    <div className="bg-blue-50/60 p-3 rounded-lg border border-blue-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-blue-900">Audio mẫu kiểm thử (Sample Demo)</span>
+                        <Volume2 size={16} className="text-blue-500" />
+                      </div>
+                      <audio controls className="w-full h-8" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">
+                        Trình duyệt không hỗ trợ phát audio.
+                      </audio>
+                      <p className="text-[10px] text-blue-600">
+                        File âm thanh mẫu dùng để kiểm tra trình phát của giao diện chấm thi.
+                      </p>
+                    </div>
+                  )}
+                </div>
                 </>
               )}
             </section>
