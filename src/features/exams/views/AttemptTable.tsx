@@ -34,8 +34,13 @@ export function AttemptTable({
         </thead>
         <tbody>
           {rows.map(row => {
-            const evalItem = evaluations?.find(e => e.questionAttemptId === row.attemptId || e.id === row.attemptId)
-              ?? (evaluations && evaluations.length === 1 && rows.length === 1 ? evaluations[0] : undefined)
+            const evalItem = evaluations?.find(e =>
+              (e.examAttemptId && e.examAttemptId === row.attemptId) ||
+              (e.studentId && e.studentId === row.studentId) ||
+              (e.studentCode && e.studentCode === row.studentCode) ||
+              e.questionAttemptId === row.attemptId ||
+              e.id === row.attemptId
+            ) ?? (evaluations && evaluations.length === 1 && rows.length === 1 ? evaluations[0] : undefined)
             const stored = getStoredGrading(examId, evalItem?.questionAttemptId ?? row.attemptId)
             const isConfirmed = Boolean(evalItem?.status === 'GRADED' || stored?.confirmed)
             const confirmedScore = evalItem?.finalScore ?? stored?.finalScore

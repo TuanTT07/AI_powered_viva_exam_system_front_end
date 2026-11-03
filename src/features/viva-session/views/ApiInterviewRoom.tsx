@@ -17,9 +17,9 @@ import { VivaSessionView } from './VivaSessionView'
 
 const transcriptStorageKey = (attemptId: string) => `aives.interview.transcript.${attemptId}`
 
-function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
+function loadStoredTranscript(attemptId: string, examId?: string): TranscriptMessageProps[] {
   try {
-    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId))
+    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId)) || (examId ? sessionStorage.getItem(`aives.interview.transcript.${examId}`) : null)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) return parsed
@@ -30,9 +30,12 @@ function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
   return []
 }
 
-function saveStoredTranscript(attemptId: string, items: TranscriptMessageProps[]) {
+function saveStoredTranscript(attemptId: string, examId: string | undefined, items: TranscriptMessageProps[]) {
   try {
     sessionStorage.setItem(transcriptStorageKey(attemptId), JSON.stringify(items))
+    if (examId) {
+      sessionStorage.setItem(`aives.interview.transcript.${examId}`, JSON.stringify(items))
+    }
   } catch {
     // Ignore storage errors
   }
@@ -53,7 +56,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const online = useOnline()
   const [busy, setBusy] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
-  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
+  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId, slot.examId))
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const violationKey = `aives.interview.violations.${userId}.${slot.attemptId}`
   const [violations, setViolations] = useState(() => readViolations(violationKey))
@@ -79,11 +82,11 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         )
         if (exists) return prev
         const next = [...prev, message]
-        saveStoredTranscript(slot.attemptId, next)
+        saveStoredTranscript(slot.attemptId, slot.examId, next)
         return next
       })
     },
-    [slot.attemptId]
+    [slot.attemptId, slot.examId]
   )
 
   const start = useMutation({
@@ -202,6 +205,16 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Quay lại chi tiết ca thi</Link>
   </section>
 
+  if (monitoring && document.fullscreenEnabled && !fullscreen) return (
+    <section className="state mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-6">
+      <h2 className="text-lg font-semibold">Quay lại toàn màn hình để tiếp tục</h2>
+      {violations > 0 && <p role="status">Cảnh báo {violations}/3. Lần thứ tư sẽ khóa phòng thi.</p>}
+      <p>Thời gian trả lời vẫn tiếp tục chạy.</p>
+      {fullscreenFailed && <p role="alert">Trình duyệt chưa cho phép mở toàn màn hình. Hãy thử lại.</p>}
+      <Button onClick={enterFullscreen}>Quay lại toàn màn hình</Button>
+    </section>
+  )
+
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
   if (current.isError && !busy) return (
     <section className="state" style={{ maxWidth: 640, margin: '40px auto', padding: '24px' }}>
@@ -236,7 +249,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     return (
       <>
       {(violations > 0 || !fullscreen) && <aside role="status" className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Hãy bật toàn màn hình trong khi thi.'}
+        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Bạn có thể tiếp tục thi ở chế độ cửa sổ.'}
           {fullscreenFailed && ' Trình duyệt chưa cho phép mở toàn màn hình.'}</span>
         {!fullscreen && document.fullscreenEnabled && <Button variant="outline" onClick={enterFullscreen}>Bật toàn màn hình</Button>}
       </aside>}
@@ -297,10 +310,23 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </div>
   ) : undefined
 
-  const totalSteps = slot.examConfig?.maxMainQuestions ?? 3
+  const answeredCount = history.filter((h) => h.role === 'student').length
+  const aiQuestionsCount = Math.max(
+    history.filter((h) => h.role === 'ai').length,
+    activePrompt ? 1 : 0
+  )
+  const configuredMax =
+    slot.examConfig?.maxMainQuestions ??
+    (slot as any).examConfig?.questionCount ??
+    (slot as any).mainQuestionCount ??
+    (slot as any).questionCount ??
+    (slot as any).maxQuestions ??
+    (slot as any).totalQuestions ??
+    3
+  const totalSteps = Math.max(configuredMax, answeredCount, aiQuestionsCount, 1)
   const currentStep = isCompleted
     ? totalSteps
-    : Math.min(totalSteps, Math.max(1, (history.filter((h) => h.role === 'ai').length || 0) + 1))
+    : Math.max(1, answeredCount + 1)
   const startTimeFormatted = slot.scheduledStartTime
     ? new Date(slot.scheduledStartTime).toLocaleString('vi-VN', {
         hour: '2-digit',
@@ -381,7 +407,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
             )}
             {isCompleted && (
               <>
-                <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result`}>
+                <Link className="button primary inline-flex items-center gap-1.5" to={`/student/exams/${encodeURIComponent(slot.examId)}/result?attemptId=${encodeURIComponent(slot.attemptId)}`}>
                   <FileText size={15} />
                   <span>Xem kết quả &amp; phúc khảo</span>
                 </Link>

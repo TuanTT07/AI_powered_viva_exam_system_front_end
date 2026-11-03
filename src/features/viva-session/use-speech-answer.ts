@@ -25,6 +25,8 @@ export function useSpeechAnswer(
 ) {
   const [state, reactDispatch] = useReducer(speechReducer, initialSpeechState);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [clientDraft, setClientDraft] = useState("");
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const current = useRef(initialSpeechState);
   const getPhase = useCallback(() => current.current.phase, []);
   const dispatch = useCallback((action: SpeechAction) => {
@@ -51,6 +53,13 @@ export function useSpeechAnswer(
     clearTimeout(timer.current);
     tts.current?.abort();
     setAudioLevel(0);
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Ignore
+    }
+    recognitionRef.current = null;
+    setClientDraft("");
     capture.current?.cancel();
     capture.current = null;
     socket.current?.close();
@@ -74,6 +83,13 @@ export function useSpeechAnswer(
       if (pending.current !== answerId) return;
       clearTimeout(timer.current);
       setAudioLevel(0);
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore
+      }
+      recognitionRef.current = null;
+      setClientDraft("");
       capture.current?.cancel();
       capture.current = null;
       dispatch({ type: "SAVED", answerId, receipt });
@@ -137,28 +153,66 @@ export function useSpeechAnswer(
             deadline: data.deadline,
           });
           capture.current?.start();
+          try {
+            setClientDraft("");
+            type SpeechRecCtor = new () => {
+              continuous: boolean;
+              interimResults: boolean;
+              lang: string;
+              onresult: (e: any) => void;
+              onerror: () => void;
+              start: () => void;
+              stop: () => void;
+            };
+            const Win = window as unknown as {
+              SpeechRecognition?: SpeechRecCtor;
+              webkitSpeechRecognition?: SpeechRecCtor;
+            };
+            const SpeechRec = Win.SpeechRecognition || Win.webkitSpeechRecognition;
+            if (SpeechRec) {
+              const rec = new SpeechRec();
+              rec.continuous = true;
+              rec.interimResults = true;
+              rec.lang = "vi-VN";
+              rec.onresult = (e: any) => {
+                let combined = "";
+                for (let i = 0; i < e.results.length; i++) {
+                  combined += e.results[i][0].transcript + " ";
+                }
+                const trimmed = combined.trim();
+                if (trimmed) setClientDraft(trimmed);
+              };
+              rec.onerror = () => {};
+              rec.start();
+              recognitionRef.current = rec;
+            }
+          } catch {
+            // Ignore
+          }
           break;
         }
         case "transcript.partial":
-        case "transcript.final":
-          if (event.answerId !== pending.current) return;
-          if (
-            typeof data.segmentId !== "string" ||
-            !/^\d+$/.test(data.segmentId) ||
-            typeof data.revision !== "number" ||
-            !Number.isSafeInteger(data.revision) ||
-            typeof data.text !== "string"
-          )
-            throw new Error("Transcript không hợp lệ.");
+        case "transcript.final": {
+          if (event.answerId && pending.current && event.answerId !== pending.current) return;
+          const targetAnswerId = pending.current || event.answerId;
+          if (!targetAnswerId) return;
+
+          const rawSegmentId = data.segmentId ?? 0;
+          const segmentId = String(rawSegmentId);
+          const revision = typeof data.revision === "number" ? data.revision : 0;
+          const text = typeof data.text === "string" ? data.text : "";
+          if (!text) return;
+
           dispatch({
             type: "SEGMENT",
-            answerId: event.answerId!,
-            segmentId: data.segmentId,
-            revision: data.revision,
-            text: data.text,
+            answerId: targetAnswerId,
+            segmentId,
+            revision,
+            text,
             final: event.type === "transcript.final",
           });
           break;
+        }
         case "answer.finalizing":
           if (event.answerId !== pending.current) return;
           serverFinalizing.current = true;
@@ -435,6 +489,12 @@ export function useSpeechAnswer(
   const stop = useCallback(async () => {
     if (getPhase() !== "recording" || !pending.current) return;
     setAudioLevel(0);
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Ignore
+    }
+    recognitionRef.current = null;
     dispatch({ type: "FINALIZING" });
     const id = generation.current;
     try {
@@ -539,6 +599,13 @@ export function useSpeechAnswer(
   const restartAnswer = useCallback(async () => {
     if (!active) return;
     clearTimeout(timer.current);
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Ignore
+    }
+    recognitionRef.current = null;
+    setClientDraft("");
     capture.current?.cancel();
     capture.current = null;
     serverFinalizing.current = false;
@@ -561,5 +628,5 @@ export function useSpeechAnswer(
     await connect();
   }, [active, connect, dispatch, key]);
 
-  return { state, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
+  return { state, clientDraft, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

@@ -21,4 +21,26 @@ describe('student result and receipt authority', () => {
     expect(screen.getByRole('heading', { name: 'Chưa có biên nhận nộp bài' })).toBeInTheDocument()
     expect(screen.queryByText('Đã hoàn tất phiên mô phỏng')).not.toBeInTheDocument()
   })
+  it('renders recorded interview transcript when stored in sessionStorage', () => {
+    runtimeConfig.dataSource = 'api'
+    const attemptId = 'attempt-123'
+    sessionStorage.setItem(
+      `aives.interview.transcript.${attemptId}`,
+      JSON.stringify([
+        { id: 't1', role: 'ai', text: 'Em hãy giải thích tính đóng gói trong Java.', timestamp: '10:01' },
+        { id: 't2', role: 'student', text: 'Đóng gói là việc ẩn giấu thuộc tính bên trong lớp.', timestamp: '10:02' },
+      ])
+    )
+    render(
+      <MemoryRouter initialEntries={[`/student/exams/exam-123/result?attemptId=${attemptId}`]}>
+        <Routes>
+          <Route path="/student/exams/:examId/result" element={<StudentExamResultPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Em hãy giải thích tính đóng gói trong Java.')).toBeInTheDocument()
+    expect(screen.getByText('Đóng gói là việc ẩn giấu thuộc tính bên trong lớp.')).toBeInTheDocument()
+    expect(screen.getByText('2 lượt hội thoại')).toBeInTheDocument()
+    sessionStorage.clear()
+  })
 })

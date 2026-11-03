@@ -273,6 +273,8 @@ export function VivaSessionView({
     (phase.toLowerCase().includes('hoàn tất') ||
       phase.toLowerCase().includes('kết thúc') ||
       phase.toLowerCase().includes('completed'))
+  const safeCurrentStep = Math.max(1, currentStep)
+  const safeTotalSteps = Math.max(safeCurrentStep, totalSteps, 1)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -440,7 +442,7 @@ export function VivaSessionView({
                   completed ? 'text-emerald-700' : 'text-blue-600'
                 }`}
               >
-                {completed ? 'Hoàn thành phiên thi' : `Câu hỏi (Câu ${currentStep}/${totalSteps})`}
+                {completed ? 'Hoàn thành phiên thi' : `Câu hỏi (Câu ${safeCurrentStep}/${safeTotalSteps})`}
               </h3>
               <div className="text-base md:text-lg font-bold text-slate-900 leading-snug">
                 {question || 'Chờ câu hỏi được hệ thống cấp quyền.'}
@@ -607,7 +609,7 @@ export function VivaSessionView({
                 <span>Tiến trình phiên thi</span>
               </div>
               <span className="text-xs font-bold text-slate-400">
-                {completed ? `${totalSteps}/${totalSteps} câu` : `${currentStep}/${totalSteps} câu`}
+                {completed ? `${safeTotalSteps}/${safeTotalSteps} câu` : `${safeCurrentStep}/${safeTotalSteps} câu`}
               </span>
             </div>
 
@@ -618,17 +620,17 @@ export function VivaSessionView({
                 style={{
                   width: completed
                     ? '100%'
-                    : `${Math.min(100, Math.max(10, (currentStep / totalSteps) * 100))}%`,
+                    : `${Math.min(100, Math.max(10, (safeCurrentStep / safeTotalSteps) * 100))}%`,
                 }}
               />
             </div>
 
             {/* Question Step List */}
-            <div className="space-y-2 pt-1 text-xs">
-              {Array.from({ length: totalSteps }).map((_, idx) => {
+            <div className="space-y-2 pt-1 text-xs max-h-[320px] overflow-y-auto pr-1">
+              {Array.from({ length: safeTotalSteps }).map((_, idx) => {
                 const qNum = idx + 1
-                const isDone = completed ? true : qNum < currentStep
-                const isCurrent = !completed && qNum === currentStep
+                const isDone = completed ? true : qNum < safeCurrentStep
+                const isCurrent = !completed && qNum === safeCurrentStep
                 return (
                   <div
                     key={qNum}
