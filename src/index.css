@@ -441,24 +441,6 @@ textarea:focus {
   color: #0f172a;
   background: rgba(0, 0, 0, 0.04);
 }
-.login-sso-vnu {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 1px solid #bfdbfe !important;
-  background: #eff6ff !important;
-  color: #1d4ed8 !important;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 12px;
-  transition: all 0.15s ease;
-  cursor: pointer;
-}
-.login-sso-vnu:hover { background: #dbeafe !important; }
 .login-sso-google {
   display: flex;
   align-items: center;
