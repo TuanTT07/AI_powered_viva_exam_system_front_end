@@ -13,9 +13,7 @@ import {
   ArrowRight,
   Mic,
   ExternalLink,
-  Building2,
   Sparkles,
-  Info,
 } from "lucide-react";
 import { Dialog } from "../../components/ui/primitives";
 import { LoadingPage } from "../../components/common/states";
@@ -49,7 +47,6 @@ export function LoginPage() {
   // Dialog states
   const [showForgotDialog, setShowForgotDialog] = useState(false);
   const [showRegulationsDialog, setShowRegulationsDialog] = useState(false);
-  const [ssoMessage, setSsoMessage] = useState<string | null>(null);
 
   const emailErrorId = useId();
   const passwordErrorId = useId();
@@ -241,35 +238,6 @@ export function LoginPage() {
                   Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.
                 </div>
               )}
-
-              {/* SSO Options */}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setSsoMessage("Cổng VNU SSO hiện đang được tích hợp cùng phòng khảo thí. Vui lòng đăng nhập bằng Email học thuật được cấp phía dưới.")}
-                  className="login-sso-vnu"
-                >
-                  <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Đăng nhập VNU SSO</span>
-                </button>
-              </div>
-
-              {/* SSO Message Notice */}
-              {ssoMessage && (
-                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800 flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-1.5">
-                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>{ssoMessage}</span>
-                  </div>
-                  <button type="button" onClick={() => setSsoMessage(null)} className="text-blue-600 hover:text-blue-900 font-bold p-0">×</button>
-                </div>
-              )}
-
-              {/* Divider */}
-              <div className="relative flex items-center justify-center my-3">
-                <div className="border-t border-slate-200 w-full" />
-                <span className="absolute bg-white px-3 text-[11px] font-bold text-slate-600 tracking-wider">HOẶC</span>
-              </div>
 
               {/* Login Form */}
               <form className="space-y-4" noValidate onSubmit={handleSubmit}>
