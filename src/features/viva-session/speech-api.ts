@@ -6,7 +6,7 @@ import {
 export type QuestionPlayback = {
   questionTurnId: string;
   text: string;
-  ttsProvider: "browser";
+  ttsProvider: "deepgram";
   language: string;
 };
 export type SpeechTicket = {
@@ -22,6 +22,24 @@ function path(attemptId: string) {
   return `/api/interview/attempts/${attemptId}`;
 }
 export const speechApi = {
+  async audio(attemptId: string, turnId: string, signal?: AbortSignal): Promise<Blob> {
+    if (!isSpeechUuid(turnId)) throw new ApiError("Chưa có lượt hỏi hợp lệ.");
+    const data = unwrapApiEnvelope(await apiClient.request<ApiEnvelope<{
+      audioId: string; contentType: string; expiresAt: string; audioPath: string;
+    }>>(`${path(attemptId)}/speech/questions/${turnId}/audio`, {
+      method: "POST", signal, timeoutMs: 65_000,
+    }));
+    if (!data || !isSpeechUuid(data.audioId) || data.contentType !== "audio/mpeg"
+      || data.audioPath !== `/api/interview/speech/audio/${data.audioId}`
+      || !Number.isFinite(Date.parse(data.expiresAt)) || Date.parse(data.expiresAt) <= Date.now())
+      throw new ApiError("Dữ liệu audio câu hỏi không hợp lệ.");
+    const blob = await apiClient.request<Blob>(data.audioPath, {
+      signal, responseType: "blob", headers: { Accept: "audio/mpeg" },
+    });
+    if (!blob.size || blob.type.split(";")[0] !== "audio/mpeg")
+      throw new ApiError("File audio câu hỏi không hợp lệ.");
+    return blob;
+  },
   async playback(
     attemptId: string,
     turnId: string,
@@ -39,7 +57,7 @@ export const speechApi = {
       data.questionTurnId !== turnId ||
       typeof data.text !== "string" ||
       !data.text.trim() ||
-      data.ttsProvider !== "browser" ||
+      data.ttsProvider !== "deepgram" ||
       typeof data.language !== "string" ||
       !/^vi(?:-|$)/i.test(data.language)
     )

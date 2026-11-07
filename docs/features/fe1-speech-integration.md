@@ -34,3 +34,21 @@ Ngày03/11/2026. Đã nối playback, speech-ticket, receipt, WebSocket speech v
 Đã có start/current và worker BE tự tiến câu/hỏi phụ/hoàn tất. FE poll current mỗi 2 giây khi online và an toàn; tạm dừng khi kết nối/đọc/thu âm/chờ receipt, giữ snapshot nếu request cũ trả về giữa lúc thu. Sau receipt, FE đồng bộ lại; receipt của một câu không tự kết luận hoàn tất bài. Start hủy GET đang chạy và không tự retry POST. Slot READY có thể còn cache sau start; current là nguồn trạng thái speech. Câu hỏi/deadline hiển thị từ prompt; answer.started.deadline được ưu tiên khi thu. Không phân loại chính/hỏi phụ hoặc bịa lịch sử/điểm nếu DTO không cấp.
 
 Kiểm chứng tự động có giả lập transport/WS/PCM/TTS cho start → current → question → answer.started → audio → finalized → processing → lượt tiếp theo → completed; reload không gọi start; không dùng ID trên URL; lỗi quyền/mạng và tra receipt sau disconnect. Đây không phải bằng chứng Deepgram/micro/DB đã chạy thật. Browser kiểm thử hiện chưa đăng nhập sinh viên; điều khiển Brave bị timeout khi chọn tab. Cần đăng nhập tài khoản sinh viên có attempt READY và câu hỏi đã phân để kiểm thử live. Không ghi token, transcript hoặc audio test thật vào repo.
+
+
+## Question audio update — 2026-11-07
+TTS provider metadata is now `deepgram`. The student listen button calls
+POST `/api/interview/attempts/{attemptId}/speech/questions/{questionTurnId}/audio`,
+then downloads `audioPath` through the authenticated API client as an MP3 Blob.
+Playback uses HTML audio, cancels when leaving/changing questions and releases its Blob URL.
+Backend defaults to female `flux-hoa-vi` (Early Access). No provider key or browser voice installation is needed in FE.
+Existing browser-TTS documentation above is superseded by this flow.
+
+
+## Minh voice and latency update — 2026-11-07
+The current backend default is male `flux-minh-vi`. The room prepares the current
+question MP3 as soon as the active question arrives, before speech connection or listen.
+Listen shares the pending request; replay reuses its Blob within the current question.
+Preparation is aborted/discarded on question, user or active-state change and unmount.
+Speculative errors are silent and retried on explicit listen. No recording starts during playback.
+First playback may still wait for the provider if preparation has not finished.

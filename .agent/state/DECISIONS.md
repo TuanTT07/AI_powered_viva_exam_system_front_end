@@ -86,3 +86,11 @@ Role-specific behavior is handled through permissions, routes and layouts.
 **Reason:** This implements the approved ownership model without storing backend entities in a client store. API/realtime contracts remain behind service boundaries until confirmed.
 
 **Testing baseline:** Vitest, Testing Library and jsdom.
+
+
+## 2026-11-07 — Female Deepgram TTS
+User requested replacing browser voice playback. Backend defaults to flux-hoa-vi; frontend fetches private MP3 with JWT and cancels playback on disposal. REST/WS ttsProvider is deepgram; deploy backend/frontend together. Existing browser-TTS docs are superseded by this decision. No new dependency or state pattern.
+
+
+## 2026-11-07 — Minh voice and question audio preparation
+User requested male Minh and lower playback delay. Backend default/local model is flux-minh-vi. Frontend prefetches only the current question and shares its in-flight/resolved Blob for playback; cancels on question/user/lifecycle change. Explicit listen retries speculative failure. This supersedes the earlier female Hoa default.

@@ -18,7 +18,7 @@ const phases: Record<SpeechPhase, string> = {
   idle: "Chưa kết nối âm thanh",
   connecting: "Đang xác minh lượt hỏi và kết nối",
   ready: "Sẵn sàng trả lời",
-  speaking: "Giám khảo AI đang đọc câu hỏi",
+  speaking: "Đang chuẩn bị và phát audio câu hỏi",
   starting: "Đang mở micro thu âm",
   recording: "Đang thu âm câu trả lời",
   finalizing: "Đang xác nhận lưu câu trả lời",
@@ -398,7 +398,7 @@ export function ApiSpeechRoom({
                     className="inline-flex items-center gap-1.5"
                   >
                     <Volume2 size={15} className="text-blue-600" />
-                    <span>Nghe AI đọc câu hỏi</span>
+                    <span>Nghe câu hỏi</span>
                   </Button>
                   <Button
                     disabled={!online}
