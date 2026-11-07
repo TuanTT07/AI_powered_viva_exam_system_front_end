@@ -60,16 +60,8 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const violationKey = `aives.interview.violations.${userId}.${slot.attemptId}`
   const [violations, setViolations] = useState(() => readViolations(violationKey))
-  const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement)
-  const [fullscreenFailed, setFullscreenFailed] = useState(false)
   const lastViolation = useRef(-Infinity)
   const locked = violations >= 4
-  const enterFullscreen = () => {
-    if (!document.fullscreenEnabled || document.fullscreenElement) return
-    void document.documentElement.requestFullscreen()
-      .then(() => setFullscreenFailed(false))
-      .catch(() => setFullscreenFailed(true))
-  }
   const key = ['student-interview', userId, slot.attemptId] as const
 
   const appendHistory = useCallback(
@@ -118,7 +110,6 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
 
   useEffect(() => {
     if (!monitoring) return
-    let wasFullscreen = !!document.fullscreenElement
     const record = () => {
       const now = performance.now()
       if (now - lastViolation.current < 750) return
@@ -134,25 +125,11 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     const onVisibility = () => {
       if (document.hidden) record()
     }
-    const onFullscreen = () => {
-      const active = !!document.fullscreenElement
-      setFullscreen(active)
-      if (wasFullscreen && !active) record()
-      wasFullscreen = active
-    }
-    setFullscreen(wasFullscreen)
     document.addEventListener('visibilitychange', onVisibility)
-    document.addEventListener('fullscreenchange', onFullscreen)
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
-      document.removeEventListener('fullscreenchange', onFullscreen)
     }
   }, [monitoring, violationKey, violations])
-
-  useEffect(() => {
-    if ((locked || snapshot?.status === 'COMPLETED') && document.fullscreenElement)
-      void document.exitFullscreen().catch(() => {})
-  }, [locked, snapshot?.status])
 
   useEffect(() => {
     if (snapshot?.status === 'AWAITING_ANSWER' && snapshot.prompt) {
@@ -201,19 +178,9 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   )
 
   if (locked) return <section className="state mx-auto max-w-xl p-6">
-    <ErrorState description="Lượt thi đã bị khóa trên trình duyệt vì vượt quá 3 lần rời tab hoặc thoát toàn màn hình." />
+    <ErrorState description="Lượt thi đã bị khóa trên trình duyệt vì vượt quá 3 lần rời tab." />
     <Link className="button outline" to={studentExamPath(slot.examId, slot.attemptId)}>Quay lại chi tiết ca thi</Link>
   </section>
-
-  if (monitoring && document.fullscreenEnabled && !fullscreen) return (
-    <section className="state mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-6">
-      <h2 className="text-lg font-semibold">Quay lại toàn màn hình để tiếp tục</h2>
-      {violations > 0 && <p role="status">Cảnh báo {violations}/3. Lần thứ tư sẽ khóa phòng thi.</p>}
-      <p>Thời gian trả lời vẫn tiếp tục chạy.</p>
-      {fullscreenFailed && <p role="alert">Trình duyệt chưa cho phép mở toàn màn hình. Hãy thử lại.</p>}
-      <Button onClick={enterFullscreen}>Quay lại toàn màn hình</Button>
-    </section>
-  )
 
   if (current.error instanceof ApiError && [401, 403].includes(current.error.status ?? 0)) return <PermissionDenied />
   if (current.isError && !busy) return (
@@ -248,10 +215,8 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   if (snapshot.status !== 'READY' && snapshot.status !== 'COMPLETED' && (snapshot.prompt ?? activePrompt)) {
     return (
       <>
-      {(violations > 0 || !fullscreen) && <aside role="status" className="mx-4 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <span>{violations > 0 ? `Cảnh báo ${violations}/3. Lần thứ tư sẽ khóa phòng thi.` : 'Bạn có thể tiếp tục thi ở chế độ cửa sổ.'}
-          {fullscreenFailed && ' Trình duyệt chưa cho phép mở toàn màn hình.'}</span>
-        {!fullscreen && document.fullscreenEnabled && <Button variant="outline" onClick={enterFullscreen}>Bật toàn màn hình</Button>}
+      {violations > 0 && <aside role="status" className="mx-4 mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Cảnh báo {violations}/3. Lần thứ tư rời tab sẽ khóa phòng thi.
       </aside>}
       <ApiSpeechRoom
         key={`${userId}:${slot.attemptId}`}
@@ -392,7 +357,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
             {isReady && (
               <Button
                 disabled={!online || start.isPending || current.isFetching}
-                onClick={() => { enterFullscreen(); start.mutate() }}
+                onClick={() => start.mutate()}
                 className="inline-flex items-center gap-1.5"
               >
                 <Play size={15} fill="currentColor" />
