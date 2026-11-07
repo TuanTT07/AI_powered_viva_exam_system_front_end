@@ -21,7 +21,7 @@ describe('student result and receipt authority', () => {
     expect(screen.getByRole('heading', { name: 'Chưa có biên nhận nộp bài' })).toBeInTheDocument()
     expect(screen.queryByText('Đã hoàn tất phiên mô phỏng')).not.toBeInTheDocument()
   })
-  it('renders recorded interview transcript when stored in sessionStorage', () => {
+  it('does not expose locally cached transcripts without publication authorization', () => {
     runtimeConfig.dataSource = 'api'
     const attemptId = 'attempt-123'
     sessionStorage.setItem(
@@ -38,9 +38,19 @@ describe('student result and receipt authority', () => {
         </Routes>
       </MemoryRouter>
     )
-    expect(screen.getByText('Em hãy giải thích tính đóng gói trong Java.')).toBeInTheDocument()
-    expect(screen.getByText('Đóng gói là việc ẩn giấu thuộc tính bên trong lớp.')).toBeInTheDocument()
-    expect(screen.getByText('2 lượt hội thoại')).toBeInTheDocument()
+    expect(screen.queryByText('Em hãy giải thích tính đóng gói trong Java.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Đóng gói là việc ẩn giấu thuộc tính bên trong lớp.')).not.toBeInTheDocument()
+    expect(screen.queryByText('2 lượt hội thoại')).not.toBeInTheDocument()
     sessionStorage.clear()
+  })
+})
+
+ describe('result navigation and published data', () => {
+  it('links compact demo cards to dedicated details and omits evaluation prose', () => {
+    runtimeConfig.dataSource = 'mock'
+    render(<MemoryRouter><StudentResultListPage /></MemoryRouter>)
+    expect(screen.getAllByRole('link', { name: /Xem chi tiết/ })[0]).toHaveAttribute('href', expect.stringContaining('/result?attemptId='))
+    expect(screen.queryByText(/Nắm vững kiến thức cơ bản/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Kiểm tra thiết bị/ })).not.toBeInTheDocument()
   })
 })
