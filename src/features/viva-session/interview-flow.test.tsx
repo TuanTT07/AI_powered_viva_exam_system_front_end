@@ -3,10 +3,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionContext } from '../../app/providers/session-context'
+import { speechApi } from './speech-api'
 import { apiClient, ApiError } from '../../services/api/client'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import type { SpeechEvent } from '../../services/realtime/speech-socket'
 import type { InterviewState } from './interview-api'
+import { playQuestionAudio } from '../../services/media/question-audio'
 import { VivaInterviewRoom } from './pages/VivaInterviewRoom'
 
 const media = vi.hoisted(() => ({
@@ -23,7 +25,7 @@ vi.mock('../../services/media/pcm-capture', () => ({ preparePcmCapture: vi.fn(as
   media.chunk = chunk
   return { start: media.captureStart, cancel: media.cancel, finish: media.finish }
 }) }))
-vi.mock('../../services/media/browser-tts', () => ({ speakVietnamese: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('../../services/media/question-audio', () => ({ playQuestionAudio: vi.fn().mockResolvedValue(undefined) }))
 
 const attemptId = '33333333-3333-4333-8333-333333333333'
 const examId = '22222222-2222-4222-8222-222222222222'
@@ -53,10 +55,12 @@ beforeEach(() => {
     if (deny) throw new ApiError('Không có quyền', { status: 403 })
     if (path.endsWith('/current')) return envelope(server) as never
     if (path.endsWith('/start')) { expect(options?.method).toBe('POST'); server = { attemptId, status: 'AWAITING_ANSWER', prompt }; return envelope(server) as never }
+    if (path.endsWith('/audio')) return envelope({ audioId: answerId, contentType: 'audio/mpeg', expiresAt: new Date(Date.now() + 600_000).toISOString(), audioPath: `/api/interview/speech/audio/${answerId}` }) as never
+    if (path === `/api/interview/speech/audio/${answerId}`) return new Blob(['mp3'], { type: 'audio/mpeg' }) as never
     if (path.endsWith('/playback')) {
       const match = path.match(/questions\/([^/]+)\/playback/)
       const currentTurnId = match ? match[1] : turnId
-      return envelope({ questionTurnId: currentTurnId, text: prompt.text, ttsProvider: 'browser', language: 'vi-VN' }) as never
+      return envelope({ questionTurnId: currentTurnId, text: prompt.text, ttsProvider: 'deepgram', language: 'vi-VN' }) as never
     }
     if (path.endsWith('/speech/answers/' + answerId)) return envelope({ transcriptTurnId: '88888888-8888-4888-8888-888888888888', text: 'Câu trả lời được lưu trước khi mất kết nối.' }) as never
     if (path.endsWith('/speech-ticket')) return envelope({ ticket: 'test-ticket', expiresAt: new Date(Date.now() + 60_000).toISOString(), websocketPath: '/ws/interview/speech' }) as never
@@ -66,6 +70,48 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); sessionStorage.clear(); runtimeConfig.dataSource = source })
 
 describe('student interview with HTTP/WS/media boundaries simulated', () => {
+  it('retries speculative audio failure only when the user listens', async () => {
+    const audio = vi.spyOn(speechApi, 'audio').mockRejectedValueOnce(new Error('TTS busy'))
+    mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu phiên thi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    await waitFor(() => expect(audio).toHaveBeenCalledTimes(1))
+    fireEvent.click(await screen.findByRole('button', { name: /Nghe câu hỏi/ }))
+    await waitFor(() => expect(playQuestionAudio).toHaveBeenCalledOnce())
+    expect(audio).toHaveBeenCalledTimes(2)
+    expect(await screen.findByRole('button', { name: 'Bắt đầu trả lời' })).toBeEnabled()
+  })
+  it('aborts preparation and never plays a late audio result after leaving', async () => {
+    let resolveAudio!: (blob: Blob) => void
+    const audio = vi.spyOn(speechApi, 'audio').mockImplementationOnce(() => new Promise(resolve => { resolveAudio = resolve }))
+    const view = mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu phiên thi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    fireEvent.click(await screen.findByRole('button', { name: /Nghe câu hỏi/ }))
+    expect(audio).toHaveBeenCalledOnce()
+    const signal = audio.mock.calls[0][2]!
+    view.unmount()
+    expect(signal.aborted).toBe(true)
+    await act(async () => { resolveAudio(new Blob(['mp3'], { type: 'audio/mpeg' })) })
+    expect(playQuestionAudio).not.toHaveBeenCalled()
+  })
+
+  it('prefetches and reuses private male question audio and returns to ready before recording', async () => {
+    mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu phiên thi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    await waitFor(() => expect(request.mock.calls.filter(([path, options]) => path.endsWith('/audio') && options?.method === 'POST')).toHaveLength(1))
+    expect(playQuestionAudio).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: /Nghe câu hỏi/ }))
+    await waitFor(() => expect(playQuestionAudio).toHaveBeenCalledOnce())
+    expect(request.mock.calls.some(([path, options]) => path.endsWith('/audio') && options?.method === 'POST')).toBe(true)
+    expect(await screen.findByRole('button', { name: 'Bắt đầu trả lời' })).toBeEnabled()
+    expect(media.captureStart).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: /Nghe câu hỏi/ }))
+    await waitFor(() => expect(playQuestionAudio).toHaveBeenCalledTimes(2))
+    expect(request.mock.calls.filter(([path, options]) => path.endsWith('/audio') && options?.method === 'POST')).toHaveLength(1)
+  })
+
   it('starts explicitly, ignores URL prompt, saves one answer, then follows backend processing and completion', async () => {
     const view = mount()
     const start = await screen.findByRole('button', { name: 'Bắt đầu phiên thi' })

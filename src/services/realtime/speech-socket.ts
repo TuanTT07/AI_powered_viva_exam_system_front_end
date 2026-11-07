@@ -164,7 +164,7 @@ export function connectSpeech(
             event.data.encoding !== "PCM_S16LE" ||
             event.data.sampleRate !== 16000 ||
             event.data.channels !== 1 ||
-            event.data.ttsProvider !== "browser"
+            event.data.ttsProvider !== "deepgram"
           )
             throw new Error();
           ready = true;

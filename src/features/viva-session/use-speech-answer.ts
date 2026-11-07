@@ -9,7 +9,7 @@ import {
   preparePcmCapture,
   type PcmCapture,
 } from "../../services/media/pcm-capture";
-import { speakVietnamese } from "../../services/media/browser-tts";
+import { playQuestionAudio } from "../../services/media/question-audio";
 import { isSpeechUuid, speechApi, type AnswerReceipt } from "./speech-api";
 import {
   initialSpeechState,
@@ -42,6 +42,26 @@ export function useSpeechAnswer(
   const capture = useRef<PcmCapture | null>(null);
   const controller = useRef<AbortController | null>(null);
   const tts = useRef<AbortController | null>(null);
+  // Start synthesis as soon as the current question arrives, independently of STT setup.
+  // Keep one in-flight/resolved Blob per question so listen/replay never downloads twice.
+  const preparedAudio = useRef<{
+    attemptId: string; turnId: string; userId: string; promise: Promise<Blob | null>;
+  } | null>(null);
+  useEffect(() => {
+    if (!active || !isSpeechUuid(attemptId) || !isSpeechUuid(turnId)) return;
+    const abort = new AbortController();
+    const entry = {
+      attemptId, turnId, userId,
+      // A failed speculative request must not block the exam; the listen action retries.
+      promise: speechApi.audio(attemptId, turnId, abort.signal).catch(() => null),
+    };
+    preparedAudio.current = entry;
+    return () => {
+      abort.abort();
+      tts.current?.abort();
+      preparedAudio.current = null;
+    };
+  }, [active, attemptId, turnId, userId]);
   const generation = useRef(0);
   const pending = useRef<string | null>(null);
   const startRequest = useRef<string | null>(null);
@@ -424,11 +444,15 @@ export function useSpeechAnswer(
     tts.current = abort;
     dispatch({ type: "SPEAK" });
     try {
-      await speakVietnamese(
-        current.current.question.text,
-        current.current.question.language,
-        abort.signal,
-      );
+      const prepared = preparedAudio.current;
+      const cached = prepared?.attemptId === attemptId && prepared.turnId === turnId
+        && prepared.userId === userId ? await prepared.promise : null;
+      if (abort.signal.aborted) return;
+      const audio = cached ?? await speechApi.audio(attemptId, turnId, abort.signal);
+      if (!cached && !abort.signal.aborted) {
+        preparedAudio.current = { attemptId, turnId, userId, promise: Promise.resolve(audio) };
+      }
+      await playQuestionAudio(audio, abort.signal);
       if (!abort.signal.aborted) dispatch({ type: "SPOKEN" });
     } catch (error) {
       if (!abort.signal.aborted)

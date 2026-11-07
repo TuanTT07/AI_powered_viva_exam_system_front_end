@@ -42,7 +42,7 @@ const ready = {
     encoding: "PCM_S16LE",
     sampleRate: 16000,
     channels: 1,
-    ttsProvider: "browser",
+    ttsProvider: "deepgram",
   },
 };
 
