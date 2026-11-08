@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { apiResult, publishedQuestions, resultOutcome } from './student-result-data'
 describe('published student result mapping', () => {
   it('excludes missing publication and invalid scores', () => {
-    const valid = { questionOrder: 1, finalScore: 8, feedback: 'Released', publishedAt: '2026-11-01T00:00:00Z' }
+    const valid = { questionAttemptId: 'qa-1', questionOrder: 1, questionContent: 'Q1', finalScore: 8, maxScore: 10, feedback: 'Released', criteria: [], transcript: [], audioUrl: null, publishedAt: '2026-11-01T00:00:00Z' }
     expect(publishedQuestions([valid, { ...valid, publishedAt: '' }, { ...valid, finalScore: NaN }])).toEqual([valid])
   })
   it('restores the published-question average without inventing overall feedback', () => {
-    const result = apiResult({ examId: 'exam', attemptId: 'attempt', examTitle: 'Exam', courseCode: 'CS', courseName: 'Course', status: 'COMPLETED', slotNumber: 1, scheduledStartTime: null, scheduledEndTime: null }, [{ questionOrder: 1, finalScore: 8, feedback: 'Question feedback', publishedAt: '2026-11-01T00:00:00Z' }])
+    const result = apiResult({ examId: 'exam', attemptId: 'attempt', examTitle: 'Exam', courseCode: 'CS', courseName: 'Course', status: 'COMPLETED', slotNumber: 1, scheduledStartTime: null, scheduledEndTime: null }, [{ questionAttemptId: 'qa-1', questionOrder: 1, questionContent: 'Q1', finalScore: 8, maxScore: 10, feedback: 'Question feedback', criteria: [], transcript: [], audioUrl: null, publishedAt: '2026-11-01T00:00:00Z' }])
     expect(result.score).toBe(8)
     expect(result.feedback).toBeNull()
     expect(result.questions).toHaveLength(1)

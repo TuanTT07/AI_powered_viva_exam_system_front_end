@@ -133,7 +133,6 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       evaluation.criteria.map(c => [c.criterionId, String(c.aiScore ?? '')])
     )
     setUserScores(aiScores)
-    setUserNotes(evaluation.overallFeedback ?? '')
     setActionMessage('Đã đặt lại về điểm do AI đề xuất ban đầu.')
   }
 
@@ -245,6 +244,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         criteria={criteria}
         scores={scores}
         notes={notes}
+        aiOverallFeedback={evaluation?.aiOverallFeedback}
         onScore={(id, value) => setUserScores(prev => ({ ...(prev ?? scores), [id]: value }))}
         onNotes={setUserNotes}
         summary={tab.summary}
@@ -406,6 +406,7 @@ function DemoGrading({ examId, attemptId }: { examId: string; attemptId: string 
         demo
         scores={scores}
         notes={notes}
+        aiOverallFeedback={gradingDemo.aiOverallFeedback}
         onScore={(id, value) => {
           setScores(s => ({ ...s, [id]: value }))
           setMessage('')

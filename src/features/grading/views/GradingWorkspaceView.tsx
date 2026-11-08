@@ -23,6 +23,7 @@ export function GradingWorkspaceView({
   criteria = [],
   scores,
   notes,
+  aiOverallFeedback,
   onScore,
   onNotes,
   summary,
@@ -40,6 +41,7 @@ export function GradingWorkspaceView({
   criteria?: CriterionReview[]
   scores: Record<string, string>
   notes: string
+  aiOverallFeedback?: string | null
   onScore: (id: string, value: string) => void
   onNotes: (value: string) => void
   summary: boolean
@@ -178,6 +180,15 @@ export function GradingWorkspaceView({
                   Chưa có rubric và điểm thành phần được cấp quyền xem.
                 </p>
               )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-1.5">
+                <Sparkles size={14} className="text-indigo-600" /> Nhận xét tổng quan của AI
+              </h3>
+              <p className="text-sm text-indigo-900 bg-indigo-50/80 p-4 rounded-lg border border-indigo-100 whitespace-pre-wrap min-h-[60px] italic">
+                {aiOverallFeedback || 'AI chưa đưa ra nhận xét tổng quan.'}
+              </p>
             </div>
 
             <div className="pt-3 border-t border-slate-100 space-y-2">
@@ -361,6 +372,16 @@ export function GradingWorkspaceView({
                   Chưa có rubric hoặc điểm AI. Chấm điểm sẽ mở khi dữ liệu và chức năng lưu được hỗ trợ.
                 </p>
               )}
+            </div>
+
+            {/* AI Overall Comment */}
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              <h3 className="text-xs font-semibold text-indigo-800 flex items-center gap-1.5">
+                <Sparkles size={13} className="text-indigo-600" /> Nhận xét tổng quan của AI
+              </h3>
+              <p className="text-xs text-indigo-900 bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 whitespace-pre-wrap italic">
+                {aiOverallFeedback || 'AI chưa đưa ra nhận xét tổng quan.'}
+              </p>
             </div>
 
             {/* Lecturer Notes */}

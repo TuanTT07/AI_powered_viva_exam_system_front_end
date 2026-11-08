@@ -1,6 +1,7 @@
 // Presentation fixtures: imported only by the explicitly selected demo workspace.
 export const gradingDemo = {
   question: 'Phân biệt ArrayList và LinkedList trong Java. Khi cần truy cập ngẫu nhiên theo chỉ số, bạn chọn cấu trúc nào và vì sao?',
+  aiOverallFeedback: 'Thí sinh trình bày đúng bản chất cấu trúc lưu trữ và lựa chọn hợp lý cho truy cập ngẫu nhiên, nhưng chưa phân tích rõ chi phí khi thêm/xóa phần tử ở các vị trí khác nhau trong ArrayList.',
   criteria: [
     { id: 'structure', name: 'Cấu trúc lưu trữ', max: 3, ai: 3, evidence: 'Phân biệt mảng động và danh sách liên kết đôi.' },
     { id: 'access', name: 'Truy cập ngẫu nhiên', max: 3, ai: 2.5, evidence: 'Chọn ArrayList, giải thích truy cập theo chỉ số O(1).' },
