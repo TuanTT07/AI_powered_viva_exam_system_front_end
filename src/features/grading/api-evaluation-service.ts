@@ -45,6 +45,7 @@ export type EvaluationResponseDto = {
   finalScore: number | null
   maxScore: number
   overallFeedback: string | null
+  aiOverallFeedback: string | null
   criteria: CriterionScoreDto[]
   status: 'PENDING_REVIEW' | 'GRADED'
   transcript?: TranscriptTurnDto[]
@@ -56,6 +57,19 @@ export type EvaluationResponseDto = {
   studentId?: string | null
   studentName?: string | null
   studentCode?: string | null
+}
+
+export type StudentResultDto = {
+  questionAttemptId: string
+  questionOrder: number
+  questionContent: string | null
+  finalScore: number
+  maxScore: number
+  feedback: string | null
+  criteria: CriterionScoreDto[]
+  transcript: TranscriptTurnDto[]
+  audioUrl: string | null
+  publishedAt: string
 }
 
 export type CriterionFinalScoreRequest = {
@@ -104,13 +118,11 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
       )
     },
 
-    async studentResults(attemptId: string, signal?: AbortSignal) {
-      const res = await client.request<ApiResponse<{
-        questionOrder: number
-        finalScore: number
-        feedback: string | null
-        publishedAt: string
-      }[]>>(`/api/v1/student/exams/${encodeURIComponent(attemptId)}/results`, signal ? { signal } : undefined)
+    async studentResults(attemptId: string, signal?: AbortSignal): Promise<StudentResultDto[]> {
+      const res = await client.request<ApiResponse<StudentResultDto[]>>(
+        `/api/v1/student/exams/${encodeURIComponent(attemptId)}/results`,
+        signal ? { signal } : undefined
+      )
       return res.data
     },
 
