@@ -94,10 +94,10 @@ describe('grading authority', () => {
     expect(screen.getByText('Chưa có transcript được cấp quyền xem.')).toBeInTheDocument()
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryByText(/Phân biệt mảng động/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Chốt điểm' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Lưu điểm câu này' })).toBeDisabled()
   })
 
-  it('loads later pages, selects only this attempt questions and isolates edits', async () => {
+  it('opens ungraded assigned questions even when only the first has a persisted evaluation', async () => {
     runtimeConfig.dataSource = 'api'
     vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({ candidateStatuses: [] } as never)
     const question = (id: string, attempt = 'attempt-1') => ({
@@ -108,15 +108,19 @@ describe('grading authority', () => {
     const first = question('q1')
     const second = question('q2')
     vi.spyOn(apiEvaluationService, 'findByExam').mockImplementation(async (_id, params) => ({
-      content: params?.page === 1 ? [second, question('other', 'other-attempt')] : [first],
+      content: params?.page === 1 ? [question('other', 'other-attempt')] : [first],
       page: params?.page ?? 0, size: 1, totalPages: 2, totalElements: 3,
     }))
     const finalize = vi.spyOn(apiEvaluationService, 'finalizeEvaluation').mockResolvedValue({ ...second, status: 'GRADED', finalScore: 3 })
-    const detail = vi.spyOn(apiEvaluationService, 'getByQuestionAttempt').mockImplementation(async id => id === 'q2' ? second : first)
+    const inventory = vi.spyOn(apiEvaluationService, 'attemptQuestions').mockResolvedValue([
+      { questionOrder: 1, questionStatus: 'COMPLETED', evaluation: first },
+      { questionOrder: 2, questionStatus: 'COMPLETED', evaluation: second },
+      { questionOrder: 3, questionStatus: 'COMPLETED', evaluation: question('q3') },
+    ])
     mount()
     const user = userEvent.setup()
-    const next = await screen.findByRole('link', { name: 'Câu 2 · Chờ chấm' })
-    expect(screen.queryByRole('link', { name: 'Câu 3 · Chờ chấm' })).not.toBeInTheDocument()
+    const next = await screen.findByRole('link', { name: 'Câu 2' })
+    expect(screen.getByRole('link', { name: 'Câu 3' })).toBeInTheDocument()
     const input = screen.getAllByRole('spinbutton')[0]
     await user.clear(input)
     await user.type(input, '8')
@@ -125,9 +129,9 @@ describe('grading authority', () => {
     await user.click(screen.getByRole('button', { name: 'Rời màn hình' }))
     expect(await screen.findByText('Đề q2')).toBeInTheDocument()
     expect(screen.getAllByRole('spinbutton')[0]).toHaveValue(3)
-    expect(detail).toHaveBeenCalledWith('q2')
-    await user.click(screen.getByRole('button', { name: 'Chốt điểm' }))
-    await user.click(within(screen.getByRole('dialog', { name: 'Xác nhận chốt điểm?' })).getByRole('button', { name: 'Xác nhận chốt điểm' }))
+    expect(inventory).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111', 'attempt-1')
+    await user.click(screen.getByRole('button', { name: 'Lưu điểm câu này' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Lưu điểm câu này?' })).getByRole('button', { name: 'Lưu điểm' }))
     expect(finalize).toHaveBeenCalledWith('q2', expect.objectContaining({ criteria: [expect.objectContaining({ criterionId: 'criterion', finalScore: 3 })] }))
   })
 

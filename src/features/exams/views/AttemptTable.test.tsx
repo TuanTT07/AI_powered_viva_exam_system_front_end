@@ -13,7 +13,7 @@ describe('attempt total presentation', () => {
   it('shows 1/2 instead of the first score even with a local confirmation', () => {
     localStorage.setItem('aives_grading_exam_attempt', JSON.stringify({ confirmed: true, finalScore: 10 }))
     mount([evaluation('q1', 9.5)], 2)
-    expect(screen.getByText('Đã chấm 1/2 câu chính')).toBeInTheDocument()
+    expect(screen.getByText('Đã lưu điểm 1 câu chính')).toBeInTheDocument()
     expect(screen.queryByText('9.5')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Xem tổng kết' })).toHaveAttribute('href', '/lecturer/exams/exam/attempts/attempt?tab=summary')
   })
@@ -23,6 +23,6 @@ describe('attempt total presentation', () => {
   })
   it('fails closed when the backend does not provide expected count', () => {
     mount([evaluation('q1', 9.5)])
-    expect(screen.getByText('Đã chấm 1/? câu chính')).toBeInTheDocument()
+    expect(screen.getByText('Đã lưu điểm 1 câu chính')).toBeInTheDocument()
   })
 })

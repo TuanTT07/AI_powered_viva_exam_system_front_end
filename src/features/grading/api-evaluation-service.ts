@@ -35,7 +35,7 @@ export type TranscriptTurnDto = {
 }
 
 export type EvaluationResponseDto = {
-  id: string
+  id: string | null
   questionAttemptId: string
   questionId: string
   questionContent: string
@@ -72,6 +72,12 @@ export type StudentResultDto = {
   publishedAt: string
 }
 
+export type AttemptQuestionGradingDto = {
+  questionOrder: number
+  questionStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED'
+  evaluation: EvaluationResponseDto
+}
+
 export type CriterionFinalScoreRequest = {
   criterionId: string
   finalScore: number
@@ -85,6 +91,22 @@ export type FinalizeEvaluationRequest = {
 
 export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = apiClient) {
   return {
+    async attemptQuestions(examId: string, attemptId: string): Promise<AttemptQuestionGradingDto[]> {
+      const res = await client.request<ApiResponse<AttemptQuestionGradingDto[]>>(
+        `/api/exams/${encodeURIComponent(examId)}/attempts/${encodeURIComponent(attemptId)}/grading`
+      )
+      if (!Array.isArray(res.data) || res.data.some(q => !q.evaluation || q.evaluation.examAttemptId !== attemptId))
+        throw new Error('Danh sách câu hỏi không khớp lượt thi.')
+      return res.data
+    },
+    async studentResultSummary(attemptId: string): Promise<{ totalQuestions: number; questions: StudentResultDto[] }> {
+      const res = await client.request<ApiResponse<{ totalQuestions: number; questions: StudentResultDto[] }>>(
+        `/api/v1/student/exams/${encodeURIComponent(attemptId)}/result-summary`
+      )
+      if (!Number.isInteger(res.data.totalQuestions) || res.data.totalQuestions < 1 || !Array.isArray(res.data.questions))
+        throw new Error('Kết quả lượt thi không hợp lệ.')
+      return res.data
+    },
     async getByQuestionAttempt(questionAttemptId: string): Promise<EvaluationResponseDto> {
       const res = await client.request<ApiResponse<EvaluationResponseDto>>(
         `/api/question-attempts/${encodeURIComponent(questionAttemptId)}/evaluation`

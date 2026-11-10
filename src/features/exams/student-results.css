@@ -17,7 +17,7 @@
 .results-page h2 { margin: 0 0 10px; font-size: 17px; font-weight: 650; line-height: 1.45; }
 .result-row h2 { margin: 5px 0 3px; }
 .result-row p, .result-date { font-size: 13px; }
-.result-date { color: var(--secondary, #64748b); }
+.result-date { color: #475569; }
 .result-row-score, .result-summary-score { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .result-row-score strong, .result-summary-score strong { font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .result-row-score small, .result-summary-score small { font-size: 14px; color: var(--secondary, #64748b); font-weight: 400; }

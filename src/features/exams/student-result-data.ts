@@ -15,9 +15,9 @@ export type StudentResult = {
 export function publishedQuestions(questions: PublishedQuestion[]) {
   return questions.filter(q => Boolean(q.publishedAt) && Number.isFinite(Date.parse(q.publishedAt)) && Number.isFinite(q.finalScore))
 }
-export function apiResult(exam: StudentExamSummary & Partial<Pick<StudentExamSlot, 'examConfig'>>, questions: PublishedQuestion[]): StudentResult {
+export function apiResult(exam: StudentExamSummary & Partial<Pick<StudentExamSlot, 'examConfig'>>, questions: PublishedQuestion[], assignedQuestionCount?: number): StudentResult {
   const published = publishedQuestions(questions)
-  const expectedQuestions = exam.examConfig?.maxMainQuestions
+  const expectedQuestions = assignedQuestionCount ?? exam.examConfig?.maxMainQuestions
   const grade = summarizeGrade(published.map(q => ({ id: q.questionAttemptId ?? String(q.questionOrder), score: q.finalScore, max: q.maxScore ?? NaN, confirmed: true })), expectedQuestions)
   return { examId: exam.examId, attemptId: exam.attemptId, title: exam.examTitle, code: exam.examId, course: [exam.courseCode, exam.courseName].filter(Boolean).join(' · '), date: exam.scheduledStartTime, expectedQuestions, score: grade.score, feedback: null, questions: published, demo: false }
 }
@@ -33,9 +33,8 @@ export function useResultList(page: number) {
   return useQuery({ queryKey: ['student-results', runtimeConfig.dataSource, session.user?.id, page], enabled: runtimeConfig.dataSource === 'api' && Boolean(session.user), queryFn: async ({ signal }) => {
     const exams = await apiStudentExamRepository.list({ status: 'COMPLETED', page }, signal)
     const rows = await Promise.all(exams.content.map(async exam => {
-      const slot = await apiStudentExamRepository.getMySlot(exam.examId, signal)
-      if (slot.attemptId !== exam.attemptId) throw new Error('Lượt thi không khớp lịch thi cá nhân.')
-      return apiResult(slot, await apiEvaluationService.studentResults(exam.attemptId, signal))
+      const result = await apiEvaluationService.studentResultSummary(exam.attemptId)
+      return apiResult(exam, result.questions, result.totalQuestions)
     }))
     return { rows, totalPages: exams.totalPages }
   } })
@@ -45,7 +44,8 @@ export function useResultDetail(examId: string, requestedAttempt: string | null)
   return useQuery({ queryKey: ['student-result', runtimeConfig.dataSource, session.user?.id, examId, requestedAttempt], enabled: runtimeConfig.dataSource === 'api' && Boolean(session.user) && Boolean(examId), queryFn: async ({ signal }) => {
     const slot = await apiStudentExamRepository.getMySlot(examId, signal)
     if ((requestedAttempt !== null && requestedAttempt !== slot.attemptId) || slot.status !== 'COMPLETED') throw new Error('Không có quyền xem kết quả của lượt thi này.')
-    return apiResult(slot, await apiEvaluationService.studentResults(slot.attemptId, signal))
+    const result = await apiEvaluationService.studentResultSummary(slot.attemptId)
+    return apiResult(slot, result.questions, result.totalQuestions)
   } })
 }
 

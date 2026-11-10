@@ -24,7 +24,7 @@ function ResultList() {
   const [filter, setFilter] = useState('all')
   const query = useResultList(page)
   const rows = demo ? demoResults : query.data?.rows ?? []
-  const visible = rows.filter(r => `${r.title} ${r.code} ${r.course}`.toLowerCase().includes(search.toLowerCase().trim()) && (filter === 'all' || (filter === 'published') === (r.score !== null || r.questions.length > 0)))
+  const visible = rows.filter(r => `${r.title} ${r.code} ${r.course}`.toLowerCase().includes(search.toLowerCase().trim()) && (filter === 'all' || (filter === 'published') === (r.score !== null)))
   return <section className="results-page">
     <header className="results-heading"><div><span className="results-eyebrow">HỌC TẬP / KẾT QUẢ</span><h1>Kết quả thi</h1><p>Tra cứu kết quả và đánh giá đã được công bố.</p></div><Link className="button outline" to="/student/exams"><Calendar size={16} />Kỳ thi của tôi</Link></header>
     {demo && <DemoLabel detail="Điểm và nhận xét minh họa, không phải kết quả thi thực tế của bạn." />}

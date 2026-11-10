@@ -56,3 +56,16 @@ describe('apiEvaluationService', () => {
   })
 })
 
+
+it('loads assigned-question inventory including drafts without triggering AI', async () => {
+  const request = vi.fn().mockResolvedValue({ data: [{ questionOrder: 2, questionStatus: 'COMPLETED', evaluation: { questionAttemptId: 'q2', examAttemptId: 'a1', id: null, status: 'PENDING_REVIEW' } }] })
+  const service = createApiEvaluationService({ request })
+  const questions = await service.attemptQuestions('exam', 'a1')
+  expect(questions[0].evaluation.questionAttemptId).toBe('q2')
+  expect(request).toHaveBeenCalledExactlyOnceWith('/api/exams/exam/attempts/a1/grading')
+})
+
+it('rejects an inventory belonging to another attempt', async () => {
+  const request = vi.fn().mockResolvedValue({ data: [{ evaluation: { examAttemptId: 'other' } }] })
+  await expect(createApiEvaluationService({ request }).attemptQuestions('exam', 'target')).rejects.toThrow('không khớp')
+})
