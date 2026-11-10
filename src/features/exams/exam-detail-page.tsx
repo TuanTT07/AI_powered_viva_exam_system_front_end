@@ -36,7 +36,7 @@ import {
   useUpdateExamStatus,
 } from './exam-hooks'
 import { examRoutes } from './exam-routes'
-import { examStatusMeta, type ExamStatus } from './exam-types'
+import { examStatusActionLabels, examStatusMeta, type ExamStatus } from './exam-types'
 import {
   evaluateBasicInformation,
   evaluateExamReadiness,
@@ -341,7 +341,7 @@ function MockExamDetailPage() {
                 disabled={statusUpdate.isPending}
                 onClick={() => setNextStatus(status)}
               >
-                {examStatusMeta[status].label}
+                {examStatusActionLabels[status]}
               </Button>
             ))}
           </div>
