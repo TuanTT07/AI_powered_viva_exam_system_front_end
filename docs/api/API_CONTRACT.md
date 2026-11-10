@@ -208,7 +208,7 @@ Playback uses Browser TTS (vi), not generated MP3. Receipt confirms only one ans
 - POST `/api/interviews/{attemptId}/start`, no body: student JWT, explicit start button, no automatic POST on mount/reload or retries.
 - GET `/api/interviews/{attemptId}/current`: student JWT; response envelope `ApiResponse<InterviewState>` with `{ attemptId, status, prompt }`.
 - `status`: READY (prompt null), AWAITING_ANSWER (validated prompt), PROCESSING (prompt null), COMPLETED (prompt null).
-- `prompt`: `{ questionAttemptId, questionTurnId, text, deadlineAt }`; deadline may be null. It supplies only the currently authorized question, not a question bank or historical transcript.
+- `prompt`: `{ questionAttemptId, questionTurnId, text, deadlineAt }`; deadline is null until the server accepts the first recording start for this turn. The server reuses that deadline for retries, and still enforces the scheduled slot end. The room starts displaying the answer countdown on `answer.started`. This endpoint supplies only the currently authorized question, not a question bank or historical transcript.
 - The FE reads current on entry/reload and after a saved answer. Safe online polling checks for backend advancement/completion; polling and prompt replacement pause during active speech or an unresolved answer receipt. Permission errors stop the room; errors never use URL/mock prompts.
 - Start cancels in-flight current reads; the current response supersedes cached my-slot READY metadata for the active speech session. Completed attempts can reopen a read-only completion view.
 - Backend InterviewWorker selects follow-up/next question and completes the attempt. The FE does not invent next/finish endpoints or interpret a receipt/clock expiry as attempt completion.

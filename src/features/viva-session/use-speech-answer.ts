@@ -66,6 +66,7 @@ export function useSpeechAnswer(
   const pending = useRef<string | null>(null);
   const startRequest = useRef<string | null>(null);
   const endRequest = useRef<string | null>(null);
+  const discardAnswer = useRef<string | null>(null);
   const serverFinalizing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const turnIdRef = useRef(turnId);
@@ -106,6 +107,7 @@ export function useSpeechAnswer(
   const saved = useCallback(
     (answerId: string, receipt: AnswerReceipt) => {
       if (pending.current !== answerId) return;
+      discardAnswer.current = null;
       clearTimeout(timer.current);
       setAudioLevel(0);
       try {
@@ -200,6 +202,7 @@ export function useSpeechAnswer(
               rec.interimResults = true;
               rec.lang = "vi-VN";
               rec.onresult = (e: any) => {
+                if (recognitionRef.current !== rec) return;
                 let combined = "";
                 for (let i = 0; i < e.results.length; i++) {
                   combined += e.results[i][0].transcript + " ";
@@ -238,6 +241,17 @@ export function useSpeechAnswer(
           });
           break;
         }
+        case "answer.discarded":
+          if (!pending.current || event.answerId !== pending.current ||
+              event.requestId !== endRequest.current || getPhase() !== "finalizing") return;
+          clearTimeout(timer.current);
+          pending.current = null;
+          discardAnswer.current = null;
+          startRequest.current = null;
+          endRequest.current = null;
+          try { sessionStorage.removeItem(key); } catch { /* Storage unavailable. */ }
+          dispatch({ type: "RESET_TURN", question: current.current.question ?? undefined });
+          break;
         case "answer.finalizing":
           if (event.answerId !== pending.current) return;
           serverFinalizing.current = true;
@@ -310,6 +324,12 @@ export function useSpeechAnswer(
     [dispatch, fail, key, saved, getPhase],
   );
 
+  // The socket survives question changes, but receipt storage is scoped to each question.
+  const latestEventHandler = useRef(handleEvent);
+  useEffect(() => {
+    latestEventHandler.current = handleEvent;
+  }, [handleEvent]);
+
   const connect = useCallback(async () => {
     const phase = getPhase();
     if (
@@ -347,7 +367,8 @@ export function useSpeechAnswer(
         const stored = sessionStorage.getItem(key);
         if (isSpeechUuid(stored)) pending.current = stored;
       }
-      if (pending.current) {
+      const discarding = pending.current && pending.current === discardAnswer.current ? pending.current : null;
+      if (pending.current && !discarding) {
         await lookup(pending.current, abort.signal);
         return;
       }
@@ -355,15 +376,14 @@ export function useSpeechAnswer(
         throw new Error(
           "Lượt thi chưa được mở hoặc đã kết thúc. Vui lòng liên hệ giảng viên.",
         );
-      const question = await speechApi.playback(
-        attemptId,
-        turnId,
-        abort.signal,
-      );
+      const cachedQuestion = current.current.question;
+      const question = discarding && cachedQuestion?.questionTurnId === turnId
+        ? cachedQuestion
+        : await speechApi.playback(attemptId, turnId, abort.signal);
       const onEvent = (event: SpeechEvent) => {
         if (id !== generation.current) return;
         try {
-          handleEvent(event);
+          latestEventHandler.current(event);
         } catch {
           fail(
             "Phản hồi speech hoặc lưu mã khôi phục không hợp lệ. Đã dừng thu âm.",
@@ -412,12 +432,38 @@ export function useSpeechAnswer(
           throw new Error("Kết nối đã hủy.");
         return connectSpeech(ticket.ticket, onEvent, onLost, abort.signal);
       };
-      const connection = await open();
+      let connection: SpeechConnection;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          connection = await open();
+          break;
+        } catch (error) {
+          if (!discarding || attempt >= 2 || abort.signal.aborted) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+        }
+      }
       if (id !== generation.current || abort.signal.aborted) {
         connection.close();
         return;
       }
       socket.current = connection;
+      if (discarding) {
+        // The backend grants only one socket per attempt. Once this one is ready,
+        // the old socket has finished closing and can no longer commit an answer.
+        try {
+          const receipt = await speechApi.answer(attemptId, discarding, abort.signal);
+          if (!abort.signal.aborted) saved(discarding, receipt);
+          return;
+        } catch (error) {
+          if (abort.signal.aborted) return;
+          if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        }
+        pending.current = null;
+        discardAnswer.current = null;
+        try { sessionStorage.removeItem(key); } catch { /* Storage unavailable. */ }
+        dispatch({ type: "RESET_TURN", question });
+        return;
+      }
       dispatch({ type: "READY", question });
     } catch (error) {
       if (id === generation.current && !abort.signal.aborted)
@@ -430,9 +476,9 @@ export function useSpeechAnswer(
     attemptId,
     dispatch,
     fail,
-    handleEvent,
     key,
     lookup,
+    saved,
     release,
     turnId,
     getPhase,
@@ -584,10 +630,19 @@ export function useSpeechAnswer(
     };
   }, [fail, dispose]);
 
+  const recoveredAnswer = useRef<string | null>(null);
+  useEffect(() => {
+    if (!active || !state.answerId || !["disconnected", "error"].includes(state.phase)
+        || recoveredAnswer.current === state.answerId) return;
+    recoveredAnswer.current = state.answerId;
+    void connect();
+  }, [active, connect, state.answerId, state.phase]);
+
   const previousTurnId = useRef(turnId);
   useEffect(() => {
     if (previousTurnId.current === turnId) return;
     previousTurnId.current = turnId;
+    discardAnswer.current = null;
 
     // Reset turn-specific state
     pending.current = null;
@@ -627,37 +682,27 @@ export function useSpeechAnswer(
     dispatch({ type: "CLEAR_STALE_ANSWER" });
   }, [key, dispatch]);
 
-  const restartAnswer = useCallback(async () => {
-    if (!active) return;
+  const restartAnswer = useCallback(() => {
+    const answerId = pending.current;
+    if (!active || getPhase() !== "recording" || !answerId || !socket.current) return;
+    discardAnswer.current = answerId;
     clearTimeout(timer.current);
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // Ignore
-    }
+    setAudioLevel(0);
+    const recognition = recognitionRef.current;
     recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* Already stopped. */ }
     setClientDraft("");
     capture.current?.cancel();
     capture.current = null;
-    serverFinalizing.current = false;
-    startRequest.current = null;
-    endRequest.current = null;
-    pending.current = null;
+    dispatch({ type: "FINALIZING" });
     try {
-      sessionStorage.removeItem(key);
+      endRequest.current = crypto.randomUUID();
+      timer.current = setTimeout(() => fail("Chưa nhận được xác nhận hủy bản thu. Đang khôi phục kết nối."), 3_000);
+      socket.current.command({ type: "answer.discard", requestId: endRequest.current, answerId });
     } catch {
-      // Ignore
+      fail("Không gửi được yêu cầu hủy. Hãy kiểm tra câu trả lời đã lưu.");
     }
-
-    controller.current?.abort();
-    socket.current?.close();
-    socket.current = null;
-
-    const question = current.current.question;
-    dispatch({ type: "RESET_TURN", question: question ?? undefined });
-
-    await connect();
-  }, [active, connect, dispatch, key]);
+  }, [active, dispatch, fail, getPhase]);
 
   return { state, clientDraft, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

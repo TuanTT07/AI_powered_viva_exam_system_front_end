@@ -27,3 +27,7 @@ Checks pass and unchanged deadline confirmed before recording and on retries.
 Created branches fix/question-countdown-on-open in FE and BE. Implemented deadline persistence and expiry display correction.
 
 Validation: FE 322 tests passed, typecheck/lint/build passed (3 existing lint warnings). BE full suite 105 tests passed with disposable PostgreSQL; added slot-end regression then TranscriptServiceTest and package passed. No deployment performed.
+
+Conflict resolution with origin/main: preserve main's recording-only countdown and answer.discard protocol. Backend opening-deadline change was withdrawn by user. This PR now supplies expired-deadline/remount regression coverage; FE-only opening countdown/expiry blocking is not implemented. Earlier target and validation entries describe the original pre-merge scope.
+
+Post-merge validation: 324 FE tests passed; typecheck/lint/build passed with existing warnings.

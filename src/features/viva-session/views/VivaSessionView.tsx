@@ -238,6 +238,8 @@ export function VivaSessionView({
   duration,
   currentStep = 1,
   totalSteps = 3,
+  liveTurns = false,
+  questionConfig,
   isRecording = false,
   isAiSpeaking = false,
   isCompleted: isCompletedProp,
@@ -262,6 +264,8 @@ export function VivaSessionView({
   duration?: string
   currentStep?: number
   totalSteps?: number
+  liveTurns?: boolean
+  questionConfig?: { maxMainQuestions?: number; maxFollowUpQuestions?: number }
   isRecording?: boolean
   isAiSpeaking?: boolean
   isCompleted?: boolean
@@ -442,7 +446,7 @@ export function VivaSessionView({
                   completed ? 'text-emerald-700' : 'text-blue-600'
                 }`}
               >
-                {completed ? 'Hoàn thành phiên thi' : `Câu hỏi (Câu ${safeCurrentStep}/${safeTotalSteps})`}
+                {completed ? 'Hoàn thành phiên thi' : liveTurns ? `Lượt hỏi ${safeCurrentStep}` : `Câu hỏi (Câu ${safeCurrentStep}/${safeTotalSteps})`}
               </h3>
               <div className="text-base md:text-lg font-bold text-slate-900 leading-snug">
                 {question || 'Chờ câu hỏi được hệ thống cấp quyền.'}
@@ -609,12 +613,19 @@ export function VivaSessionView({
                 <span>Tiến trình phiên thi</span>
               </div>
               <span className="text-xs font-bold text-slate-400">
-                {completed ? `${safeTotalSteps}/${safeTotalSteps} câu` : `${safeCurrentStep}/${safeTotalSteps} câu`}
+                {liveTurns ? `${totalSteps} lượt hỏi` : completed ? `${safeTotalSteps}/${safeTotalSteps} câu` : `${safeCurrentStep}/${safeTotalSteps} câu`}
               </span>
             </div>
 
+            {liveTurns && questionConfig?.maxMainQuestions !== undefined &&
+              questionConfig.maxFollowUpQuestions !== undefined && (
+                <p className="text-xs text-slate-600">
+                  {questionConfig.maxMainQuestions} câu chính · Tối đa {questionConfig.maxFollowUpQuestions} câu đào sâu mỗi câu chính
+                </p>
+              )}
+
             {/* Progress bar */}
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            {!liveTurns && <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-600 rounded-full transition-all duration-300"
                 style={{
@@ -623,11 +634,11 @@ export function VivaSessionView({
                     : `${Math.min(100, Math.max(10, (safeCurrentStep / safeTotalSteps) * 100))}%`,
                 }}
               />
-            </div>
+            </div>}
 
             {/* Question Step List */}
             <div className="space-y-2 pt-1 text-xs max-h-[320px] overflow-y-auto pr-1">
-              {Array.from({ length: safeTotalSteps }).map((_, idx) => {
+              {Array.from({ length: liveTurns ? totalSteps : safeTotalSteps }).map((_, idx) => {
                 const qNum = idx + 1
                 const isDone = completed ? true : qNum < safeCurrentStep
                 const isCurrent = !completed && qNum === safeCurrentStep
@@ -661,7 +672,7 @@ export function VivaSessionView({
                         </span>
                       ) : isCurrent ? (
                         <span className="px-2 py-0.5 rounded-full bg-blue-100 border border-blue-200/60 text-blue-800 text-[11px] font-semibold">
-                          {isProcessing ? 'Đang xử lý' : 'Đang trả lời'}
+                          {isProcessing ? 'Đang xử lý' : isRecording || !liveTurns ? 'Đang trả lời' : 'Chờ trả lời'}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-400">Chưa diễn ra</span>

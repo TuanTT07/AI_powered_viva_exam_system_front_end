@@ -49,9 +49,11 @@ Preparation is aborted/discarded on question, user or active-state change and un
 Speculative errors are silent and retried on explicit listen. No recording starts during playback.
 First playback may still wait for the provider if preparation has not finished.
 
-## Question deadline — 2026-11-11
-Each main question and follow-up now persists `deadlineAt` when the backend opens
-that prompt, capped by the slot end. Thinking, listening and recording share that
-same time budget. `answer.start` reuses the deadline; retry/reload does not extend
-it. The frontend displays zero for expired deadlines while awaiting the server's
-transition. Opening an entire interview still uses the existing start action.
+## Retry the current answer
+During recording, send `answer.discard` with the active answerId and a fresh requestId. Stop capturing immediately and wait for matching `answer.discarded` before clearing the recovery ID and enabling another start on the same socket. The backend closes the old STT stream without persisting it and retains the current turn deadline. If finalization already won the race, the answer receipt takes precedence. If confirmation is lost, keep the recovery ID for receipt lookup.
+
+## Countdown regression checks — 2026-11-11
+The frontend clamps an expired server deadline to zero. Remounting with the same
+deadline does not restart the countdown. This FE branch does not require a backend
+change. The current main branch only displays an active countdown while recording;
+question-opening countdown and FE-only expiry blocking remain separate follow-up work.
