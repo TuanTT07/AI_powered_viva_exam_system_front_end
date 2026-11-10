@@ -54,6 +54,6 @@ During recording, send `answer.discard` with the active answerId and a fresh req
 
 ## Countdown regression checks — 2026-11-11
 The frontend clamps an expired server deadline to zero. Remounting with the same
-deadline does not restart the countdown. This FE branch does not require a backend
-change. The current main branch only displays an active countdown while recording;
-question-opening countdown and FE-only expiry blocking remain separate follow-up work.
+deadline does not restart the countdown. The room uses the prompt `deadlineAt` from the merged backend question-opening
+deadline contract before recording starts. Recording, retry and reload share that
+same deadline. Backend timeout processing remains authoritative.

@@ -176,8 +176,8 @@ export function ApiSpeechRoom({
           : phases[state.phase]}
         timer={
           <TurnQuestionCountdown
-            key={state.phase === "recording" ? state.deadline : prompt.questionTurnId}
-            turnDeadline={state.phase === "recording" ? state.deadline : null}
+            key={prompt.questionTurnId}
+            turnDeadline={prompt.deadlineAt ?? state.deadline}
             isProcessing={isProcessing || ["finalizing", "checking", "saved"].includes(state.phase)}
           />
         }

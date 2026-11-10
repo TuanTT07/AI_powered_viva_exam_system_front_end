@@ -31,3 +31,5 @@ Validation: FE 322 tests passed, typecheck/lint/build passed (3 existing lint wa
 Conflict resolution with origin/main: preserve main's recording-only countdown and answer.discard protocol. Backend opening-deadline change was withdrawn by user. This PR now supplies expired-deadline/remount regression coverage; FE-only opening countdown/expiry blocking is not implemented. Earlier target and validation entries describe the original pre-merge scope.
 
 Post-merge validation: 324 FE tests passed; typecheck/lint/build passed with existing warnings.
+
+Final scope correction: user confirmed BE PR #37 is merged. FE now displays the backend prompt deadline immediately (including before speech connection/recording) and keys the timer by questionTurnId. No FE-only guessed deadline or transition is introduced. This supersedes the interim recording-only conflict resolution above.
