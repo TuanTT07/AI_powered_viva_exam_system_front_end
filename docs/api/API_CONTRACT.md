@@ -223,3 +223,7 @@ Deploy corresponding BE branch `fix/complete-attempt-grading` before this fronte
 - `GET /api/v1/student/exams/{attemptId}/result-summary`: student-owner envelope `{ totalQuestions, questions: StudentResultDto[] }`. Count is actual assignment count; questions are published-only. Used to gate whole-result display without configured 1/3 ratios.
 
 Reading draft data does not prove AI has evaluated it. Saving a question does not publish it. Publication still uses existing per-question endpoint; there is no atomic publish-entire-attempt contract.
+
+## Whole-attempt publication
+
+`PUT /api/exams/{examId}/attempts/{attemptId}/publish`, no body, manager JWT. Publishes all assigned main-question evaluations in one transaction. Requires completed exam attempt, at least one assigned question, and all evaluations GRADED with non-null final scores. Returns standard success envelope. Missing grade/incomplete attempt is409; wrong exam scope is404; unauthorized manager is403. Locks attempt then questions, validates the entire set before writing, and preserves timestamps of already published questions on retries. Deploy BE endpoint before FE publication button. Legacy per-question endpoint remains for compatibility; FE now uses the whole-attempt action only.

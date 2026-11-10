@@ -84,6 +84,11 @@ export function GradingWorkspaceView({
         <div className="flex flex-wrap items-center gap-2">{actions}</div>
       </div>
 
+      {publication && <section className={panel} aria-label="Công bố kết quả bài thi">
+        <h2 className="text-sm font-semibold text-slate-800">Công bố kết quả bài thi</h2>
+        {publication}
+      </section>}
+
       {summary ? (
         <>
           {/* Summary KPI Cards */}
@@ -201,13 +206,6 @@ export function GradingWorkspaceView({
             </div>
           </section>
 
-          {/* Publication status */}
-          {publication && <section className={panel}><h2 className="text-sm font-semibold text-slate-800">Công bố điểm cho sinh viên</h2>
-            <p className="text-sm text-slate-500">
-              Điểm chỉ được công bố khi hệ thống xác nhận giảng viên đã chốt điểm và cho phép sinh viên xem kết quả.
-            </p>
-            {publication}
-          </section>}
         </>
       ) : (
         /* Workspace 3-column Layout */

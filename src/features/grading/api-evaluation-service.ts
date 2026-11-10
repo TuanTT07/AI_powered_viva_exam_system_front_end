@@ -133,6 +133,10 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
       return res.data
     },
 
+    async publishAttempt(examId: string, attemptId: string): Promise<void> {
+      await client.request(`/api/exams/${encodeURIComponent(examId)}/attempts/${encodeURIComponent(attemptId)}/publish`, { method: 'PUT' })
+    },
+
     async publish(questionAttemptId: string): Promise<void> {
       await client.request(
         `/api/question-attempts/${encodeURIComponent(questionAttemptId)}/evaluation/publish`,
