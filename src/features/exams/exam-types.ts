@@ -18,6 +18,7 @@ export type ExamSession = {
   scheduledAt: string
   durationMinutes: number
   studentCount: number
+  expectedMainQuestionCount?: number
   mainQuestionCount: number
   maxFollowUpCount: number
   status: ExamStatus

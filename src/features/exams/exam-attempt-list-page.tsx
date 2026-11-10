@@ -11,7 +11,8 @@ import { AttemptTable } from './views/AttemptTable'
 import { attemptStatusLabels } from './attempt-status'
 import { useAssessmentOverview } from './use-assessment-overview'
 import { runtimeConfig } from '../../services/api/runtime-config'
-import { apiEvaluationService } from '../grading/api-evaluation-service'
+import { loadExamEvaluations } from '../grading/load-exam-evaluations'
+import { summarizeAttempt } from '../grading/attempt-grade'
 
 export function ExamAttemptListPage() {
   const { examId = '' } = useParams()
@@ -25,7 +26,7 @@ export function ExamAttemptListPage() {
   // Dev3 API: Query exam-specific evaluations
   const examEvals = useQuery({
     queryKey: ['dev3-exam-evaluations', examId],
-    queryFn: () => apiEvaluationService.findByExam(examId),
+    queryFn: () => loadExamEvaluations(examId),
     enabled: runtimeConfig.dataSource === 'api' && Boolean(examId),
     retry: false,
   })
@@ -35,17 +36,13 @@ export function ExamAttemptListPage() {
   if (exam.isPending || query.isPending) return <LoadingPage label="Đang tải danh sách lượt thi" />
   if (exam.isError || query.isError) return <><ErrorState description={exam.error?.message || query.error?.message || 'Không thể tải lượt thi.'} /><Button onClick={() => { void exam.refetch(); void query.refetch() }}>Thử lại</Button></>
   if (!exam.data) return <ErrorState description="Không tìm thấy kỳ thi." />
+  const expectedQuestions = exam.data.expectedMainQuestionCount
   const { rows, total } = query.data
   const pendingReview = evaluationsList.filter(item => item.status === 'PENDING_REVIEW')
   const finalized = evaluationsList.filter(item => item.status === 'GRADED')
   const queue = rows.filter(row => {
     if (row.status !== 'COMPLETED') return false
-    const matches = evaluationsList.filter(item =>
-      item.examAttemptId ? item.examAttemptId === row.attemptId
-        : item.studentId ? item.studentId === row.studentId
-        : Boolean(item.studentCode && item.studentCode === row.studentCode),
-    )
-    return !matches.length || matches.some(item => item.status !== 'GRADED')
+    return summarizeAttempt(evaluationsList, row.attemptId, expectedQuestions).score === null
   })
   const visibleRows = summary ? rows : queue
   const filtered = visibleRows.filter(r => (!summary || !status || r.status === status) && `${r.studentName} ${r.studentCode} ${r.studentEmail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
@@ -78,8 +75,8 @@ export function ExamAttemptListPage() {
       </div>}
       <div className="grid sm:grid-cols-3 gap-4">
         <SourceMetric label={summary ? 'THÍ SINH' : 'LƯỢT THI CẦN XỬ LÝ'} value={summary ? total : queue.length} icon={Users} />
-        <SourceMetric label="ĐÁNH GIÁ CHỜ DUYỆT" value={pendingReview.length} icon={Clock} tone="amber" />
-        {summary && <SourceMetric label="ĐÁNH GIÁ ĐÃ CHỐT" value={finalized.length} icon={CheckCircle2} tone="emerald" />}
+        <SourceMetric label="CÂU CHỜ DUYỆT" value={pendingReview.length} icon={Clock} tone="amber" />
+        {summary && <SourceMetric label="CÂU ĐÃ CHỐT" value={finalized.length} icon={CheckCircle2} tone="emerald" />}
       </div>
       <div className="assessment-filters">
         <label className="flex items-center gap-2 border border-slate-200 rounded-lg bg-white px-3 flex-1">
@@ -91,7 +88,7 @@ export function ExamAttemptListPage() {
           {Object.entries(attemptStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>}
       </div>
-      <AttemptTable rows={filtered} evaluations={evaluationsList} examId={examId} allowReview summary={summary} demo={query.data.demo} />
+      <AttemptTable rows={filtered} evaluations={examEvals.isSuccess ? evaluationsList : []} expectedQuestions={exam.data.expectedMainQuestionCount} examId={examId} allowReview summary={summary} demo={query.data.demo} />
       <p className="text-xs text-slate-500">Hiển thị {filtered.length} / {visibleRows.length} hồ sơ</p>
 
       {/* DEV3 API: Bảng kết quả chấm điểm học phần từ Backend */}

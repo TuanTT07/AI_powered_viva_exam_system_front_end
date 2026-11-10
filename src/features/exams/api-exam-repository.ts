@@ -24,6 +24,7 @@ function mapExam(dto: ExamDto | ExamDetailDto): ExamSession {
     scheduledAt: dto.startTime,
     durationMinutes: durationMinutes(dto.startTime, dto.endTime),
     studentCount: typeof dto.totalCandidates === 'number' ? dto.totalCandidates : ('candidates' in dto && Array.isArray(dto.candidates) ? dto.candidates.length : 0),
+    expectedMainQuestionCount: dto.examConfig?.maxMainQuestions,
     mainQuestionCount: dto.examConfig?.maxMainQuestions ?? 1,
     maxFollowUpCount: dto.examConfig?.maxFollowUpQuestions ?? 0,
     status: dto.status,
