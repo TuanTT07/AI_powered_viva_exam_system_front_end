@@ -9,7 +9,7 @@ import { ApiError } from '../../../services/api/client'
 import { useOnline } from '../../../hooks/use-online'
 import type { StudentExamSlot } from '../../exams/api-student-exam-repository'
 import { studentExamPath } from '../../exams/student-exam-navigation'
-import { interviewApi, type InterviewPrompt } from '../interview-api'
+import { interviewApi, type InterviewPrompt, type InterviewState } from '../interview-api'
 import type { AnswerReceipt } from '../speech-api'
 import type { TranscriptMessageProps } from '../components/TranscriptMessage'
 import { ApiSpeechRoom } from './ApiSpeechRoom'
@@ -17,9 +17,9 @@ import { VivaSessionView } from './VivaSessionView'
 
 const transcriptStorageKey = (attemptId: string) => `aives.interview.transcript.${attemptId}`
 
-function loadStoredTranscript(attemptId: string, examId?: string): TranscriptMessageProps[] {
+function loadStoredTranscript(attemptId: string): TranscriptMessageProps[] {
   try {
-    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId)) || (examId ? sessionStorage.getItem(`aives.interview.transcript.${examId}`) : null)
+    const raw = sessionStorage.getItem(transcriptStorageKey(attemptId))
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed)) return parsed
@@ -30,12 +30,9 @@ function loadStoredTranscript(attemptId: string, examId?: string): TranscriptMes
   return []
 }
 
-function saveStoredTranscript(attemptId: string, examId: string | undefined, items: TranscriptMessageProps[]) {
+function saveStoredTranscript(attemptId: string, items: TranscriptMessageProps[]) {
   try {
     sessionStorage.setItem(transcriptStorageKey(attemptId), JSON.stringify(items))
-    if (examId) {
-      sessionStorage.setItem(`aives.interview.transcript.${examId}`, JSON.stringify(items))
-    }
   } catch {
     // Ignore storage errors
   }
@@ -56,7 +53,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
   const online = useOnline()
   const [busy, setBusy] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
-  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId, slot.examId))
+  const [history, setHistory] = useState<TranscriptMessageProps[]>(() => loadStoredTranscript(slot.attemptId))
   const [activePrompt, setActivePrompt] = useState<InterviewPrompt | null>(null)
   const violationKey = `aives.interview.violations.${userId}.${slot.attemptId}`
   const [violations, setViolations] = useState(() => readViolations(violationKey))
@@ -78,22 +75,33 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         const exists = prev.some(
           (m) =>
             m.role === message.role &&
-            ((message.id && m.id === message.id) || m.text === message.text)
+            m.id === message.id
         )
         if (exists) return prev
         const next = [...prev, message]
-        saveStoredTranscript(slot.attemptId, slot.examId, next)
+        saveStoredTranscript(slot.attemptId, next)
         return next
       })
     },
-    [slot.attemptId, slot.examId]
+    [slot.attemptId]
   )
 
   const start = useMutation({
     mutationFn: () => interviewApi.start(slot.attemptId),
     retry: false,
-    onMutate: () => client.cancelQueries({ queryKey: key }),
-    onSuccess: data => client.setQueryData(key, data),
+    onMutate: async () => {
+      const wasReady = client.getQueryData<InterviewState>(key)?.status === 'READY'
+      await client.cancelQueries({ queryKey: key })
+      return { wasReady }
+    },
+    onSuccess: (data, _, context) => {
+      if (context?.wasReady && data.status !== 'READY') {
+        saveStoredTranscript(slot.attemptId, [])
+        setHistory([])
+        setActivePrompt(null)
+      }
+      client.setQueryData(key, data)
+    },
     onError: () => { void client.invalidateQueries({ queryKey: key }) },
   })
   const current = useQuery({
@@ -310,23 +318,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
     </div>
   ) : undefined
 
-  const answeredCount = history.filter((h) => h.role === 'student').length
-  const aiQuestionsCount = Math.max(
-    history.filter((h) => h.role === 'ai').length,
-    activePrompt ? 1 : 0
-  )
-  const configuredMax =
-    slot.examConfig?.maxMainQuestions ??
-    (slot as any).examConfig?.questionCount ??
-    (slot as any).mainQuestionCount ??
-    (slot as any).questionCount ??
-    (slot as any).maxQuestions ??
-    (slot as any).totalQuestions ??
-    3
-  const totalSteps = Math.max(configuredMax, answeredCount, aiQuestionsCount, 1)
-  const currentStep = isCompleted
-    ? totalSteps
-    : Math.max(1, answeredCount + 1)
+  const turnCount = isReady ? 0 : history.filter((entry) => entry.role === 'ai').length
   const startTimeFormatted = slot.scheduledStartTime
     ? new Date(slot.scheduledStartTime).toLocaleString('vi-VN', {
         hour: '2-digit',
@@ -357,8 +349,10 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         slotCode={slotCodeFormatted}
         startTime={startTimeFormatted}
         duration={durationFormatted}
-        currentStep={currentStep}
-        totalSteps={totalSteps}
+        currentStep={turnCount}
+        totalSteps={turnCount}
+        liveTurns
+        questionConfig={slot.examConfig}
         isCompleted={isCompleted}
         isProcessing={isProcessing}
         isAiSpeaking={false}
@@ -368,7 +362,7 @@ export function ApiInterviewRoom({ slot, userId, name }: { slot: StudentExamSlot
         timerLabel="Thời gian trả lời"
         progress={slot.slotNumber == null ? 'Ca thi của bạn' : `Ca ${slot.slotNumber}`}
         question={customQuestion}
-        transcript={history}
+        transcript={isReady ? [] : history}
         connection={online ? 'Đã kết nối máy chủ khảo thí' : 'Mất kết nối mạng'}
         notice={
           <div className="space-y-2">

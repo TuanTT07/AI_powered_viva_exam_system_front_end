@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Mic, Volume2, RotateCcw, RefreshCw, LogOut, Square } from "lucide-react";
 import { Button, Dialog } from "../../../components/ui/primitives";
@@ -63,36 +63,9 @@ export function ApiSpeechRoom({
   );
 
   const draft = speechDraft(state) || clientDraft;
-  const latestSpokenTextRef = useRef<string>("");
-  useEffect(() => {
-    if (draft.trim()) {
-      latestSpokenTextRef.current = draft.trim();
-    }
-  }, [draft]);
-
-  // When question changes, reset the draft tracker for the new question
-  const prevQuestionTurnId = useRef(prompt.questionTurnId);
-  useEffect(() => {
-    if (prevQuestionTurnId.current !== prompt.questionTurnId) {
-      prevQuestionTurnId.current = prompt.questionTurnId;
-      latestSpokenTextRef.current = "";
-    }
-  }, [prompt.questionTurnId]);
-
   const handleRestartAnswer = async () => {
     setAnswerResetNotice(true);
     await restartAnswer();
-  };
-
-  const handleConfirmAnswer = async () => {
-    const recognizedText = latestSpokenTextRef.current || draft.trim();
-    if (recognizedText) {
-      onAnswerSaved({
-        transcriptTurnId: `student-${prompt.questionTurnId}`,
-        text: recognizedText,
-      });
-    }
-    await stop();
   };
 
   // Accumulate history dialogue with current prompt and student receipt
@@ -101,8 +74,7 @@ export function ApiSpeechRoom({
     (t) =>
       t.role === "ai" &&
       (t.id === `ai-${prompt.questionTurnId}` ||
-        t.id === prompt.questionTurnId ||
-        t.text === prompt.text)
+        t.id === prompt.questionTurnId)
   );
   if (!hasPrompt) {
     transcript.push({
@@ -119,8 +91,7 @@ export function ApiSpeechRoom({
         t.role === "student" &&
         ((currentReceipt.transcriptTurnId &&
           (t.id === currentReceipt.transcriptTurnId ||
-            t.id === `student-${currentReceipt.transcriptTurnId}`)) ||
-          t.text === currentReceipt.text)
+            t.id === `student-${currentReceipt.transcriptTurnId}`)))
     );
     if (!hasReceipt) {
       transcript.push({
@@ -139,52 +110,11 @@ export function ApiSpeechRoom({
   useEffect(() => { onBusyChange(busy); }, [busy, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
   useEffect(() => {
-    if (state.phase === "saved") {
-      const receiptText =
-        state.receipt?.text?.trim() ||
-        latestSpokenTextRef.current ||
-        "Đã ghi nhận câu trả lời";
-      const receiptTurnId =
-        state.receipt?.transcriptTurnId || `student-${prompt.questionTurnId}`;
-      onAnswerSaved({
-        transcriptTurnId: receiptTurnId,
-        text: receiptText,
-      });
-    }
-  }, [state.phase, state.receipt, prompt.questionTurnId, onAnswerSaved]);
+    if (state.phase === "saved" && state.receipt) onAnswerSaved(state.receipt);
+  }, [state.phase, state.receipt, onAnswerSaved]);
   const retry = ["idle", "disconnected", "error"].includes(state.phase);
 
-  const turnLimitSeconds =
-    slot.examConfig?.timeLimitPerTurnSeconds ??
-    (slot as any).timeLimitPerTurnSeconds ??
-    (slot as any).examConfig?.durationPerTurn ??
-    120;
-
-  const answeredCount =
-    history.filter((h) => h.role === "student").length +
-    (state.receipt &&
-    !history.some(
-      (h) =>
-        h.role === "student" &&
-        (h.id === state.receipt?.transcriptTurnId || h.text === state.receipt?.text)
-    )
-      ? 1
-      : 0);
-  const currentStep = Math.max(1, answeredCount + 1);
-  const aiQuestionsCount = Math.max(
-    history.filter((h) => h.role === "ai").length,
-    transcript.filter((h) => h.role === "ai").length,
-    1
-  );
-  const configuredMax =
-    slot.examConfig?.maxMainQuestions ??
-    (slot as any).examConfig?.questionCount ??
-    (slot as any).mainQuestionCount ??
-    (slot as any).questionCount ??
-    (slot as any).maxQuestions ??
-    (slot as any).totalQuestions ??
-    3;
-  const totalSteps = Math.max(configuredMax, currentStep, aiQuestionsCount);
+  const turnCount = transcript.filter((entry) => entry.role === "ai").length;
   const startTimeFormatted = slot.scheduledStartTime
     ? new Date(slot.scheduledStartTime).toLocaleString("vi-VN", {
         hour: "2-digit",
@@ -216,8 +146,10 @@ export function ApiSpeechRoom({
         slotCode={slotCodeFormatted}
         startTime={startTimeFormatted}
         duration={durationFormatted}
-        currentStep={currentStep}
-        totalSteps={totalSteps}
+        currentStep={turnCount}
+        totalSteps={turnCount}
+        liveTurns
+        questionConfig={slot.examConfig}
         isRecording={state.phase === "recording"}
         isAiSpeaking={state.phase === "speaking"}
         isProcessing={isProcessing}
@@ -239,15 +171,14 @@ export function ApiSpeechRoom({
             prompt.text
           )
         }
-        phase={isProcessing ? "Hệ thống đang xử lý lượt thi" : phases[state.phase]}
+        phase={isProcessing ? "Hệ thống đang xử lý lượt thi"
+          : answerResetNotice && state.phase === "finalizing" ? "Đang hủy bản thu"
+          : phases[state.phase]}
         timer={
           <TurnQuestionCountdown
-            key={prompt.questionTurnId}
-            turnDeadline={state.deadline}
-            promptDeadline={prompt.deadlineAt}
-            turnLimitSeconds={turnLimitSeconds}
-            isProcessing={isProcessing}
-            slotEndTime={slot.scheduledEndTime}
+            key={state.phase === "recording" ? state.deadline : prompt.questionTurnId}
+            turnDeadline={state.phase === "recording" ? state.deadline : null}
+            isProcessing={isProcessing || ["finalizing", "checking", "saved"].includes(state.phase)}
           />
         }
         timerLabel="Thời gian trả lời"
@@ -357,7 +288,7 @@ export function ApiSpeechRoom({
               {retry && (
                 <>
                   <Button
-                    aria-label={state.answerId ? "Kiểm tra câu trả lời đã lưu" : "Kết nối speech"}
+                    aria-label="Kết nối speech"
                     disabled={!online}
                     onClick={() => {
                       onBusyChange(true);
@@ -367,23 +298,11 @@ export function ApiSpeechRoom({
                   >
                     <RefreshCw size={14} />
                     <span>
-                      {state.answerId
-                        ? "Kiểm tra câu trả lời đã lưu"
-                        : state.phase === "idle"
+                      {state.phase === "idle"
                           ? "Kết nối âm thanh phòng thi"
                           : "Kết nối lại âm thanh"}
                     </span>
                   </Button>
-                  {state.answerId && (
-                    <Button
-                      variant="outline"
-                      onClick={() => void handleRestartAnswer()}
-                      className="border-amber-300 text-amber-800 hover:bg-amber-50 inline-flex items-center gap-1.5"
-                    >
-                      <RotateCcw size={14} className="text-amber-600" />
-                      <span>Hủy bản thu cũ &amp; Trả lời lại</span>
-                    </Button>
-                  )}
                 </>
               )}
               {state.phase === "ready" && (
@@ -418,7 +337,7 @@ export function ApiSpeechRoom({
                 <>
                   <Button
                     aria-label="Xác nhận câu trả lời"
-                    onClick={() => void handleConfirmAnswer()}
+                    onClick={() => void stop()}
                     className="border border-slate-300 hover:bg-slate-50 font-bold text-slate-800 bg-white inline-flex items-center gap-2 shadow-2xs px-5 py-2"
                   >
                     <Square size={13} className="fill-slate-800 text-slate-800" />
@@ -485,58 +404,28 @@ export function ApiSpeechRoom({
 
 function TurnQuestionCountdown({
   turnDeadline,
-  promptDeadline,
-  turnLimitSeconds,
   isProcessing,
-  slotEndTime,
 }: {
-  turnDeadline?: string | null;
-  promptDeadline?: string | null;
-  turnLimitSeconds: number;
-  isProcessing?: boolean;
-  slotEndTime?: string | null;
+  turnDeadline: string | null;
+  isProcessing: boolean;
 }) {
+  const deadline = turnDeadline ? Date.parse(turnDeadline) : NaN;
+  const ticking = Number.isFinite(deadline) && !isProcessing;
   const [now, setNow] = useState(Date.now);
-  const [turnStartedAt] = useState(Date.now);
 
   useEffect(() => {
+    if (!ticking) return;
     const timer = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(timer);
-  }, []);
+  }, [ticking, deadline]);
 
-  if (isProcessing) {
-    return (
-      <span className="text-sm font-semibold text-blue-600 animate-pulse">
-        Đang xử lý...
-      </span>
-    );
-  }
+  if (isProcessing) return <span className="text-sm font-semibold text-blue-600">Đang xử lý...</span>;
+  if (!ticking) return <span className="text-sm font-semibold">Chưa bắt đầu</span>;
 
-  let remaining: number;
-  if (turnDeadline && Number.isFinite(Date.parse(turnDeadline))) {
-    remaining = Math.max(0, Math.ceil((Date.parse(turnDeadline) - now) / 1000));
-  } else if (promptDeadline && Number.isFinite(Date.parse(promptDeadline))) {
-    const promptDiff = Math.ceil((Date.parse(promptDeadline) - now) / 1000);
-    if (promptDiff > 0 && promptDiff <= turnLimitSeconds * 2) {
-      remaining = promptDiff;
-    } else {
-      const elapsed = Math.floor((now - turnStartedAt) / 1000);
-      remaining = Math.max(0, turnLimitSeconds - elapsed);
-    }
-  } else {
-    const elapsed = Math.floor((now - turnStartedAt) / 1000);
-    remaining = Math.max(0, turnLimitSeconds - elapsed);
-  }
-
-  if (slotEndTime && Number.isFinite(Date.parse(slotEndTime))) {
-    const slotRemaining = Math.max(0, Math.ceil((Date.parse(slotEndTime) - now) / 1000));
-    remaining = Math.min(remaining, slotRemaining);
-  }
-
+  const remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const isUrgent = remaining <= 15 && remaining > 0;
-
   return (
     <span className={isUrgent ? "text-red-600 animate-pulse font-mono" : "font-mono"}>
       {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}

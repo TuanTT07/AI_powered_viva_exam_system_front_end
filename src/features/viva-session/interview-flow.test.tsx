@@ -37,7 +37,7 @@ let server: InterviewState
 let deny: boolean
 const request = vi.fn<typeof apiClient.request>()
 const source = runtimeConfig.dataSource
-const slot = { attemptId, examId, examTitle: 'Vấn đáp Java', courseCode: 'PRJ301', courseName: 'Java', slotNumber: 1, scheduledStartTime: null, scheduledEndTime: null, actualStartTime: null, actualEndTime: null, status: 'READY', accessCode: null }
+const slot = { attemptId, examId, examTitle: 'Vấn đáp Java', courseCode: 'PRJ301', courseName: 'Java', slotNumber: 1, scheduledStartTime: null, scheduledEndTime: null, actualStartTime: null, actualEndTime: null, status: 'READY', accessCode: null, examConfig: { maxMainQuestions: 2, maxFollowUpQuestions: 1 } }
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })
   const result = render(<QueryClientProvider client={client}><SessionContext.Provider value={{ session: { status: 'authenticated', user: { id: '11111111-1111-4111-8111-111111111111', displayName: 'Sinh viên', roles: ['student'] } }, signIn: vi.fn(), signOut: vi.fn() }}>
@@ -112,6 +112,17 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     expect(request.mock.calls.filter(([path, options]) => path.endsWith('/audio') && options?.method === 'POST')).toHaveLength(1)
   })
 
+  it('drops cached turns when a reset attempt starts again', async () => {
+    sessionStorage.setItem(`aives.interview.transcript.${attemptId}`, JSON.stringify([
+      { id: 'old-1', role: 'ai', text: 'Câu hỏi cũ thứ nhất' },
+      { id: 'old-2', role: 'ai', text: 'Câu hỏi cũ thứ hai' },
+    ]))
+    mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu phiên thi' }))
+    expect(await screen.findByText('1 lượt hỏi')).toBeInTheDocument()
+    expect(screen.queryByText('Câu hỏi cũ thứ nhất')).not.toBeInTheDocument()
+  })
+
   it('starts explicitly, ignores URL prompt, saves one answer, then follows backend processing and completion', async () => {
     const view = mount()
     const start = await screen.findByRole('button', { name: 'Bắt đầu phiên thi' })
@@ -119,13 +130,18 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     fireEvent.click(start)
     await screen.findByRole('button', { name: 'Kết nối speech' })
     expect(screen.getAllByText(prompt.text).length).toBeGreaterThan(0)
+    expect(screen.getByText('Chưa bắt đầu')).toBeInTheDocument()
+    expect(screen.getByText('1 lượt hỏi')).toBeInTheDocument()
+    expect(screen.getByText('2 câu chính · Tối đa 1 câu đào sâu mỗi câu chính')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Kết nối speech' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
     await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start', questionTurnId: turnId })))
     expect(media.captureStart).not.toHaveBeenCalled()
+    expect(screen.getByText('Chưa bắt đầu')).toBeInTheDocument()
     const startCommand = media.command.mock.calls[0][0]
     act(() => media.emit?.({ type: 'answer.started', requestId: startCommand.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
     expect(media.captureStart).toHaveBeenCalledOnce()
+    expect(screen.queryByText('Chưa bắt đầu')).not.toBeInTheDocument()
     act(() => media.chunk?.(new ArrayBuffer(320)))
     expect(media.audio).toHaveBeenCalledOnce()
     server = { attemptId, status: 'PROCESSING', prompt: null }
@@ -140,6 +156,8 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     server = { attemptId, status: 'AWAITING_ANSWER', prompt: { ...prompt, questionTurnId: '66666666-6666-4666-8666-666666666666', text: 'Câu hỏi tiếp theo từ hệ thống.' } }
     await view.sync()
     expect((await screen.findAllByText('Câu hỏi tiếp theo từ hệ thống.')).length).toBeGreaterThan(0)
+    expect(screen.getByText('2 lượt hỏi')).toBeInTheDocument()
+    expect(screen.getByText('Chưa bắt đầu')).toBeInTheDocument()
     // Live WebSocket connection is preserved without closing
     expect(media.close).not.toHaveBeenCalled()
     expect(await screen.findByRole('button', { name: 'Bắt đầu trả lời' })).toBeInTheDocument()
@@ -157,9 +175,9 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     await waitFor(() => expect(media.command).toHaveBeenCalled())
     const command = media.command.mock.calls[0][0]
     act(() => media.emit?.({ type: 'answer.started', requestId: command.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
-    act(() => media.disconnected?.())
     server = { attemptId, status: 'PROCESSING', prompt: null }
-    fireEvent.click(await screen.findByRole('button', { name: 'Kiểm tra câu trả lời đã lưu' }))
+    act(() => media.disconnected?.())
+    expect(screen.queryByRole('button', { name: 'Kiểm tra câu trả lời đã lưu' })).not.toBeInTheDocument()
     await screen.findAllByText('Hệ thống đang xử lý lượt thi')
     expect(request.mock.calls.some(([path]) => path.endsWith('/speech/answers/' + answerId))).toBe(true)
     expect(media.command.mock.calls.filter(([value]) => value.type === 'answer.start')).toHaveLength(1)
@@ -190,15 +208,48 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     await screen.findByRole('button', { name: 'Bắt đầu phiên thi' })
     expect(request.mock.calls.some(([path]) => path.endsWith('/start'))).toBe(false)
   })
-  it('allows student to discard mistranscribed answer and re-record during the turn', async () => {
+  it('reconnects automatically when the server rejects the discard command', async () => {
     server = { attemptId, status: 'AWAITING_ANSWER', prompt }
+    const transport = request.getMockImplementation()!
+    request.mockImplementation(async (path, options) => {
+      if (path.endsWith('/speech/answers/' + answerId)) {
+        expect(request.mock.calls.filter(([url]) => url.endsWith('/speech-ticket'))).toHaveLength(2)
+        throw new ApiError('Chưa có câu trả lời', { status: 404 })
+      }
+      return transport(path, options)
+    })
     mount()
     fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
     await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start' })))
+    const start = media.command.mock.calls[0][0]
+    act(() => media.emit?.({ type: 'answer.started', requestId: start.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    fireEvent.click(await screen.findByRole('button', { name: /trả lời lại/i }))
+    const discard = media.command.mock.calls.at(-1)![0]
+    act(() => media.emit?.({ type: 'speech.error', requestId: discard.requestId, answerId, data: { code: 'INVALID_MESSAGE', message: 'Loại sự kiện không hợp lệ' } }))
+
+    const retry = await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
+    expect(media.close).toHaveBeenCalled()
+    expect(request.mock.calls.filter(([url]) => url.endsWith("/playback"))).toHaveLength(1)
+    fireEvent.click(retry)
+    await waitFor(() => expect(media.command.mock.calls.filter(([cmd]) => cmd.type === 'answer.start')).toHaveLength(2))
+  })
+
+  it('allows student to discard mistranscribed answer and re-record during the turn', async () => {
+    server = { attemptId, status: 'AWAITING_ANSWER', prompt }
+    const view = mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
+    const secondTurnId = '66666666-6666-4666-8666-666666666666'
+    server = { attemptId, status: 'AWAITING_ANSWER', prompt: { ...prompt, questionTurnId: secondTurnId, text: 'Câu hỏi thứ hai' } }
+    await view.sync()
+    await screen.findAllByText('Câu hỏi thứ hai')
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
+    await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start' })))
     const firstCommand = media.command.mock.calls[0][0]
-    act(() => media.emit?.({ type: 'answer.started', requestId: firstCommand.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    act(() => media.emit?.({ type: 'answer.started', requestId: firstCommand.requestId, answerId, data: { questionTurnId: secondTurnId, deadline: prompt.deadlineAt } }))
     expect(media.captureStart).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem(`aives-speech:11111111-1111-4111-8111-111111111111:${attemptId}:${secondTurnId}`)).toBe(answerId)
 
     // Server returns wrong transcript
     act(() => media.emit?.({
@@ -213,9 +264,13 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     const retryBtn = await screen.findByRole('button', { name: /trả lời lại/i })
     fireEvent.click(retryBtn)
 
-    // Verify current capture was cancelled and socket closed
+    // Cancel the capture and wait for the server to discard it on the same socket.
     await waitFor(() => expect(media.cancel).toHaveBeenCalled())
-    expect(media.close).toHaveBeenCalled()
+    expect(media.close).not.toHaveBeenCalled()
+    const discard = media.command.mock.calls.at(-1)![0]
+    expect(discard).toMatchObject({ type: 'answer.discard', answerId })
+    expect(screen.queryByRole('button', { name: 'Bắt đầu trả lời' })).not.toBeInTheDocument()
+    act(() => media.emit?.({ type: 'answer.discarded', requestId: discard.requestId, answerId, data: {} }))
 
     // Verify user can start answering again
     const startAgainBtn = await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
@@ -225,9 +280,9 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     // Student clicks start answering again
     const secondAnswerId = '99999999-9999-4999-8999-999999999999'
     fireEvent.click(startAgainBtn)
-    await waitFor(() => expect(media.command.mock.calls.length).toBeGreaterThan(1))
+    await waitFor(() => expect(media.command.mock.calls.length).toBeGreaterThan(2))
     const secondCommand = media.command.mock.calls.at(-1)![0]
-    act(() => media.emit?.({ type: 'answer.started', requestId: secondCommand.requestId, answerId: secondAnswerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    act(() => media.emit?.({ type: 'answer.started', requestId: secondCommand.requestId, answerId: secondAnswerId, data: { questionTurnId: secondTurnId, deadline: prompt.deadlineAt } }))
 
     // Server returns correct transcript
     act(() => media.emit?.({
