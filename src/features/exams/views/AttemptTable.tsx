@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import type { AttemptRow } from '../use-assessment-overview'
 import type { EvaluationResponseDto } from '../../grading/api-evaluation-service'
 import { attemptStatusLabels } from '../attempt-status'
-import { summarizeAttempt } from '../../grading/attempt-grade'
+import { attemptEvaluations, summarizeAttempt } from '../../grading/attempt-grade'
 
 export function AttemptTable({
   rows,
@@ -12,10 +12,12 @@ export function AttemptTable({
   demo = false,
   evaluations,
   expectedQuestions,
+  questionCounts,
 }: {
   rows: AttemptRow[]
   evaluations?: EvaluationResponseDto[]
   expectedQuestions?: number
+  questionCounts?: Record<string, number>
   examId: string
   allowReview: boolean
   summary?: boolean
@@ -36,7 +38,8 @@ export function AttemptTable({
         </thead>
         <tbody>
           {rows.map(row => {
-            const grade = summarizeAttempt(evaluations ?? [], row.attemptId, expectedQuestions)
+            const grade = summarizeAttempt(evaluations ?? [], row.attemptId, questionCounts?.[row.attemptId] ?? expectedQuestions)
+            const questions = attemptEvaluations(evaluations ?? [], row.attemptId)
             const targetAttemptId = row.attemptId
 
             return (
@@ -56,14 +59,20 @@ export function AttemptTable({
                     <span>{row.demoScore !== undefined ? row.demoScore.toFixed(1) : 'Chờ chấm'}</span>
                   ) : grade.score !== null ? (
                     <div><strong className="text-emerald-700">{grade.score.toFixed(1)} / 10</strong>
-                      <p>Đã chốt đủ {grade.expected}/{grade.expected} câu chính</p>
-                      <small>Trung bình quy đổi từ điểm từng câu; chưa phải bản tổng điểm riêng từ backend.</small>
+                      <p>Đã lưu điểm {grade.graded} câu chính</p>
+                      <small>Trung bình các câu, quy đổi về thang 10.</small>
                     </div>
                   ) : <div className="text-amber-700">
-                    <p>Đã chấm {grade.graded}/{grade.expected ?? '?'} câu chính</p>
-                    <p>Chưa đủ dữ liệu điểm toàn bài</p>
+                    <p>{row.status === 'COMPLETED' ? `Đã lưu điểm ${grade.graded} câu chính` : 'Chưa thi xong'}</p>
+                    {row.status === 'COMPLETED' && <p>Cần hoàn tất chấm điểm</p>}
                   </div>}
 
+                  {!demo && questions.length > 0 && <details className="mt-2 text-slate-700"><summary className="cursor-pointer">Xem điểm từng câu</summary>
+                    <ul className="mt-2 space-y-2">{questions.map((q, index) => <li key={q.questionAttemptId}>
+                      <Link className="text-blue-700 underline" to={`/lecturer/exams/${examId}/attempts/${row.attemptId}?question=${encodeURIComponent(q.questionAttemptId)}`}>{q.questionContent || `Câu ${index + 1}`}</Link>
+                      <p>{q.status === 'GRADED' && q.finalScore !== null ? `${q.finalScore} / ${q.maxScore} · ${q.publishedAt ? 'Đã công bố' : 'Đã lưu điểm'}` : 'Chưa chấm'}</p>
+                    </li>)}</ul>
+                  </details>}
                 </td>
                 <td className="p-4">
                   {allowReview && (!demo || row.status === 'COMPLETED') ? (

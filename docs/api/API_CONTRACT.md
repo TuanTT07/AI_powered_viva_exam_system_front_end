@@ -214,3 +214,12 @@ Playback uses Browser TTS (vi), not generated MP3. Receipt confirms only one ans
 - Backend InterviewWorker selects follow-up/next question and completes the attempt. The FE does not invent next/finish endpoints or interpret a receipt/clock expiry as attempt completion.
 
 Automated tests simulate HTTP, speech WS, PCM and Browser TTS. Actual student JWT/Render voice/provider persistence still require a signed-in live run.
+
+## Complete grading inventory (BE/FE coordinated fix, 2026-11-11)
+
+Deploy corresponding BE branch `fix/complete-attempt-grading` before this frontend. No compatibility fallback to first-question lookup is used.
+
+- `GET /api/exams/{examId}/attempts/{attemptId}/grading`: manager-only envelope of `[{ questionOrder, questionStatus, evaluation: EvaluationResponseDto }]`. Returns actual assigned questions including drafts with null evaluation id and current-run transcript/rubric. Read-only; does not trigger AI. Workspace selects from this inventory and sends selected questionAttemptId to save/AI/publish. Summary derives per-attempt count from actual inventory, not configured maximum or persisted evaluations.
+- `GET /api/v1/student/exams/{attemptId}/result-summary`: student-owner envelope `{ totalQuestions, questions: StudentResultDto[] }`. Count is actual assignment count; questions are published-only. Used to gate whole-result display without configured 1/3 ratios.
+
+Reading draft data does not prove AI has evaluated it. Saving a question does not publish it. Publication still uses existing per-question endpoint; there is no atomic publish-entire-attempt contract.

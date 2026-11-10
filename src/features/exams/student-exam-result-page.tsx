@@ -22,8 +22,8 @@ function ResultDetail() {
   const query = useResultDetail(examId, params.get('attemptId'))
   const result = demo ? demoResults.find(r => r.examId === examId && (!params.has('attemptId') || params.get('attemptId') === r.attemptId)) : query.data
   const recordRef = useRef<HTMLDetailsElement>(null)
-  const questions = result?.questions ?? []
-  const released = result?.demo || questions.length > 0
+  const released = Boolean(result?.demo || result?.score !== null && result?.score !== undefined)
+  const questions = released ? result?.questions ?? [] : []
   return <section className="student-page result-detail-page">
     <nav className="results-breadcrumb" aria-label="Đường dẫn"><Link to="/student/results">Kết quả thi</Link><span aria-hidden="true">/</span><span aria-current="page">Chi tiết kết quả</span></nav>
     <header className="student-hero">
@@ -38,7 +38,7 @@ function ResultDetail() {
     {!demo && query.isFetching && !query.data && <Skeleton label="Đang tải chi tiết kết quả" />}
     {query.isError && !demo ? <section className="result-panel" role="alert"><h2>Không thể xem kết quả này</h2><p>Kết quả không khả dụng hoặc bạn chưa được cấp quyền truy cập.</p><Button variant="outline" onClick={() => query.refetch()}>Thử lại</Button></section> : <>
       <section className="dashboard-section result-summary result-detail-summary" aria-labelledby="result-summary-title"><div><span className="subject-code-badge">{result?.course.split(' · ')[0] || 'Kỳ thi vấn đáp'}</span><h2 id="result-summary-title">{result?.title ?? 'Biên bản kết quả'}</h2><p>{result?.course.split(' · ').slice(1).join(' · ')}</p><p className="result-detail-date"><Calendar size={14} aria-hidden="true" />Ngày thi: {resultDate(result?.date ?? null)}</p><div className="result-approval"><ShieldCheck size={16} /><span>{result?.demo ? 'Xác nhận mẫu · Dữ liệu mô phỏng' : released ? 'Đánh giá từng câu đã được công bố' : 'Chưa có kết quả được hệ thống công bố'}</span></div></div><div className={`result-summary-score ${resultOutcome(result)}`}><span>{demo ? 'Điểm mẫu' : 'Điểm trung bình'}</span><strong>{result?.score?.toFixed(1) ?? '—'}<small> /10</small></strong><ResultStatus result={result} /></div></section>
-      {!demo && result?.score == null && <p role="status" className="result-note">Kết quả chưa đầy đủ · Đã công bố {questions.length}/{result?.expectedQuestions ?? '?'} câu chính. Chưa có điểm toàn bài.</p>}
+      {!demo && result?.score == null && <p role="status" className="result-note">Đang chờ giảng viên hoàn tất và công bố kết quả.</p>}
       <div className="result-detail-grid">
       <div className="result-detail-main">
       {released ? <>
@@ -60,7 +60,7 @@ function ResultDetail() {
       </> : <section className="dashboard-section result-publication-empty"><div className="result-publication-icon"><ShieldCheck size={24} aria-hidden="true" /></div><h2 className="section-title">Đang chờ công bố đánh giá</h2><p>Nhận xét giảng viên và điểm từng câu sẽ hiển thị tại đây khi được công bố.</p></section>}
       </div>
       <aside className="result-detail-aside" aria-label="Thông tin đánh giá">
-      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu hỏi chính đã công bố</dt><dd>{`${questions.length}/${result?.expectedQuestions ?? '?'} câu chính`}</dd></div></dl>{!demo && <p className="result-note">Chỉ hiển thị điểm tổng hợp khi đủ câu chính được công bố. Điểm từng câu được quy đổi về thang 10 rồi lấy trung bình, làm tròn một chữ số thập phân.</p>}</section>
+      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu hỏi chính đã công bố</dt><dd>{released ? questions.length : 'Chờ công bố'}</dd></div></dl>{!demo && <p className="result-note">Kết quả hiển thị sau khi giảng viên hoàn tất công bố. Điểm từng câu được quy đổi về thang 10 và tính trung bình.</p>}</section>
       <section className="dashboard-section result-record"><div><h2 className="section-title result-section-title"><FileText size={18} aria-hidden="true" />Biên bản đánh giá</h2><p>Xem lại dữ liệu đánh giá đã công bố của lượt thi này.</p></div>{questions.length > 0 ? <a className="button outline" href="#approved-assessment-record" onClick={() => { if (recordRef.current) recordRef.current.open = true }}><FileText size={16} />Xem biên bản đánh giá</a> : <Button variant="outline" disabled>Chưa có biên bản được công bố</Button>}</section>
       {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố, bao gồm câu trả lời của bạn.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}>
         <dt>Câu hỏi chính {q.questionOrder} · {q.finalScore} / {q.maxScore} điểm</dt>

@@ -1,5 +1,5 @@
 import { loadExamEvaluations } from './load-exam-evaluations'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams, useBlocker } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { DemoLabel } from '../../components/common/inline-notice'
@@ -51,40 +51,26 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     retry: false,
   })
 
-  // Scope every selectable question to the attempt identified by this route.
-  const questions = useMemo(() => {
-    const entries = examEvals.data?.content ?? []
-    const direct = entries.find(e => e.questionAttemptId === attemptId || e.id === attemptId)
-    const examAttemptId = direct?.examAttemptId ?? attemptId
-    return entries.filter(e => e.examAttemptId === examAttemptId || e === direct)
-  }, [examEvals.data, attemptId])
-  const selected = questions.find(e => e.questionAttemptId === params.get('question')) ?? questions[0]
-  const resolvedQuestionAttemptId = selected?.questionAttemptId ?? attemptId
-
-  // Dev3 API call: GET /api/question-attempts/{questionAttemptId}/evaluation
+  // Old question-level links resolve via existing evaluation metadata only.
+  const legacy = examEvals.data?.content.find(e => e.questionAttemptId === attemptId || e.id === attemptId)
+  const examAttemptId = legacy?.examAttemptId ?? attemptId
   const evalQuery = useQuery({
-    queryKey: ['dev3-evaluation', resolvedQuestionAttemptId],
-    queryFn: async () => {
-      try {
-        return await apiEvaluationService.getByQuestionAttempt(resolvedQuestionAttemptId)
-      } catch {
-        const fallback = examEvals.data?.content.find(
-          e =>
-            e.questionAttemptId === resolvedQuestionAttemptId ||
-            e.examAttemptId === resolvedQuestionAttemptId
-        )
-        return fallback ?? null
-      }
-    },
-    enabled: Boolean(resolvedQuestionAttemptId) && !examEvals.isPending,
+    queryKey: ['attempt-grading', examId, examAttemptId],
+    queryFn: () => apiEvaluationService.attemptQuestions(examId, examAttemptId),
+    enabled: Boolean(examAttemptId) && !examEvals.isPending,
     retry: false,
   })
+  const questions = evalQuery.isSuccess ? evalQuery.data.map(q => ({ ...q.evaluation, questionOrder: q.questionOrder, questionStatus: q.questionStatus })) : []
+  const selected = questions.find(e => e.questionAttemptId === params.get('question'))
+    ?? questions.find(e => e.questionAttemptId === legacy?.questionAttemptId)
+    ?? questions[0]
+  const resolvedQuestionAttemptId = selected?.questionAttemptId ?? ''
 
   const publication = useMutation({
     mutationFn: () => apiEvaluationService.publish(resolvedQuestionAttemptId),
     onSuccess: () => evalQuery.refetch(),
   })
-  const evaluation = evalQuery.data
+  const evaluation = selected
   const targetQuestionAttemptId = evaluation?.questionAttemptId ?? resolvedQuestionAttemptId
 
   const candidate = query.data?.candidateStatuses.find(
@@ -99,12 +85,9 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   ) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
 
 
-  const defaultScores = useMemo(() => {
-    if (!evaluation) return {}
-    return Object.fromEntries(
-      evaluation.criteria.map(c => [c.criterionId, String(c.finalScore ?? c.aiScore ?? '')])
-    )
-  }, [evaluation])
+  const defaultScores = Object.fromEntries(
+    (evaluation?.criteria ?? []).map(c => [c.criterionId, String(c.finalScore ?? c.aiScore ?? '')])
+  )
 
   const [userScores, setUserScores] = useState<Record<string, string> | null>(null)
   const [userNotes, setUserNotes] = useState<string | null>(null)
@@ -150,7 +133,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       await apiEvaluationService.gradeWithAi(targetQuestionAttemptId)
       await evalQuery.refetch()
       await examEvals.refetch()
-      setActionMessage('Đã kích hoạt AI chấm điểm thành công!')
+      setActionMessage('Đã nhận gợi ý điểm AI cho câu này.')
     } catch (err: unknown) {
       setActionMessage(err instanceof Error ? err.message : 'Không thể kích hoạt AI chấm điểm.')
     } finally {
@@ -193,9 +176,9 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         notes,
         confirmed: true,
         finalScore,
-        finalizedAt: res.updatedAt ?? new Date().toISOString(),
+        finalizedAt: res.updatedAt,
       })
-      setActionMessage('Đã chốt điểm thành công!')
+      setActionMessage('Đã lưu điểm câu này. Sinh viên chưa thấy điểm cho đến khi bạn công bố.')
       await evalQuery.refetch()
       await examEvals.refetch()
     } catch (err: unknown) {
@@ -215,7 +198,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     )
   }
 
-  if (!candidate && !evaluation) {
+  if (!candidate && !evaluation && !evalQuery.isError) {
     return <ErrorState description="Không tìm thấy lượt thi trong kỳ thi được cấp quyền xem." />
   }
 
@@ -236,16 +219,19 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
       {examEvals.isError && <Alert tone="danger">Không tải được danh sách câu hỏi. <Button variant="outline" onClick={() => void examEvals.refetch()}>Tải lại danh sách câu hỏi</Button></Alert>}
+      {evalQuery.isSuccess && !questions.length && <Alert>Chưa có câu hỏi được gán cho lượt thi này.</Alert>}
+      {evalQuery.isError && <Alert tone="danger">Không tải được hội thoại và điểm của câu này. <Button variant="outline" onClick={() => void evalQuery.refetch()}>Thử lại</Button></Alert>}
+      <p className="px-4 pt-4 text-sm text-slate-600">Chọn câu → xem hội thoại → lưu điểm → công bố điểm câu đó.</p>
       {questions.length > 0 && <nav aria-label="Chọn câu hỏi chấm điểm" className="flex flex-wrap gap-2 p-4">
-        {questions.map((question, index) => {
+        {questions.map(question => {
           const next = new URLSearchParams(params)
           next.set('question', question.questionAttemptId)
-          return <Link key={question.questionAttemptId} className="button outline"
+          return <div key={question.questionAttemptId} className="flex flex-col items-start gap-1"><Link className={`button ${question.questionAttemptId === resolvedQuestionAttemptId ? 'primary' : 'outline'}`}
             aria-current={question.questionAttemptId === resolvedQuestionAttemptId ? 'page' : undefined}
             title={question.questionContent}
             to={`?${next}`}>
-            Câu {index + 1} · {question.status === 'GRADED' ? 'Đã chốt' : 'Chờ chấm'}
-          </Link>
+            Câu {question.questionOrder}
+          </Link><span className="text-xs text-slate-600">{question.publishedAt ? 'Đã công bố' : question.status === 'GRADED' ? 'Đã lưu điểm' : 'Chưa chấm'}</span></div>
         })}
       </nav>}
       <GradingWorkspaceView
@@ -281,7 +267,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
                 ) : (
                   <>Chưa có điểm gợi ý từ AI. Giảng viên có thể tự chấm hoặc bấm &quot;Gọi AI chấm điểm&quot;. </>
                 )}
-                Trạng thái: <strong>{evaluation.status === 'GRADED' ? 'Đã chốt điểm' : 'Chờ duyệt'}</strong>.
+                Trạng thái: <strong>{evaluation.status === 'GRADED' ? 'Đã lưu điểm câu này' : 'Chưa lưu điểm câu này'}</strong>.
               </Alert>
             ) : (
               <Alert>
@@ -297,10 +283,10 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
               Danh sách lượt thi
             </Link>
             <Button variant="outline" onClick={tab.toggle}>
-              {tab.summary ? 'Không gian chấm điểm' : 'Tổng kết hồ sơ'}
+              {tab.summary ? 'Chấm câu này' : 'Xem điểm câu này'}
             </Button>
             {!confirmed && (
-              <Button variant="outline" disabled={triggering} onClick={handleTriggerAi}>
+              <Button variant="outline" disabled={!evaluation || triggering} onClick={handleTriggerAi}>
                 {triggering
                   ? 'Đang gọi AI...'
                   : evaluation?.aiSuggestedScore !== null && evaluation?.aiSuggestedScore !== undefined
@@ -310,7 +296,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
             )}
             {evaluation?.publishedAt ? null : confirmed ? (
               <Button variant="outline" onClick={() => setIsEditing(true)}>
-                Sửa điểm / Chấm lại
+                Sửa điểm câu này
               </Button>
             ) : (
               <>
@@ -323,7 +309,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
                   disabled={!criteria.length || isFinalizing}
                   onClick={handleOpenConfirm}
                 >
-                  {isGraded ? 'Cập nhật điểm' : 'Chốt điểm'}
+                  Lưu điểm câu này
                 </Button>
               </>
             )}
@@ -334,7 +320,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       <Dialog open={blocker.state === 'blocked'}
         onClose={() => blocker.state === 'blocked' && blocker.reset()}
         title="Rời bản chấm điểm chưa lưu?">
-        <p>Chỉnh sửa chưa lưu của câu này sẽ bị mất. Hãy chốt điểm trước khi chuyển câu nếu muốn lưu.</p>
+        <p>Chỉnh sửa chưa lưu của câu này sẽ bị mất. Hãy lưu điểm trước khi chuyển câu nếu muốn giữ chỉnh sửa.</p>
         <div className="dialog-actions">
           <Button variant="outline" onClick={() => blocker.state === 'blocked' && blocker.reset()}>Tiếp tục chỉnh sửa</Button>
           <Button variant="danger" disabled={isFinalizing || triggering || publication.isPending}
@@ -343,14 +329,14 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       </Dialog>
 
       {/* Confirm Final Grade Dialog */}
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Xác nhận chốt điểm?">
-        <p>Bạn có chắc chắn muốn chốt điểm chính thức cho câu hỏi này không?</p>
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Lưu điểm câu này?">
+        <p>Lưu điểm và nhận xét cho câu đang chọn. Thao tác này chưa công bố kết quả cho sinh viên.</p>
         <div className="dialog-actions">
           <Button variant="outline" disabled={isFinalizing} onClick={() => setConfirmOpen(false)}>
             Hủy
           </Button>
           <Button pending={isFinalizing} onClick={handleConfirmFinalize}>
-            Xác nhận chốt điểm
+            Lưu điểm
           </Button>
         </div>
       </Dialog>
