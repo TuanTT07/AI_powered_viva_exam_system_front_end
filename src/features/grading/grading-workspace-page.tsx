@@ -14,10 +14,11 @@ import type { CriterionReview, EvidenceLine } from './grading-types'
 
 export function GradingWorkspacePage() {
   const { examId = '', attemptId = '' } = useParams()
+  const [params] = useSearchParams()
   return runtimeConfig.dataSource === 'mock' ? (
     <DemoGrading key={`${examId}/${attemptId}`} examId={examId} attemptId={attemptId} />
   ) : (
-    <ApiGrading examId={examId} attemptId={attemptId} />
+    <ApiGrading key={`${examId}/${attemptId}/${params.get('question') ?? ''}`} examId={examId} attemptId={attemptId} />
   )
 }
 
@@ -25,11 +26,17 @@ function useSummaryTab() {
   const [params, setParams] = useSearchParams()
   return {
     summary: params.get('tab') === 'summary',
-    toggle: () => setParams(params.get('tab') === 'summary' ? {} : { tab: 'summary' }),
+    toggle: () => {
+      const next = new URLSearchParams(params)
+      if (params.get('tab') === 'summary') next.delete('tab')
+      else next.set('tab', 'summary')
+      setParams(next)
+    },
   }
 }
 
 function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }) {
+  const [params] = useSearchParams()
   const query = useExamMonitoring(examId)
   const tab = useSummaryTab()
   const [triggering, setTriggering] = useState(false)
@@ -38,26 +45,28 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   // Dev3 API: Query evaluations of this exam to resolve questionAttemptId if needed
   const examEvals = useQuery({
     queryKey: ['dev3-exam-evaluations', examId],
-    queryFn: () => apiEvaluationService.findByExam(examId),
+    queryFn: async () => {
+      const first = await apiEvaluationService.findByExam(examId)
+      const content = [...first.content]
+      for (let page = 1; page < first.totalPages; page++) {
+        const next = await apiEvaluationService.findByExam(examId, { page })
+        content.push(...next.content)
+      }
+      return { ...first, content }
+    },
     enabled: Boolean(examId),
     retry: false,
   })
 
-  // Resolve questionAttemptId: If attemptId is an examAttemptId, find corresponding questionAttemptId
-  const resolvedQuestionAttemptId = useMemo(() => {
-    if (!examEvals.data?.content || examEvals.data.content.length === 0) return attemptId
-    const match = examEvals.data.content.find(
-      e =>
-        e.questionAttemptId === attemptId ||
-        e.examAttemptId === attemptId ||
-        e.id === attemptId
-    )
-    if (match) return match.questionAttemptId
-    if (examEvals.data.content.length === 1) {
-      return examEvals.data.content[0].questionAttemptId
-    }
-    return attemptId
+  // Scope every selectable question to the attempt identified by this route.
+  const questions = useMemo(() => {
+    const entries = examEvals.data?.content ?? []
+    const direct = entries.find(e => e.questionAttemptId === attemptId || e.id === attemptId)
+    const examAttemptId = direct?.examAttemptId ?? attemptId
+    return entries.filter(e => e.examAttemptId === examAttemptId || e === direct)
   }, [examEvals.data, attemptId])
+  const selected = questions.find(e => e.questionAttemptId === params.get('question')) ?? questions[0]
+  const resolvedQuestionAttemptId = selected?.questionAttemptId ?? attemptId
 
   // Dev3 API call: GET /api/question-attempts/{questionAttemptId}/evaluation
   const evalQuery = useQuery({
@@ -74,7 +83,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         return fallback ?? null
       }
     },
-    enabled: Boolean(resolvedQuestionAttemptId),
+    enabled: Boolean(resolvedQuestionAttemptId) && !examEvals.isPending,
     retry: false,
   })
 
@@ -116,6 +125,12 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   const scores = userScores ?? stored?.scores ?? defaultScores
   const notes = userNotes ?? stored?.notes ?? evaluation?.overallFeedback ?? ''
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    (isFinalizing || triggering || publication.isPending || (!confirmed && (userScores !== null || userNotes !== null))) &&
+    (currentLocation.pathname !== nextLocation.pathname ||
+      new URLSearchParams(currentLocation.search).get('question') !== new URLSearchParams(nextLocation.search).get('question'))
+  )
 
   const criteria: CriterionReview[] = evaluation
     ? evaluation.criteria.map(c => ({
@@ -199,7 +214,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
     }
   }
 
-  if (query.isPending || evalQuery.isPending) return <LoadingPage label="Đang tải lượt thi và kết quả chấm điểm" />
+  if (query.isPending || examEvals.isPending || evalQuery.isPending) return <LoadingPage label="Đang tải lượt thi và kết quả chấm điểm" />
   if (query.isError) {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-4">
@@ -228,6 +243,19 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
+      {examEvals.isError && <Alert tone="danger">Không tải được danh sách câu hỏi. <Button variant="outline" onClick={() => void examEvals.refetch()}>Tải lại danh sách câu hỏi</Button></Alert>}
+      {questions.length > 0 && <nav aria-label="Chọn câu hỏi chấm điểm" className="flex flex-wrap gap-2 p-4">
+        {questions.map((question, index) => {
+          const next = new URLSearchParams(params)
+          next.set('question', question.questionAttemptId)
+          return <Link key={question.questionAttemptId} className="button outline"
+            aria-current={question.questionAttemptId === resolvedQuestionAttemptId ? 'page' : undefined}
+            title={question.questionContent}
+            to={`?${next}`}>
+            Câu {index + 1} · {question.status === 'GRADED' ? 'Đã chốt' : 'Chờ chấm'}
+          </Link>
+        })}
+      </nav>}
       <GradingWorkspaceView
         name={candidate?.studentName ?? evaluation?.studentName ?? 'Thí sinh'}
         code={candidate?.studentCode ?? evaluation?.studentCode ?? attemptId}
@@ -309,6 +337,17 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
           </>
         }
       />
+
+      <Dialog open={blocker.state === 'blocked'}
+        onClose={() => blocker.state === 'blocked' && blocker.reset()}
+        title="Rời bản chấm điểm chưa lưu?">
+        <p>Chỉnh sửa chưa lưu của câu này sẽ bị mất. Hãy chốt điểm trước khi chuyển câu nếu muốn lưu.</p>
+        <div className="dialog-actions">
+          <Button variant="outline" onClick={() => blocker.state === 'blocked' && blocker.reset()}>Tiếp tục chỉnh sửa</Button>
+          <Button variant="danger" disabled={isFinalizing || triggering || publication.isPending}
+            onClick={() => blocker.state === 'blocked' && blocker.proceed()}>Rời màn hình</Button>
+        </div>
+      </Dialog>
 
       {/* Confirm Final Grade Dialog */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Xác nhận chốt điểm?">
