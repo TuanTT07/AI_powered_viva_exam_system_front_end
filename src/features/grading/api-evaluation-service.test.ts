@@ -69,3 +69,9 @@ it('rejects an inventory belonging to another attempt', async () => {
   const request = vi.fn().mockResolvedValue({ data: [{ evaluation: { examAttemptId: 'other' } }] })
   await expect(createApiEvaluationService({ request }).attemptQuestions('exam', 'target')).rejects.toThrow('không khớp')
 })
+
+it('publishes an attempt with one request rather than one request per question', async () => {
+  const request = vi.fn().mockResolvedValue({})
+  await createApiEvaluationService({ request }).publishAttempt('exam', 'attempt')
+  expect(request).toHaveBeenCalledExactlyOnceWith('/api/exams/exam/attempts/attempt/publish', { method: 'PUT' })
+})

@@ -1,7 +1,7 @@
 import { loadExamEvaluations } from './load-exam-evaluations'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams, useBlocker } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DemoLabel } from '../../components/common/inline-notice'
 import { Alert, Button, Dialog } from '../../components/ui/primitives'
 import { ErrorState, LoadingPage } from '../../components/common/states'
@@ -38,6 +38,8 @@ function useSummaryTab() {
 
 function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }) {
   const [params] = useSearchParams()
+  const client = useQueryClient()
+  const [publishOpen, setPublishOpen] = useState(false)
   const query = useExamMonitoring(examId)
   const tab = useSummaryTab()
   const [triggering, setTriggering] = useState(false)
@@ -67,8 +69,18 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   const resolvedQuestionAttemptId = selected?.questionAttemptId ?? ''
 
   const publication = useMutation({
-    mutationFn: () => apiEvaluationService.publish(resolvedQuestionAttemptId),
-    onSuccess: () => evalQuery.refetch(),
+    mutationFn: () => apiEvaluationService.publishAttempt(examId, examAttemptId),
+    onError: () => { void evalQuery.refetch() },
+    onSuccess: async () => {
+      setPublishOpen(false)
+      setActionMessage('Đã công bố kết quả toàn bộ bài thi cho sinh viên.')
+      await Promise.all([
+        evalQuery.refetch(), examEvals.refetch(),
+        client.invalidateQueries({ queryKey: ['exam-attempt-grading', examId] }),
+        client.invalidateQueries({ queryKey: ['student-results'] }),
+        client.invalidateQueries({ queryKey: ['student-result'] }),
+      ])
+    },
   })
   const evaluation = selected
   const targetQuestionAttemptId = evaluation?.questionAttemptId ?? resolvedQuestionAttemptId
@@ -100,6 +112,11 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   const scores = userScores ?? defaultScores
   const notes = userNotes ?? evaluation?.overallFeedback ?? ''
+
+  const allGraded = questions.length > 0 && questions.every(q => q.status === 'GRADED' && q.finalScore !== null && Number.isFinite(q.finalScore))
+  const allPublished = questions.length > 0 && questions.every(q => Boolean(q.publishedAt))
+  const hasUnsavedChanges = isEditing || userScores !== null || userNotes !== null
+  const canPublish = candidate?.status === 'COMPLETED' && evalQuery.isSuccess && !evalQuery.isFetching && allGraded && !allPublished && !hasUnsavedChanges && !isFinalizing && !triggering
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
     (isFinalizing || triggering || publication.isPending || (!confirmed && (userScores !== null || userNotes !== null))) &&
@@ -169,6 +186,8 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         overallFeedback: notes,
       })
       setIsEditing(false)
+      setUserScores(null)
+      setUserNotes(null)
       setConfirmOpen(false)
       const finalScore = res.finalScore ?? Object.values(scores).reduce((sum, v) => sum + (Number(v) || 0), 0)
       saveStoredGrading(examId, targetQuestionAttemptId, {
@@ -239,12 +258,14 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
         code={candidate?.studentCode ?? evaluation?.studentCode ?? attemptId}
         question={evaluation?.questionContent}
         publication={<div className="space-y-2">
-          {evaluation?.publishedAt
-            ? <p role="status" className="text-sm font-semibold text-emerald-700">Đã công bố điểm câu này</p>
-            : <Button disabled={evaluation?.status !== 'GRADED' || isEditing || isFinalizing} pending={publication.isPending}
-                onClick={() => { if (window.confirm('Công bố điểm đã chốt của câu này cho sinh viên?')) publication.mutate() }}>
-                Công bố điểm câu này
-              </Button>}
+          <p className="text-sm text-slate-600">Lưu điểm tất cả câu chính, sau đó công bố toàn bộ kết quả bằng một lần xác nhận.</p>
+          {allPublished
+            ? <p role="status" className="text-sm font-semibold text-emerald-700">Đã công bố kết quả bài thi</p>
+            : <>
+              <Button disabled={!canPublish} pending={publication.isPending} onClick={() => { publication.reset(); setPublishOpen(true) }}>Công bố kết quả</Button>
+              {!allGraded && <p className="text-sm text-slate-600">Cần lưu điểm đủ các câu chính trước khi công bố.</p>}
+              {hasUnsavedChanges && <p className="text-sm text-slate-600">Hãy lưu chỉnh sửa của câu đang chọn trước.</p>}
+            </>}
           {publication.isError && <Alert tone="danger">{publication.error.message}</Alert>}
         </div>}
         transcript={transcript}
@@ -286,7 +307,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
               {tab.summary ? 'Chấm câu này' : 'Xem điểm câu này'}
             </Button>
             {!confirmed && (
-              <Button variant="outline" disabled={!evaluation || triggering} onClick={handleTriggerAi}>
+              <Button variant="outline" disabled={!evaluation || triggering || publication.isPending} onClick={handleTriggerAi}>
                 {triggering
                   ? 'Đang gọi AI...'
                   : evaluation?.aiSuggestedScore !== null && evaluation?.aiSuggestedScore !== undefined
@@ -295,7 +316,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
               </Button>
             )}
             {evaluation?.publishedAt ? null : confirmed ? (
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" disabled={publication.isPending} onClick={() => setIsEditing(true)}>
                 Sửa điểm câu này
               </Button>
             ) : (
@@ -316,6 +337,15 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
           </>
         }
       />
+
+      <Dialog open={publishOpen} onClose={() => { if (!publication.isPending) setPublishOpen(false) }} title="Công bố kết quả bài thi?">
+        <p>Sinh viên sẽ xem được điểm, nhận xét và hội thoại đã công bố của tất cả {questions.length} câu chính. Sau khi công bố, điểm đã lưu sẽ bị khóa chỉnh sửa.</p>
+        {publication.isError && <Alert tone="danger">{publication.error.message}</Alert>}
+        <div className="dialog-actions">
+          <Button variant="outline" disabled={publication.isPending} onClick={() => setPublishOpen(false)}>Quay lại</Button>
+          <Button disabled={!canPublish} pending={publication.isPending} onClick={() => publication.mutate()}>Xác nhận công bố</Button>
+        </div>
+      </Dialog>
 
       <Dialog open={blocker.state === 'blocked'}
         onClose={() => blocker.state === 'blocked' && blocker.reset()}

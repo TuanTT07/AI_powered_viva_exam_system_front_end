@@ -61,6 +61,8 @@ describe('grading authority', () => {
 
   it('never exposes demo transcript or scoring controls in API mode', async () => {
     runtimeConfig.dataSource = 'api'
+    vi.spyOn(apiEvaluationService, 'findByExam').mockResolvedValue({ content: [], totalPages: 1 } as never)
+    vi.spyOn(apiEvaluationService, 'attemptQuestions').mockRejectedValue(new Error('Forbidden'))
     vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({
       examId: 'exam',
       examTitle: 'Exam',
@@ -133,6 +135,38 @@ describe('grading authority', () => {
     await user.click(screen.getByRole('button', { name: 'Lưu điểm câu này' }))
     await user.click(within(screen.getByRole('dialog', { name: 'Lưu điểm câu này?' })).getByRole('button', { name: 'Lưu điểm' }))
     expect(finalize).toHaveBeenCalledWith('q2', expect.objectContaining({ criteria: [expect.objectContaining({ criterionId: 'criterion', finalScore: 3 })] }))
+  })
+
+  it('publishes the whole attempt with one confirmation after every question is saved', async () => {
+    runtimeConfig.dataSource = 'api'
+    vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({ candidateStatuses: [{ attemptId: 'attempt-1', studentName: 'Candidate', status: 'COMPLETED' }] } as never)
+    vi.spyOn(apiEvaluationService, 'findByExam').mockResolvedValue({ content: [], totalPages: 1 } as never)
+    const questions = [1, 2, 3].map(order => ({ questionOrder: order, questionStatus: 'COMPLETED' as const,
+      evaluation: { id: `e${order}`, questionAttemptId: `q${order}`, examAttemptId: 'attempt-1', questionContent: `Question ${order}`, finalScore: 8, maxScore: 10, status: 'GRADED', criteria: [], transcript: [], publishedAt: null } as unknown as EvaluationResponseDto }))
+    vi.spyOn(apiEvaluationService, 'attemptQuestions').mockResolvedValue(questions)
+    const publish = vi.spyOn(apiEvaluationService, 'publishAttempt').mockResolvedValue()
+    const perQuestion = vi.spyOn(apiEvaluationService, 'publish')
+    mount()
+    const user = userEvent.setup()
+    const button = await screen.findByRole('button', { name: 'Công bố kết quả' })
+    expect(button).toBeEnabled()
+    await user.click(button)
+    const dialog = screen.getByRole('dialog', { name: 'Công bố kết quả bài thi?' })
+    expect(dialog).toHaveTextContent('3 câu chính')
+    expect(publish).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('button', { name: 'Xác nhận công bố' }))
+    expect(publish).toHaveBeenCalledExactlyOnceWith('11111111-1111-4111-8111-111111111111', 'attempt-1')
+    expect(perQuestion).not.toHaveBeenCalled()
+  })
+
+  it('disables whole-attempt publication while one question still needs grading', async () => {
+    runtimeConfig.dataSource = 'api'
+    vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({ candidateStatuses: [{ attemptId: 'attempt-1', studentName: 'Candidate', status: 'COMPLETED' }] } as never)
+    vi.spyOn(apiEvaluationService, 'findByExam').mockResolvedValue({ content: [], totalPages: 1 } as never)
+    vi.spyOn(apiEvaluationService, 'attemptQuestions').mockResolvedValue([1, 2].map(order => ({ questionOrder: order, questionStatus: 'COMPLETED', evaluation: { id: `e${order}`, questionAttemptId: `q${order}`, examAttemptId: 'attempt-1', status: order === 1 ? 'GRADED' : 'PENDING_REVIEW', finalScore: order === 1 ? 8 : null, criteria: [], transcript: [] } })) as never)
+    mount()
+    expect(await screen.findByRole('button', { name: 'Công bố kết quả' })).toBeDisabled()
+    expect(screen.getByText('Cần lưu điểm đủ các câu chính trước khi công bố.')).toBeInTheDocument()
   })
 
   it('supports draft saving and notes entry in demo mode', async () => {
