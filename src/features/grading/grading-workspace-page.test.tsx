@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { GradingWorkspacePage } from './grading-workspace-page'
+import { apiEvaluationService, type EvaluationResponseDto } from './api-evaluation-service'
 import { runtimeConfig } from '../../services/api/runtime-config'
 import { apiExamMonitoringRepository } from '../exams/api-exam-monitoring-repository'
 
@@ -94,6 +95,40 @@ describe('grading authority', () => {
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)
     expect(screen.queryByText(/Phân biệt mảng động/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Chốt điểm' })).toBeDisabled()
+  })
+
+  it('loads later pages, selects only this attempt questions and isolates edits', async () => {
+    runtimeConfig.dataSource = 'api'
+    vi.spyOn(apiExamMonitoringRepository, 'get').mockResolvedValue({ candidateStatuses: [] } as never)
+    const question = (id: string, attempt = 'attempt-1') => ({
+      id, questionAttemptId: id, examAttemptId: attempt, questionContent: `Đề ${id}`,
+      studentName: 'Student', criteria: [{ criterionId: 'criterion', criterionName: 'Kiến thức', maxScore: 10, aiScore: 3, finalScore: null, comment: null }],
+      status: 'PENDING_REVIEW', overallFeedback: null, transcript: [],
+    } as unknown as EvaluationResponseDto)
+    const first = question('q1')
+    const second = question('q2')
+    vi.spyOn(apiEvaluationService, 'findByExam').mockImplementation(async (_id, params) => ({
+      content: params?.page === 1 ? [second, question('other', 'other-attempt')] : [first],
+      page: params?.page ?? 0, size: 1, totalPages: 2, totalElements: 3,
+    }))
+    const finalize = vi.spyOn(apiEvaluationService, 'finalizeEvaluation').mockResolvedValue({ ...second, status: 'GRADED', finalScore: 3 })
+    const detail = vi.spyOn(apiEvaluationService, 'getByQuestionAttempt').mockImplementation(async id => id === 'q2' ? second : first)
+    mount()
+    const user = userEvent.setup()
+    const next = await screen.findByRole('link', { name: 'Câu 2 · Chờ chấm' })
+    expect(screen.queryByRole('link', { name: 'Câu 3 · Chờ chấm' })).not.toBeInTheDocument()
+    const input = screen.getAllByRole('spinbutton')[0]
+    await user.clear(input)
+    await user.type(input, '8')
+    await user.click(next)
+    expect(await screen.findByRole('dialog', { name: 'Rời bản chấm điểm chưa lưu?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Rời màn hình' }))
+    expect(await screen.findByText('Đề q2')).toBeInTheDocument()
+    expect(screen.getAllByRole('spinbutton')[0]).toHaveValue(3)
+    expect(detail).toHaveBeenCalledWith('q2')
+    await user.click(screen.getByRole('button', { name: 'Chốt điểm' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Xác nhận chốt điểm?' })).getByRole('button', { name: 'Xác nhận chốt điểm' }))
+    expect(finalize).toHaveBeenCalledWith('q2', expect.objectContaining({ criteria: [expect.objectContaining({ criterionId: 'criterion', finalScore: 3 })] }))
   })
 
   it('supports draft saving and notes entry in demo mode', async () => {
