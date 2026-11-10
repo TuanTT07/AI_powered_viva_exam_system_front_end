@@ -42,3 +42,13 @@ export const examStatusMeta: Record<ExamStatus, { label: string; tone: 'neutral'
   COMPLETED: { label: 'ĐÃ KẾT THÚC', tone: 'success' },
   CANCELLED: { label: 'ĐÃ HỦY', tone: 'danger' },
 }
+
+// Action names describe the operation; status badges retain the resulting state.
+export const examStatusActionLabels: Record<ExamStatus, string> = {
+  DRAFT: 'Chuyển về nháp',
+  PUBLISHED: 'Công bố',
+  SCHEDULED: 'Lên lịch',
+  IN_PROGRESS: 'Bắt đầu kỳ thi',
+  COMPLETED: 'Kết thúc kỳ thi',
+  CANCELLED: 'Hủy kỳ thi',
+}
