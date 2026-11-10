@@ -48,3 +48,10 @@ Listen shares the pending request; replay reuses its Blob within the current que
 Preparation is aborted/discarded on question, user or active-state change and unmount.
 Speculative errors are silent and retried on explicit listen. No recording starts during playback.
 First playback may still wait for the provider if preparation has not finished.
+
+## Question deadline — 2026-11-11
+Each main question and follow-up now persists `deadlineAt` when the backend opens
+that prompt, capped by the slot end. Thinking, listening and recording share that
+same time budget. `answer.start` reuses the deadline; retry/reload does not extend
+it. The frontend displays zero for expired deadlines while awaiting the server's
+transition. Opening an entire interview still uses the existing start action.

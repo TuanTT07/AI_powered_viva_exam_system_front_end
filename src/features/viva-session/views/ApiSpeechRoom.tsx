@@ -483,7 +483,7 @@ export function ApiSpeechRoom({
   );
 }
 
-function TurnQuestionCountdown({
+export function TurnQuestionCountdown({
   turnDeadline,
   promptDeadline,
   turnLimitSeconds,
@@ -516,13 +516,7 @@ function TurnQuestionCountdown({
   if (turnDeadline && Number.isFinite(Date.parse(turnDeadline))) {
     remaining = Math.max(0, Math.ceil((Date.parse(turnDeadline) - now) / 1000));
   } else if (promptDeadline && Number.isFinite(Date.parse(promptDeadline))) {
-    const promptDiff = Math.ceil((Date.parse(promptDeadline) - now) / 1000);
-    if (promptDiff > 0 && promptDiff <= turnLimitSeconds * 2) {
-      remaining = promptDiff;
-    } else {
-      const elapsed = Math.floor((now - turnStartedAt) / 1000);
-      remaining = Math.max(0, turnLimitSeconds - elapsed);
-    }
+    remaining = Math.max(0, Math.ceil((Date.parse(promptDeadline) - now) / 1000));
   } else {
     const elapsed = Math.floor((now - turnStartedAt) / 1000);
     remaining = Math.max(0, turnLimitSeconds - elapsed);
