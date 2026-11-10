@@ -6,7 +6,7 @@ import { DemoLabel } from '../../components/common/inline-notice'
 import { Alert, Button, Dialog } from '../../components/ui/primitives'
 import { ErrorState, LoadingPage } from '../../components/common/states'
 import { runtimeConfig } from '../../services/api/runtime-config'
-import { useExam, useExamMonitoring, useExamRoster } from '../exams/exam-hooks'
+import { useExamMonitoring, useExamRoster } from '../exams/exam-hooks'
 import { GradingWorkspaceView } from './views/GradingWorkspaceView'
 import { gradingDemo } from './mocks/grading-demo'
 import { getStoredGrading, saveStoredGrading } from './grading-repository'
@@ -38,7 +38,6 @@ function useSummaryTab() {
 
 function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }) {
   const [params] = useSearchParams()
-  const exam = useExam(examId)
   const query = useExamMonitoring(examId)
   const tab = useSummaryTab()
   const [triggering, setTriggering] = useState(false)
@@ -236,10 +235,6 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
-      {exam.data?.expectedMainQuestionCount !== undefined && questions.length < exam.data.expectedMainQuestionCount && <Alert tone="warning">
-        Backend mới cung cấp {questions.length}/{exam.data.expectedMainQuestionCount} bản đánh giá câu chính.
-        Các câu chưa có bản đánh giá chưa thể mở từ API hiện tại. Điểm câu đang xem không phải điểm toàn bài.
-      </Alert>}
       {examEvals.isError && <Alert tone="danger">Không tải được danh sách câu hỏi. <Button variant="outline" onClick={() => void examEvals.refetch()}>Tải lại danh sách câu hỏi</Button></Alert>}
       {questions.length > 0 && <nav aria-label="Chọn câu hỏi chấm điểm" className="flex flex-wrap gap-2 p-4">
         {questions.map((question, index) => {
