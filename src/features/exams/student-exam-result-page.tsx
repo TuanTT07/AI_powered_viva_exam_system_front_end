@@ -1,3 +1,5 @@
+import type { TranscriptTurnDto } from '../grading/api-evaluation-service'
+import { transcriptLabels } from '../grading/transcript-labels'
 import { useRef } from 'react'
 import { ResultQueryBoundary } from './result-query-boundary'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -40,16 +42,28 @@ function ResultDetail() {
       <div className="result-detail-main">
       {released ? <>
       <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><MessageSquare size={18} aria-hidden="true" />Nhận xét giảng viên</h2></div><p className="result-prose">{result?.feedback ?? 'Chưa có nhận xét tổng quan được công bố.'}</p></section>
-      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><ListChecks size={18} aria-hidden="true" />Đánh giá từng câu hỏi</h2></div><p className="result-note">Mở từng câu để xem điểm và nhận xét đã công bố.</p><div className="result-questions">{questions.map(q => <details className="result-question" key={q.questionOrder}><summary><span>Câu hỏi {q.questionOrder}</span><strong>{q.finalScore} điểm</strong></summary><div><h3>Nhận xét của giảng viên</h3><p className="result-prose">{q.feedback || 'Chưa có nhận xét được công bố cho câu hỏi này.'}</p><p className="result-note">Ngày công bố: {resultDate(q.publishedAt)}</p></div></details>)}</div>{!questions.length && <p>Chưa có đánh giá từng câu được cung cấp.</p>}</section>
+      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><ListChecks size={18} aria-hidden="true" />Đánh giá từng câu hỏi chính</h2></div><p className="result-note">Mở từng câu để xem điểm và nhận xét đã công bố.</p><div className="result-questions">{questions.map(q => <details className="result-question" key={q.questionOrder}><summary><span>Câu hỏi chính {q.questionOrder}</span><strong>{q.finalScore} điểm</strong></summary><div>{q.questionContent && <p className="result-prose"><strong>Đề bài câu hỏi chính:</strong> {q.questionContent}</p>}<PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} /><h3>Nhận xét của giảng viên</h3><p className="result-prose">{q.feedback || 'Chưa có nhận xét được công bố cho câu hỏi này.'}</p><p className="result-note">Ngày công bố: {resultDate(q.publishedAt)}</p></div></details>)}</div>{!questions.length && <p>Chưa có đánh giá từng câu được cung cấp.</p>}</section>
       </> : <section className="dashboard-section result-publication-empty"><div className="result-publication-icon"><ShieldCheck size={24} aria-hidden="true" /></div><h2 className="section-title">Đang chờ công bố đánh giá</h2><p>Nhận xét giảng viên và điểm từng câu sẽ hiển thị tại đây khi được công bố.</p></section>}
       </div>
       <aside className="result-detail-aside" aria-label="Thông tin đánh giá">
-      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu đã công bố đánh giá</dt><dd>{questions.length || 'Chưa được cung cấp'}</dd></div></dl>{!demo && <p className="result-note">Điểm trung bình được tính từ các câu đã công bố, làm tròn đến một chữ số thập phân. Từ 5 điểm: đạt; dưới 5 điểm: chưa đạt.</p>}</section>
+      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu hỏi chính đã công bố</dt><dd>{questions.length || 'Chưa được cung cấp'}</dd></div></dl>{!demo && <p className="result-note">Điểm trung bình được tính từ các câu đã công bố, làm tròn đến một chữ số thập phân. Từ 5 điểm: đạt; dưới 5 điểm: chưa đạt.</p>}</section>
       <section className="dashboard-section result-record"><div><h2 className="section-title result-section-title"><FileText size={18} aria-hidden="true" />Biên bản đánh giá</h2><p>Xem lại dữ liệu đánh giá đã công bố của lượt thi này.</p></div>{questions.length > 0 ? <a className="button outline" href="#approved-assessment-record" onClick={() => { if (recordRef.current) recordRef.current.open = true }}><FileText size={16} />Xem biên bản đánh giá</a> : <Button variant="outline" disabled>Chưa có biên bản được công bố</Button>}</section>
-      {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố. Chưa có tài liệu biên bản riêng.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}><dt>Câu hỏi {q.questionOrder} · {q.finalScore} điểm</dt><dd className="result-prose">{q.feedback || 'Chưa có nhận xét.'}<br />Công bố: {resultDate(q.publishedAt)}</dd></div>)}</dl></details>}
+      {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố. Chưa có tài liệu biên bản riêng.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}><dt>Câu hỏi chính {q.questionOrder} · {q.finalScore} điểm</dt><dd className="result-prose"><PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />{q.feedback || 'Chưa có nhận xét.'}<br />Công bố: {resultDate(q.publishedAt)}</dd></div>)}</dl></details>}
       {result && <details className="dashboard-section result-metadata"><summary>Thông tin bổ sung về kỳ thi</summary><dl className="result-overview"><div><dt>Mã kỳ thi</dt><dd>{result.examId}</dd></div><div><dt>Mã lượt thi</dt><dd>{result.attemptId}</dd></div></dl></details>}
       </aside>
       </div>
     </>}
+  </section>
+}
+
+function PublishedTranscript({ turns, questionOrder }: { turns: TranscriptTurnDto[]; questionOrder: number }) {
+  if (!turns.length) return null
+  const labels = transcriptLabels(turns)
+  return <section aria-label={`Hội thoại câu hỏi chính ${questionOrder}`}>
+    <h3>Hội thoại câu hỏi chính và câu hỏi phụ</h3>
+    <p className="result-note">Câu hỏi phụ và câu trả lời bên dưới thuộc câu hỏi chính này, được đánh giá cùng trong một mục.</p>
+    <ol>{turns.map((turn, index) => <li key={turn.id} className="result-prose">
+      <strong>{labels[index] || (turn.speaker === 'AI' ? 'Giám khảo AI' : 'Sinh viên')}:</strong> {turn.textContent}
+    </li>)}</ol>
   </section>
 }

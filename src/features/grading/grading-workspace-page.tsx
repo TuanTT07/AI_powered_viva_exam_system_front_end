@@ -230,6 +230,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   const transcript: EvidenceLine[] = (evaluation?.transcript ?? []).map(t => ({
     id: t.id,
+    turnType: t.turnType,
     role: t.speaker.toLowerCase() === 'ai' ? 'ai' : 'student',
     text: t.textContent,
     time: t.createdAt

@@ -107,6 +107,8 @@ export function createApiEvaluationService(client: Pick<ApiClient, 'request'> = 
     async studentResults(attemptId: string, signal?: AbortSignal) {
       const res = await client.request<ApiResponse<{
         questionOrder: number
+        questionContent?: string | null
+        transcript?: TranscriptTurnDto[]
         finalScore: number
         feedback: string | null
         publishedAt: string

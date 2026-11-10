@@ -137,7 +137,7 @@ describe('grading authority', () => {
     const user = userEvent.setup()
 
     expect(screen.getByText(/Biên bản hội thoại/)).toBeInTheDocument()
-    expect(screen.getByText('Câu hỏi đang rà soát')).toBeInTheDocument()
+    expect(screen.getByText('Câu hỏi chính đang rà soát')).toBeInTheDocument()
 
     const notesInput = screen.getByPlaceholderText(/Nhận xét chi tiết và lý do điều chỉnh điểm/)
     await user.type(notesInput, 'Sinh viên nắm vững kiến thức.')

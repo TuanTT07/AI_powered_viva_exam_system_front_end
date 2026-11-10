@@ -1,3 +1,4 @@
+import { transcriptLabels } from '../transcript-labels'
 import type { ReactNode } from 'react'
 import {
   FileText,
@@ -50,6 +51,7 @@ export function GradingWorkspaceView({
   demo?: boolean
   status?: string
 }) {
+  const turnLabels = transcriptLabels(transcript)
   const total = criteria.reduce((sum, c) => sum + (Number(scores[c.id]) || 0), 0)
   const aiTotal = criteria.reduce((sum, c) => sum + c.ai, 0)
 
@@ -205,7 +207,7 @@ export function GradingWorkspaceView({
             <section className={panel}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
-                  <HelpCircle size={16} className="text-amber-600" /> Câu hỏi đang rà soát
+                  <HelpCircle size={16} className="text-amber-600" /> Câu hỏi chính đang rà soát
                 </h2>
                 <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700">
                   Chính thức
@@ -253,7 +255,7 @@ export function GradingWorkspaceView({
                           </span>
                         )}
                         <span className={isAi ? 'text-slate-700' : 'text-blue-700'}>
-                          {isAi ? 'Giám khảo AI' : 'Thí sinh'}
+                          {isAi ? 'Giám khảo AI' : 'Thí sinh'}{turnLabels[i] && ` · ${turnLabels[i]}`}
                         </span>
                       </div>
                       <time className="font-mono text-[11px] text-slate-400">{line.time}</time>
