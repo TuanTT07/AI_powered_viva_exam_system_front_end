@@ -1,9 +1,8 @@
 import type { TranscriptTurnDto } from '../grading/api-evaluation-service'
 import { transcriptLabels } from '../grading/transcript-labels'
-import { useRef } from 'react'
 import { ResultQueryBoundary } from './result-query-boundary'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, FileText, ShieldCheck, Award, MessageSquare, ListChecks, Calendar } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, Award, MessageSquare, ListChecks, Calendar } from 'lucide-react'
 import { Button, Skeleton } from '../../components/ui/primitives'
 import { DemoLabel } from '../../components/common/inline-notice'
 import { runtimeConfig } from '../../services/api/runtime-config'
@@ -21,7 +20,6 @@ function ResultDetail() {
   const demo = runtimeConfig.dataSource === 'mock'
   const query = useResultDetail(examId, params.get('attemptId'))
   const result = demo ? demoResults.find(r => r.examId === examId && (!params.has('attemptId') || params.get('attemptId') === r.attemptId)) : query.data
-  const recordRef = useRef<HTMLDetailsElement>(null)
   const released = Boolean(result?.demo || result?.score !== null && result?.score !== undefined)
   const questions = released ? result?.questions ?? [] : []
   return <section className="student-page result-detail-page">
@@ -46,14 +44,17 @@ function ResultDetail() {
       <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><ListChecks size={18} aria-hidden="true" />Đánh giá từng câu hỏi chính</h2></div><p className="result-note">Mở từng câu để xem câu trả lời, điểm và nhận xét đã công bố.</p><div className="result-questions">{questions.map(q => <details className="result-question" key={q.questionOrder}>
         <summary><span>Câu hỏi chính {q.questionOrder}</span><strong>{q.finalScore} / {q.maxScore} điểm</strong></summary>
         <div>
-          {q.questionContent && <p className="result-prose result-question-content"><strong>Đề bài:</strong> {q.questionContent}</p>}
+          {q.questionContent && !q.transcript?.some(t => t.turnType === 'MAIN_QUESTION') && <p className="result-prose result-question-content"><strong>Đề bài:</strong> {q.questionContent}</p>}
           <PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />
           {q.criteria.length > 0 && <div className="result-criteria">
             <h3>Điểm theo tiêu chí</h3>
-            <ul>{q.criteria.map(c => <li key={c.criterionId}><strong>{c.criterionName}</strong> — {c.finalScore ?? 0} / {c.maxScore}{c.comment && <span className="result-note"> · {c.comment}</span>}</li>)}</ul>
+            <ul>{q.criteria.map(c => <li key={c.criterionId}>
+              <div className="result-criterion-heading"><strong>{c.criterionName}</strong><span>{c.finalScore ?? '—'} / {c.maxScore}</span></div>
+              {c.comment && <p className="result-prose result-criterion-comment">{c.comment}</p>}
+            </li>)}</ul>
           </div>}
-          <h3>Nhận xét của giảng viên</h3>
-          <p className="result-prose">{q.feedback || 'Chưa có nhận xét được công bố cho câu hỏi này.'}</p>
+          <section className="result-lecturer-feedback"><h3>Nhận xét của giảng viên</h3>
+          <p className="result-prose">{q.feedback || 'Giảng viên chưa bổ sung nhận xét cho câu này.'}</p></section>
           <p className="result-note">Ngày công bố: {resultDate(q.publishedAt)}</p>
         </div>
       </details>)}</div>{!questions.length && <p>Chưa có đánh giá từng câu được cung cấp.</p>}</section>
@@ -61,16 +62,6 @@ function ResultDetail() {
       </div>
       <aside className="result-detail-aside" aria-label="Thông tin đánh giá">
       <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu hỏi chính đã công bố</dt><dd>{released ? questions.length : 'Chờ công bố'}</dd></div></dl>{!demo && <p className="result-note">Kết quả hiển thị sau khi giảng viên hoàn tất công bố. Điểm từng câu được quy đổi về thang 10 và tính trung bình.</p>}</section>
-      <section className="dashboard-section result-record"><div><h2 className="section-title result-section-title"><FileText size={18} aria-hidden="true" />Biên bản đánh giá</h2><p>Xem lại dữ liệu đánh giá đã công bố của lượt thi này.</p></div>{questions.length > 0 ? <a className="button outline" href="#approved-assessment-record" onClick={() => { if (recordRef.current) recordRef.current.open = true }}><FileText size={16} />Xem biên bản đánh giá</a> : <Button variant="outline" disabled>Chưa có biên bản được công bố</Button>}</section>
-      {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố, bao gồm câu trả lời của bạn.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}>
-        <dt>Câu hỏi chính {q.questionOrder} · {q.finalScore} / {q.maxScore} điểm</dt>
-        <dd className="result-prose">
-          {q.questionContent && <><strong>Đề bài:</strong> {q.questionContent}<br /></>}
-          <PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />
-          <strong>Nhận xét:</strong> {q.feedback || 'Chưa có nhận xét.'}<br />
-          Công bố: {resultDate(q.publishedAt)}
-        </dd>
-      </div>)}</dl></details>}
       {result && <details className="dashboard-section result-metadata"><summary>Thông tin bổ sung về kỳ thi</summary><dl className="result-overview"><div><dt>Mã kỳ thi</dt><dd>{result.examId}</dd></div><div><dt>Mã lượt thi</dt><dd>{result.attemptId}</dd></div></dl></details>}
       </aside>
       </div>
@@ -81,11 +72,15 @@ function ResultDetail() {
 function PublishedTranscript({ turns, questionOrder }: { turns: TranscriptTurnDto[]; questionOrder: number }) {
   if (!turns.length) return null
   const labels = transcriptLabels(turns)
-  return <section aria-label={`Hội thoại câu hỏi chính ${questionOrder}`}>
-    <h3>Hội thoại câu hỏi chính và câu hỏi phụ</h3>
-    <p className="result-note">Câu hỏi phụ và câu trả lời bên dưới thuộc câu hỏi chính này, được đánh giá cùng trong một mục.</p>
-    <ol>{turns.map((turn, index) => <li key={turn.id} className="result-prose">
-      <strong>{labels[index] || (turn.speaker === 'AI' ? 'Giám khảo AI' : 'Sinh viên')}:</strong> {turn.textContent}
-    </li>)}</ol>
+  return <section className="result-transcript" aria-label={`Hội thoại câu hỏi chính ${questionOrder}`}>
+    <h3>Hội thoại hỏi–đáp</h3>
+    <ol>{turns.map((turn, index) => {
+      const label = (labels[index] || (turn.speaker === 'AI' ? 'Giám khảo AI' : 'Bạn trả lời'))
+        .replace(/câu hỏi phụ (\d+)/i, (_, number) => `câu hỏi phụ ${questionOrder}.${number}`)
+      return <li key={turn.id} className={`result-dialogue-turn ${turn.speaker === 'AI' ? 'is-question' : 'is-answer'} ${turn.turnType === 'FOLLOW_UP' ? 'is-followup' : ''}`}>
+        <span className="result-dialogue-label">{label}</span>
+        <p className="result-prose">{turn.textContent}</p>
+      </li>
+    })}</ol>
   </section>
 }
