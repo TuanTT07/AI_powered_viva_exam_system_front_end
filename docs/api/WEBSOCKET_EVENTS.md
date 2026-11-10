@@ -51,3 +51,9 @@ First playback may still wait for the provider if preparation has not finished.
 
 ## Retry the current answer
 During recording, send `answer.discard` with the active answerId and a fresh requestId. Stop capturing immediately and wait for matching `answer.discarded` before clearing the recovery ID and enabling another start on the same socket. The backend closes the old STT stream without persisting it and retains the current turn deadline. If finalization already won the race, the answer receipt takes precedence. If confirmation is lost, keep the recovery ID for receipt lookup.
+
+## Countdown regression checks — 2026-11-11
+The frontend clamps an expired server deadline to zero. Remounting with the same
+deadline does not restart the countdown. The room uses the prompt `deadlineAt` from the merged backend question-opening
+deadline contract before recording starts. Recording, retry and reload share that
+same deadline. Backend timeout processing remains authoritative.
