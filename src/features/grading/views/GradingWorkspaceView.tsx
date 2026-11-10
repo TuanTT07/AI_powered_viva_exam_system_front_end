@@ -14,7 +14,7 @@ import type { CriterionReview, EvidenceLine } from '../grading-types'
 
 export type { CriterionReview, EvidenceLine }
 
-const panel = 'bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs'
+const panel = 'min-w-0 bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-xs'
 
 export function GradingWorkspaceView({
   name,
@@ -58,7 +58,7 @@ export function GradingWorkspaceView({
   const aiTotal = criteria.reduce((sum, c) => sum + c.ai, 0)
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
       {notice}
 
       {/* Header bar */}
@@ -213,7 +213,7 @@ export function GradingWorkspaceView({
         /* Workspace 3-column Layout */
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
           {/* Column 1: Monitoring & Evidence */}
-          <aside className="xl:col-span-3 space-y-4">
+          <aside className="min-w-0 xl:col-span-3 space-y-4">
             {/* Question assigned */}
             <section className={panel}>
               <div className="flex items-center justify-between">
@@ -338,7 +338,7 @@ export function GradingWorkspaceView({
                         </strong>
                         <span className="text-[10px] text-indigo-500 font-medium">Trích xuất từ biên bản</span>
                       </div>
-                      <p className="text-[11px] text-indigo-800/80 leading-relaxed italic border-l-2 border-indigo-300 pl-2">
+                      <p className="text-[11px] text-indigo-800/80 whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed italic border-l-2 border-indigo-300 pl-2">
                         &ldquo;{c.evidence}&rdquo;
                       </p>
                     </div>
