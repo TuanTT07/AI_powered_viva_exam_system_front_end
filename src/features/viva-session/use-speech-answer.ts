@@ -200,6 +200,7 @@ export function useSpeechAnswer(
               rec.interimResults = true;
               rec.lang = "vi-VN";
               rec.onresult = (e: any) => {
+                if (recognitionRef.current !== rec) return;
                 let combined = "";
                 for (let i = 0; i < e.results.length; i++) {
                   combined += e.results[i][0].transcript + " ";
@@ -238,6 +239,16 @@ export function useSpeechAnswer(
           });
           break;
         }
+        case "answer.discarded":
+          if (!pending.current || event.answerId !== pending.current ||
+              event.requestId !== endRequest.current || getPhase() !== "finalizing") return;
+          clearTimeout(timer.current);
+          pending.current = null;
+          startRequest.current = null;
+          endRequest.current = null;
+          try { sessionStorage.removeItem(key); } catch { /* Storage unavailable. */ }
+          dispatch({ type: "RESET_TURN", question: current.current.question ?? undefined });
+          break;
         case "answer.finalizing":
           if (event.answerId !== pending.current) return;
           serverFinalizing.current = true;
@@ -627,37 +638,26 @@ export function useSpeechAnswer(
     dispatch({ type: "CLEAR_STALE_ANSWER" });
   }, [key, dispatch]);
 
-  const restartAnswer = useCallback(async () => {
-    if (!active) return;
+  const restartAnswer = useCallback(() => {
+    const answerId = pending.current;
+    if (!active || getPhase() !== "recording" || !answerId || !socket.current) return;
     clearTimeout(timer.current);
-    try {
-      recognitionRef.current?.stop();
-    } catch {
-      // Ignore
-    }
+    setAudioLevel(0);
+    const recognition = recognitionRef.current;
     recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* Already stopped. */ }
     setClientDraft("");
     capture.current?.cancel();
     capture.current = null;
-    serverFinalizing.current = false;
-    startRequest.current = null;
-    endRequest.current = null;
-    pending.current = null;
+    dispatch({ type: "FINALIZING" });
     try {
-      sessionStorage.removeItem(key);
+      endRequest.current = crypto.randomUUID();
+      timer.current = setTimeout(() => fail("Chưa xác nhận hủy bản thu. Hãy kiểm tra câu trả lời đã lưu."), 20_000);
+      socket.current.command({ type: "answer.discard", requestId: endRequest.current, answerId });
     } catch {
-      // Ignore
+      fail("Không gửi được yêu cầu hủy. Hãy kiểm tra câu trả lời đã lưu.");
     }
-
-    controller.current?.abort();
-    socket.current?.close();
-    socket.current = null;
-
-    const question = current.current.question;
-    dispatch({ type: "RESET_TURN", question: question ?? undefined });
-
-    await connect();
-  }, [active, connect, dispatch, key]);
+  }, [active, dispatch, fail, getPhase]);
 
   return { state, clientDraft, audioLevel, connect, speak, start, stop, clearStaleAnswer, restartAnswer };
 }

@@ -48,3 +48,6 @@ Listen shares the pending request; replay reuses its Blob within the current que
 Preparation is aborted/discarded on question, user or active-state change and unmount.
 Speculative errors are silent and retried on explicit listen. No recording starts during playback.
 First playback may still wait for the provider if preparation has not finished.
+
+## Retry the current answer
+During recording, send `answer.discard` with the active answerId and a fresh requestId. Stop capturing immediately and wait for matching `answer.discarded` before clearing the recovery ID and enabling another start on the same socket. The backend closes the old STT stream without persisting it and retains the current turn deadline. If finalization already won the race, the answer receipt takes precedence. If confirmation is lost, keep the recovery ID for receipt lookup.
