@@ -45,12 +45,21 @@
 .result-question summary strong { float: right; color: var(--primary); }
 .result-question h3 { font-size: 13px; margin: 4px 0; }
 .result-question > div { padding-bottom: 8px; }
+.result-question-content { background: var(--surface-muted, #f1f5f9); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+.result-transcript, .result-criteria { margin: 12px 0; }
+.result-transcript ol, .result-criteria ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.result-transcript-turn { font-size: 13px; line-height: 1.6; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); }
+.result-transcript-turn.is-ai { background: var(--surface-muted, #f1f5f9); }
+.result-transcript-turn.is-student { background: var(--primary-soft); }
+.result-criteria li { font-size: 13px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.result-criteria li:last-child { border-bottom: none; padding-bottom: 0; }
 .result-record { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .result-record p { font-size: 13px; }
 .result-panel > summary { cursor: pointer; font-size: 14px; font-weight: 600; }
 .result-record-lines > div { border-top: 1px solid var(--border); padding: 14px 0; }
 .result-record-lines dt { font-weight: 600; font-size: 14px; }
 .result-record-lines dd { margin: 8px 0 0; font-size: 13px; }
+.result-record-transcript { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
 #approved-assessment-record { scroll-margin-top: 24px; }
 @media (max-width: 700px) {
   .results-heading { align-items: flex-start; flex-direction: column; gap: 12px; }

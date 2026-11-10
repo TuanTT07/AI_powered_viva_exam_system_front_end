@@ -43,13 +43,34 @@ function ResultDetail() {
       <div className="result-detail-main">
       {released ? <>
       <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><MessageSquare size={18} aria-hidden="true" />Nhận xét giảng viên</h2></div><p className="result-prose">{result?.feedback ?? 'Chưa có nhận xét tổng quan được công bố.'}</p></section>
-      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><ListChecks size={18} aria-hidden="true" />Đánh giá từng câu hỏi chính</h2></div><p className="result-note">Mở từng câu để xem điểm và nhận xét đã công bố.</p><div className="result-questions">{questions.map(q => <details className="result-question" key={q.questionOrder}><summary><span>Câu hỏi chính {q.questionOrder}</span><strong>{q.finalScore} điểm</strong></summary><div>{q.questionContent && <p className="result-prose"><strong>Đề bài câu hỏi chính:</strong> {q.questionContent}</p>}<PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} /><h3>Nhận xét của giảng viên</h3><p className="result-prose">{q.feedback || 'Chưa có nhận xét được công bố cho câu hỏi này.'}</p><p className="result-note">Ngày công bố: {resultDate(q.publishedAt)}</p></div></details>)}</div>{!questions.length && <p>Chưa có đánh giá từng câu được cung cấp.</p>}</section>
+      <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><ListChecks size={18} aria-hidden="true" />Đánh giá từng câu hỏi chính</h2></div><p className="result-note">Mở từng câu để xem câu trả lời, điểm và nhận xét đã công bố.</p><div className="result-questions">{questions.map(q => <details className="result-question" key={q.questionOrder}>
+        <summary><span>Câu hỏi chính {q.questionOrder}</span><strong>{q.finalScore} / {q.maxScore} điểm</strong></summary>
+        <div>
+          {q.questionContent && <p className="result-prose result-question-content"><strong>Đề bài:</strong> {q.questionContent}</p>}
+          <PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />
+          {q.criteria.length > 0 && <div className="result-criteria">
+            <h3>Điểm theo tiêu chí</h3>
+            <ul>{q.criteria.map(c => <li key={c.criterionId}><strong>{c.criterionName}</strong> — {c.finalScore ?? 0} / {c.maxScore}{c.comment && <span className="result-note"> · {c.comment}</span>}</li>)}</ul>
+          </div>}
+          <h3>Nhận xét của giảng viên</h3>
+          <p className="result-prose">{q.feedback || 'Chưa có nhận xét được công bố cho câu hỏi này.'}</p>
+          <p className="result-note">Ngày công bố: {resultDate(q.publishedAt)}</p>
+        </div>
+      </details>)}</div>{!questions.length && <p>Chưa có đánh giá từng câu được cung cấp.</p>}</section>
       </> : <section className="dashboard-section result-publication-empty"><div className="result-publication-icon"><ShieldCheck size={24} aria-hidden="true" /></div><h2 className="section-title">Đang chờ công bố đánh giá</h2><p>Nhận xét giảng viên và điểm từng câu sẽ hiển thị tại đây khi được công bố.</p></section>}
       </div>
       <aside className="result-detail-aside" aria-label="Thông tin đánh giá">
       <section className="dashboard-section"><div className="section-header-row"><h2 className="section-title result-section-title"><Award size={18} aria-hidden="true" />Tổng quan đánh giá</h2></div><dl className="result-overview"><div><dt>Điểm trung bình</dt><dd>{result?.score !== null && result?.score !== undefined ? `${result.score.toFixed(1)} / 10` : 'Chưa được cung cấp'}</dd></div><div><dt>Số câu hỏi chính đã công bố</dt><dd>{`${questions.length}/${result?.expectedQuestions ?? '?'} câu chính`}</dd></div></dl>{!demo && <p className="result-note">Chỉ hiển thị điểm tổng hợp khi đủ câu chính được công bố. Điểm từng câu được quy đổi về thang 10 rồi lấy trung bình, làm tròn một chữ số thập phân.</p>}</section>
       <section className="dashboard-section result-record"><div><h2 className="section-title result-section-title"><FileText size={18} aria-hidden="true" />Biên bản đánh giá</h2><p>Xem lại dữ liệu đánh giá đã công bố của lượt thi này.</p></div>{questions.length > 0 ? <a className="button outline" href="#approved-assessment-record" onClick={() => { if (recordRef.current) recordRef.current.open = true }}><FileText size={16} />Xem biên bản đánh giá</a> : <Button variant="outline" disabled>Chưa có biên bản được công bố</Button>}</section>
-      {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố. Chưa có tài liệu biên bản riêng.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}><dt>Câu hỏi chính {q.questionOrder} · {q.finalScore} điểm</dt><dd className="result-prose"><PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />{q.feedback || 'Chưa có nhận xét.'}<br />Công bố: {resultDate(q.publishedAt)}</dd></div>)}</dl></details>}
+      {questions.length > 0 && <details ref={recordRef} id="approved-assessment-record" className="result-panel"><summary>Biên bản đánh giá đã công bố</summary><p className="result-note">Nội dung dưới đây tổng hợp các đánh giá đã công bố, bao gồm câu trả lời của bạn.</p><dl className="result-record-lines">{questions.map(q => <div key={q.questionOrder}>
+        <dt>Câu hỏi chính {q.questionOrder} · {q.finalScore} / {q.maxScore} điểm</dt>
+        <dd className="result-prose">
+          {q.questionContent && <><strong>Đề bài:</strong> {q.questionContent}<br /></>}
+          <PublishedTranscript turns={q.transcript ?? []} questionOrder={q.questionOrder} />
+          <strong>Nhận xét:</strong> {q.feedback || 'Chưa có nhận xét.'}<br />
+          Công bố: {resultDate(q.publishedAt)}
+        </dd>
+      </div>)}</dl></details>}
       {result && <details className="dashboard-section result-metadata"><summary>Thông tin bổ sung về kỳ thi</summary><dl className="result-overview"><div><dt>Mã kỳ thi</dt><dd>{result.examId}</dd></div><div><dt>Mã lượt thi</dt><dd>{result.attemptId}</dd></div></dl></details>}
       </aside>
       </div>
