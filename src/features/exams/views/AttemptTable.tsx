@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import type { AttemptRow } from '../use-assessment-overview'
 import type { EvaluationResponseDto } from '../../grading/api-evaluation-service'
 import { attemptStatusLabels } from '../attempt-status'
-import { getStoredGrading } from '../../grading/grading-repository'
+import { summarizeAttempt } from '../../grading/attempt-grade'
 
 export function AttemptTable({
   rows,
@@ -11,9 +11,11 @@ export function AttemptTable({
   summary = false,
   demo = false,
   evaluations,
+  expectedQuestions,
 }: {
   rows: AttemptRow[]
   evaluations?: EvaluationResponseDto[]
+  expectedQuestions?: number
   examId: string
   allowReview: boolean
   summary?: boolean
@@ -28,23 +30,14 @@ export function AttemptTable({
             <th className="p-4">Thí sinh</th>
             <th className="p-4">Mã sinh viên</th>
             <th className="p-4">Trạng thái lượt thi</th>
-            <th className="p-4">{demo ? 'Điểm mẫu' : 'Điểm chính thức'}</th>
+            <th className="p-4">{demo ? 'Điểm mẫu' : 'Điểm tổng hợp / 10'}</th>
             <th className="p-4">Hồ sơ</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(row => {
-            const evalItem = evaluations?.find(e =>
-              (e.examAttemptId && e.examAttemptId === row.attemptId) ||
-              (e.studentId && e.studentId === row.studentId) ||
-              (e.studentCode && e.studentCode === row.studentCode) ||
-              e.questionAttemptId === row.attemptId ||
-              e.id === row.attemptId
-            )
-            const stored = getStoredGrading(examId, evalItem?.questionAttemptId ?? row.attemptId)
-            const isConfirmed = Boolean(evalItem?.status === 'GRADED' || stored?.confirmed)
-            const confirmedScore = evalItem?.finalScore ?? stored?.finalScore
-            const targetAttemptId = evalItem?.questionAttemptId ?? row.attemptId
+            const grade = summarizeAttempt(evaluations ?? [], row.attemptId, expectedQuestions)
+            const targetAttemptId = row.attemptId
 
             return (
               <tr key={row.attemptId} className="border-t border-slate-100 hover:bg-slate-50/80 transition-colors">
@@ -59,22 +52,18 @@ export function AttemptTable({
                   </span>
                 </td>
                 <td className="p-4 text-slate-600">
-                  {isConfirmed && confirmedScore !== undefined ? (
-                    <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700">
-                      <span>{confirmedScore.toFixed(1)}</span>
-                      <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        Đã chốt
-                      </span>
-                    </span>
-                  ) : demo ? (
-                    row.demoScore !== undefined ? (
-                      <span className="font-semibold text-slate-800">{row.demoScore.toFixed(1)}</span>
-                    ) : (
-                      <span className="text-slate-400">Chờ chấm</span>
-                    )
-                  ) : (
-                    <span className="text-slate-400">Chưa có dữ liệu</span>
-                  )}
+                  {demo ? (
+                    <span>{row.demoScore !== undefined ? row.demoScore.toFixed(1) : 'Chờ chấm'}</span>
+                  ) : grade.score !== null ? (
+                    <div><strong className="text-emerald-700">{grade.score.toFixed(1)} / 10</strong>
+                      <p>Đã chốt đủ {grade.expected}/{grade.expected} câu chính</p>
+                      <small>Trung bình quy đổi từ điểm từng câu; chưa phải bản tổng điểm riêng từ backend.</small>
+                    </div>
+                  ) : <div className="text-amber-700">
+                    <p>Đã chấm {grade.graded}/{grade.expected ?? '?'} câu chính</p>
+                    <p>Chưa đủ dữ liệu điểm toàn bài</p>
+                  </div>}
+
                 </td>
                 <td className="p-4">
                   {allowReview && (!demo || row.status === 'COMPLETED') ? (

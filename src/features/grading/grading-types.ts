@@ -13,6 +13,7 @@ export type EvidenceLine = {
   text: string
   time?: string
   audioUrl?: string
+  turnType?: 'MAIN_QUESTION' | 'FOLLOW_UP' | 'ANSWER'
 }
 
 export type CandidateAttemptDetail = {

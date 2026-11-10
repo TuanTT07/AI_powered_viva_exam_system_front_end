@@ -1,3 +1,4 @@
+import { loadExamEvaluations } from './load-exam-evaluations'
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useParams, useSearchParams, useBlocker } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -5,7 +6,7 @@ import { DemoLabel } from '../../components/common/inline-notice'
 import { Alert, Button, Dialog } from '../../components/ui/primitives'
 import { ErrorState, LoadingPage } from '../../components/common/states'
 import { runtimeConfig } from '../../services/api/runtime-config'
-import { useExamMonitoring, useExamRoster } from '../exams/exam-hooks'
+import { useExam, useExamMonitoring, useExamRoster } from '../exams/exam-hooks'
 import { GradingWorkspaceView } from './views/GradingWorkspaceView'
 import { gradingDemo } from './mocks/grading-demo'
 import { getStoredGrading, saveStoredGrading } from './grading-repository'
@@ -37,6 +38,7 @@ function useSummaryTab() {
 
 function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }) {
   const [params] = useSearchParams()
+  const exam = useExam(examId)
   const query = useExamMonitoring(examId)
   const tab = useSummaryTab()
   const [triggering, setTriggering] = useState(false)
@@ -45,15 +47,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   // Dev3 API: Query evaluations of this exam to resolve questionAttemptId if needed
   const examEvals = useQuery({
     queryKey: ['dev3-exam-evaluations', examId],
-    queryFn: async () => {
-      const first = await apiEvaluationService.findByExam(examId)
-      const content = [...first.content]
-      for (let page = 1; page < first.totalPages; page++) {
-        const next = await apiEvaluationService.findByExam(examId, { page })
-        content.push(...next.content)
-      }
-      return { ...first, content }
-    },
+    queryFn: () => loadExamEvaluations(examId),
     enabled: Boolean(examId),
     retry: false,
   })
@@ -105,7 +99,6 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
       ))
   ) ?? (query.data?.candidateStatuses && query.data.candidateStatuses.length === 1 ? query.data.candidateStatuses[0] : undefined)
 
-  const stored = getStoredGrading(examId, targetQuestionAttemptId)
 
   const defaultScores = useMemo(() => {
     if (!evaluation) return {}
@@ -120,11 +113,11 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isFinalizing, setIsFinalizing] = useState(false)
 
-  const isGraded = evaluation?.status === 'GRADED' || Boolean(stored?.confirmed)
+  const isGraded = evaluation?.status === 'GRADED'
   const confirmed = isGraded && !isEditing
 
-  const scores = userScores ?? stored?.scores ?? defaultScores
-  const notes = userNotes ?? stored?.notes ?? evaluation?.overallFeedback ?? ''
+  const scores = userScores ?? defaultScores
+  const notes = userNotes ?? evaluation?.overallFeedback ?? ''
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
     (isFinalizing || triggering || publication.isPending || (!confirmed && (userScores !== null || userNotes !== null))) &&
@@ -229,6 +222,7 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   const transcript: EvidenceLine[] = (evaluation?.transcript ?? []).map(t => ({
     id: t.id,
+    turnType: t.turnType,
     role: t.speaker.toLowerCase() === 'ai' ? 'ai' : 'student',
     text: t.textContent,
     time: t.createdAt
@@ -242,6 +236,10 @@ function ApiGrading({ examId, attemptId }: { examId: string; attemptId: string }
 
   return (
     <section className="source-screen max-w-7xl mx-auto pb-12">
+      {exam.data?.expectedMainQuestionCount !== undefined && questions.length < exam.data.expectedMainQuestionCount && <Alert tone="warning">
+        Backend mới cung cấp {questions.length}/{exam.data.expectedMainQuestionCount} bản đánh giá câu chính.
+        Các câu chưa có bản đánh giá chưa thể mở từ API hiện tại. Điểm câu đang xem không phải điểm toàn bài.
+      </Alert>}
       {examEvals.isError && <Alert tone="danger">Không tải được danh sách câu hỏi. <Button variant="outline" onClick={() => void examEvals.refetch()}>Tải lại danh sách câu hỏi</Button></Alert>}
       {questions.length > 0 && <nav aria-label="Chọn câu hỏi chấm điểm" className="flex flex-wrap gap-2 p-4">
         {questions.map((question, index) => {
