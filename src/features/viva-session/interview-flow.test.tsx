@@ -175,9 +175,9 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     await waitFor(() => expect(media.command).toHaveBeenCalled())
     const command = media.command.mock.calls[0][0]
     act(() => media.emit?.({ type: 'answer.started', requestId: command.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
-    act(() => media.disconnected?.())
     server = { attemptId, status: 'PROCESSING', prompt: null }
-    fireEvent.click(await screen.findByRole('button', { name: 'Kiểm tra câu trả lời đã lưu' }))
+    act(() => media.disconnected?.())
+    expect(screen.queryByRole('button', { name: 'Kiểm tra câu trả lời đã lưu' })).not.toBeInTheDocument()
     await screen.findAllByText('Hệ thống đang xử lý lượt thi')
     expect(request.mock.calls.some(([path]) => path.endsWith('/speech/answers/' + answerId))).toBe(true)
     expect(media.command.mock.calls.filter(([value]) => value.type === 'answer.start')).toHaveLength(1)
@@ -208,15 +208,48 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     await screen.findByRole('button', { name: 'Bắt đầu phiên thi' })
     expect(request.mock.calls.some(([path]) => path.endsWith('/start'))).toBe(false)
   })
-  it('allows student to discard mistranscribed answer and re-record during the turn', async () => {
+  it('reconnects automatically when the server rejects the discard command', async () => {
     server = { attemptId, status: 'AWAITING_ANSWER', prompt }
+    const transport = request.getMockImplementation()!
+    request.mockImplementation(async (path, options) => {
+      if (path.endsWith('/speech/answers/' + answerId)) {
+        expect(request.mock.calls.filter(([url]) => url.endsWith('/speech-ticket'))).toHaveLength(2)
+        throw new ApiError('Chưa có câu trả lời', { status: 404 })
+      }
+      return transport(path, options)
+    })
     mount()
     fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
     await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start' })))
+    const start = media.command.mock.calls[0][0]
+    act(() => media.emit?.({ type: 'answer.started', requestId: start.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    fireEvent.click(await screen.findByRole('button', { name: /trả lời lại/i }))
+    const discard = media.command.mock.calls.at(-1)![0]
+    act(() => media.emit?.({ type: 'speech.error', requestId: discard.requestId, answerId, data: { code: 'INVALID_MESSAGE', message: 'Loại sự kiện không hợp lệ' } }))
+
+    const retry = await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
+    expect(media.close).toHaveBeenCalled()
+    expect(request.mock.calls.filter(([url]) => url.endsWith("/playback"))).toHaveLength(1)
+    fireEvent.click(retry)
+    await waitFor(() => expect(media.command.mock.calls.filter(([cmd]) => cmd.type === 'answer.start')).toHaveLength(2))
+  })
+
+  it('allows student to discard mistranscribed answer and re-record during the turn', async () => {
+    server = { attemptId, status: 'AWAITING_ANSWER', prompt }
+    const view = mount()
+    fireEvent.click(await screen.findByRole('button', { name: 'Kết nối speech' }))
+    await screen.findByRole('button', { name: 'Bắt đầu trả lời' })
+    const secondTurnId = '66666666-6666-4666-8666-666666666666'
+    server = { attemptId, status: 'AWAITING_ANSWER', prompt: { ...prompt, questionTurnId: secondTurnId, text: 'Câu hỏi thứ hai' } }
+    await view.sync()
+    await screen.findAllByText('Câu hỏi thứ hai')
+    fireEvent.click(await screen.findByRole('button', { name: 'Bắt đầu trả lời' }))
+    await waitFor(() => expect(media.command).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer.start' })))
     const firstCommand = media.command.mock.calls[0][0]
-    act(() => media.emit?.({ type: 'answer.started', requestId: firstCommand.requestId, answerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    act(() => media.emit?.({ type: 'answer.started', requestId: firstCommand.requestId, answerId, data: { questionTurnId: secondTurnId, deadline: prompt.deadlineAt } }))
     expect(media.captureStart).toHaveBeenCalledOnce()
+    expect(sessionStorage.getItem(`aives-speech:11111111-1111-4111-8111-111111111111:${attemptId}:${secondTurnId}`)).toBe(answerId)
 
     // Server returns wrong transcript
     act(() => media.emit?.({
@@ -249,7 +282,7 @@ describe('student interview with HTTP/WS/media boundaries simulated', () => {
     fireEvent.click(startAgainBtn)
     await waitFor(() => expect(media.command.mock.calls.length).toBeGreaterThan(2))
     const secondCommand = media.command.mock.calls.at(-1)![0]
-    act(() => media.emit?.({ type: 'answer.started', requestId: secondCommand.requestId, answerId: secondAnswerId, data: { questionTurnId: turnId, deadline: prompt.deadlineAt } }))
+    act(() => media.emit?.({ type: 'answer.started', requestId: secondCommand.requestId, answerId: secondAnswerId, data: { questionTurnId: secondTurnId, deadline: prompt.deadlineAt } }))
 
     // Server returns correct transcript
     act(() => media.emit?.({

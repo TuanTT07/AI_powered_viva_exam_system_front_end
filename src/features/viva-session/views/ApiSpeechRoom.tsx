@@ -288,7 +288,7 @@ export function ApiSpeechRoom({
               {retry && (
                 <>
                   <Button
-                    aria-label={state.answerId ? "Kiểm tra câu trả lời đã lưu" : "Kết nối speech"}
+                    aria-label="Kết nối speech"
                     disabled={!online}
                     onClick={() => {
                       onBusyChange(true);
@@ -298,9 +298,7 @@ export function ApiSpeechRoom({
                   >
                     <RefreshCw size={14} />
                     <span>
-                      {state.answerId
-                        ? "Kiểm tra câu trả lời đã lưu"
-                        : state.phase === "idle"
+                      {state.phase === "idle"
                           ? "Kết nối âm thanh phòng thi"
                           : "Kết nối lại âm thanh"}
                     </span>
